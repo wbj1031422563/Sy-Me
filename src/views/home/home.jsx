@@ -7,7 +7,7 @@
  * @Description:
  */
 import "./home.less";
-
+import ReactThree from '../react-three/react-three.jsx'
 function Home() {
   return (
     <>
@@ -65,6 +65,7 @@ function Home() {
         </div>
         <div className="footer"></div>
       </div>
+      <ReactThree />
       {/* <div className="gui-container"></div> */}
     </>
   );
