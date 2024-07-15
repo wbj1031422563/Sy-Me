@@ -2,13 +2,20 @@
  * @Author: FMC
  * @Date: 2024-06-23 09:58:48
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-14 19:02:33
+ * @LastEditTime: 2024-07-15 20:36:42
  * @FilePath: \fmc-personal-blog\src\views\home\home.jsx
  * @Description:
  */
 import "./home.less";
-import ReactThree from '../react-three/react-three.jsx'
+import ReactThree from "../react-three/react-three.jsx";
+import { useNavigate } from "react-router-dom";
 function Home() {
+  let navigate = useNavigate();
+
+  const goRouter = (router) => {
+    // return <Navigate to={router} />;
+    navigate(router);
+  };
   return (
     <>
       <div className="home">
@@ -23,14 +30,19 @@ function Home() {
             </div>
           ))} */}
           <div className="project-list-item">
-            <div className="image-container">
+            <div
+              className="image-container"
+              onClick={() => {
+                goRouter("/sbpk-map");
+              }}
+            >
               <img className="pre-img" src="/img/banner1.jpg" />
               <div className="mask">
-                <span>项目1</span>
+                <span>赛博朋克项目</span>
               </div>
             </div>
-            <p className="project-item-name">项目1</p>
-            <p className="project-item-time">2024-07-14</p>
+            <p className="project-item-name">赛博朋克项目</p>
+            <p className="project-item-time">2024-07-15</p>
           </div>
           <div className="project-list-item">
             <img className="pre-img" src="/img/banner1.jpg" />
