@@ -2,76 +2,69 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-17 22:06:47
+ * @LastEditTime: 2024-07-17 23:40:58
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
 import { useTexture } from "@react-three/drei";
 import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import { extend } from "@react-three/fiber";
-import vs from './shader/vs.glsl'
-import  fs from './shader/fs.glsl'
+import vs from "./shader/vs.glsl";
+import fs from "./shader/fs.glsl";
 import * as THREE from "three";
-import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils';
-const params = {
-  colors: { base: "#f9f002", gradInner: "#8ae66e", gradOuter: "#03c03c" },
+import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
+/**
+ * Sizes
+ */
+const sizes = {
+  width: window.innerWidth,
+  height: window.innerHeight,
+  resolution: null,
+  pixelRatio: Math.min(window.devicePixelRatio, 2),
 };
-const uniforms = {
-  // impacts: { value: impacts },
-  // 陆地色块大小
-  maxSize: { value: 0.04 },
-  // 海洋色块大小
-  minSize: { value: 0.025 },
-  // 冲击波高度
-  waveHeight: { value: 0.1 },
-  // 冲击波范围
-  scaling: { value: 1 },
-  // 冲击波径向渐变内侧颜色
-  gradInner: { value: new THREE.Color(params.colors.gradInner) },
-  // 冲击波径向渐变外侧颜色
-  gradOuter: { value: new THREE.Color(params.colors.gradOuter) },
-};
-const texture = new THREE.TextureLoader().load('/img/earth.jpg')
+sizes.resolution = new THREE.Vector2(
+  window.innerWidth * sizes.pixelRatio,
+  window.innerHeight * sizes.pixelRatio
+);
+const texture = new THREE.TextureLoader().load("/img/earth.jpg");
 // console.log('texture',texture)
 
-class EarthMaterial extends CustomShaderMaterial {
+class EarthMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
-        baseMaterial: THREE.MeshBasicMaterial,
-        color:'blue',
-        uniforms:{
-            ...uniforms,
-            tex:{value:texture}
+      uniforms: {
+        uResolution: {
+          value: sizes.resolution,
         },
-        vertexShader:vs,
-        fragmentShader:fs
+        uTexture:{
+          value:texture
+        }
+      },
+      vertexShader: vs,
+      fragmentShader: fs,
     });
   }
 }
 extend({ EarthMaterial });
 
 function SbpkEarth() {
-  //   console.log("geometrys", makeGlobeOfPoints());
-//   const texture=useTexture('/img/earth.jpg')
-  const geometrys=mergeBufferGeometries(makeGlobeOfPoints());
-  console.log('geometrys',geometrys)
 
+  const geometry = makeGlobeOfPoints();
   return (
     <>
-      <mesh geometry={geometrys}>
+      <points geometry={geometry}>
         {/* <sphereGeometry></sphereGeometry> */}
         <earthMaterial />
-      </mesh>
+      </points>
     </>
   );
 }
 export default SbpkEarth;
 
 function makeGlobeOfPoints() {
-  let dummyObj = new THREE.Object3D();
+  const geometry = new THREE.BufferGeometry();
   let sph = new THREE.Spherical();
   // THREE.BoxGeometry
-  let geometrys = []; //存储生成的几何体
   //   let texture = new THREE.TextureLoader().load(imgData);
   let count = 75000; //点的数量
   let sphRadius = 5; //球体半径
@@ -91,12 +84,17 @@ function makeGlobeOfPoints() {
    * 设置经纬度初始值
    */
   let longitude = 0;
-  let latitude = 1 - (latitudeStep / 2); //设置为接近于1.靠近北极作为初始值。这里减去步长，避免北极点的点的重合
+  let latitude = 1 - latitudeStep / 2; //设置为接近于1.靠近北极作为初始值。这里减去步长，避免北极点的点的重合
 
+  const positions = new Float32Array(count * 3);
+  const uvs = new Float32Array(count * 2);
+  const n=new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const i2 = i * 2;
     // 当前纬度角对应的圆面的半径
     const r = Math.sqrt(1 - latitude * latitude);
-    const p=new THREE.Vector3();
+    const p = new THREE.Vector3();
     p.set(
       Math.cos(longitude) * r,
       latitude,
@@ -105,34 +103,6 @@ function makeGlobeOfPoints() {
     longitude += longitudeStep;
     latitude -= latitudeStep;
     sph.setFromVector3(p);
-    //lookat:旋转物体使其在世界空间中面朝一个点,
-    //对于后面来说，就是让平面的法线与方向保持一致，平面朝向球体外部。
-    dummyObj.lookAt(p);
-    dummyObj.updateMatrix();
-
-    const geometry = new THREE.PlaneGeometry(1, 1);
-    geometry.applyMatrix4(dummyObj.matrix);
-    // if(isNaN(p.x)){
-    //   debugger
-    // }
-    geometry.translate(p.x,p.y,p.z);
-
-    //每一个平面作为一个粒子，四个顶点，重复四次
-    const centers = [
-      p.x,
-      p.y,
-      p.z,
-      p.x,
-      p.y,
-      p.z,
-      p.x,
-      p.y,
-      p.z,
-      p.x,
-      p.y,
-      p.z,
-    ];
-
     /**
      * u 计算:
      * u 坐标计算通过将 theta 角度从 [-Math.PI, Math.PI] 范围映射到 [0, 1]
@@ -147,14 +117,22 @@ function makeGlobeOfPoints() {
       (sph.theta + Math.PI) / (2 * Math.PI),
       1 - sph.phi / Math.PI
     );
-    //每个粒子是一个PlaneGeometry，它有四个顶点，所以这里重复的4次
-    let uvs = [uv.x, uv.y, uv.x, uv.y, uv.x, uv.y, uv.x, uv.y];
-    geometry.setAttribute(
-      "center",
-      new THREE.Float32BufferAttribute(centers, 3)
-    );
-    geometry.setAttribute("baseUv", new THREE.Float32BufferAttribute(uvs, 3));
-    geometrys.push(geometry);
+    positions[i3] = p.x;
+    positions[i3 + 1] = p.y;
+    positions[i3 + 2] = p.z;
+
+    n[i3] = p.x;
+    n[i3 + 1] = p.y;
+    n[i3 + 2] = p.z;
+
+    uvs[i2] = uv.x;
+    uvs[i2 + 1] = uv.y;
   }
-  return geometrys;
+
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("aUv", new THREE.BufferAttribute(uvs, 2));
+  geometry.setAttribute("aNormal", new THREE.BufferAttribute(n, 2));
+  // geometry.setAttribute("aN", new THREE.BufferAttribute(uvs, 2));
+
+  return geometry;
 }

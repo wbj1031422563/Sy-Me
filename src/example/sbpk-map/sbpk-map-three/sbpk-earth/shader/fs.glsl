@@ -1,11 +1,12 @@
-
-uniform vec3 gradInner;
-uniform vec3 gradOuter;
-varying float vFinalStep;
+varying vec2 vUv;
 varying float vMap;
+varying float vVisibility;
 
-void main(){
-    vec3 diffuseMap = diffuse * ((vMap > 0.5) ? 0.5 : 1.);
-    csm_DiffuseColor=vec4(vec3(vMap),1.);
-    
+void main() {
+    // if (vVisibility < 0.5) {
+    //     discard; // 丢弃背面的粒子
+    // }
+
+    float strength = step(0.5, vMap);
+    gl_FragColor = vec4(vec3(strength), 1.0);
 }
