@@ -30,6 +30,7 @@ function makeGlobeOfPoints(){
       let g =  new THREE.PlaneGeometry(1, 1);
       g.applyMatrix4(dummyObj.matrix);
       g.translate(p.x, p.y, p.z);
+      //每个粒子是一个PlaneGeometry，它有四个顶点，所以这里重复的4次
       let centers = [
         p.x, p.y, p.z,
         p.x, p.y, p.z,
@@ -40,6 +41,7 @@ function makeGlobeOfPoints(){
         (sph.theta + Math.PI) / (Math.PI * 2),
         1. - sph.phi / Math.PI
       );
+       //每个粒子是一个PlaneGeometry，它有四个顶点，所以这里重复的4次
       let uvs = [
         uv.x, uv.y,
         uv.x, uv.y,
@@ -48,7 +50,7 @@ function makeGlobeOfPoints(){
       ];
       g.setAttribute('center', new THREE.Float32BufferAttribute(centers, 3));
       g.setAttribute('baseUv', new THREE.Float32BufferAttribute(uvs, 2));
-      geoms.·(g);
+      geoms.push(g);
     }
     let g = mergeBufferGeometries(geoms);
     let m = new THREE.MeshBasicMaterial({
