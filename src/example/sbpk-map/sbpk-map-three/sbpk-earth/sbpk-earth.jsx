@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-18 21:56:08
+ * @LastEditTime: 2024-07-19 01:17:20
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -15,7 +15,7 @@ import linnerFS from "./shader/liner/liner.fs.glsl";
 import linnerVs from "./shader/liner/liner.vs.glsl";
 import * as THREE from "three";
 import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 const params = {
   colors: { base: "#f9f002", gradInner: "#8ae66e", gradOuter: "#03c03c" },
 };
@@ -56,6 +56,9 @@ extend({ EarthMaterial });
 class TrailLinerMaterial extends CustomShaderMaterial {
   constructor(trailRatio, trailLength) {
     super({
+      /**
+       * 虚线材质
+       */
       baseMaterial: THREE.LineDashedMaterial,
       uniforms: {
         actionRatio: { value: trailRatio },
@@ -67,49 +70,98 @@ class TrailLinerMaterial extends CustomShaderMaterial {
       gapSize: 1,
       fragmentShader: linnerFS,
     });
+    // console.log("material执行");
   }
 }
 extend({ TrailLinerMaterial });
 
+const maxImactAmount = 10;
 function SbpkEarth() {
   const earthRef = useRef();
+  const linerRefs = useRef([]);
+  /**
+   * 初始化飞行线与冲击波数组
+   */
+  const [impacts, setImpacts] = useState(() => {
+    const list = [];
+    for (let i = 0; i < maxImactAmount; i++) {
+      list.push({
+        impactPosition: new THREE.Vector3()
+          .random()
+          .subScalar(0.5)
+          .setLength(5),
+        impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),
+        impactRatio: 0,
+        prevPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
+        trailRatio: { value: 0 },
+        trailLength: { value: 0 },
+        linerGeometry: null,
+      });
+      list[i].linerGeometry = new THREE.BufferGeometry().setFromPoints(
+        setPath(list[i].impactPosition, list[i].prevPosition, 1)
+      );
+    }
+    return list;
+  });
   const geometrys = mergeBufferGeometries(makeGlobeOfPoints());
 
-  const maxImactAmount = 10;
-  const impacts = [];
-  const trails = [0, 1, 2];
-  for (let i = 0; i < maxImactAmount; i++) {
-    impacts.push({
-      impactPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
-      impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),
-      impactRatio: { value: 0 },
-      trailRatio: { value: 0 },
-      trailLength: { value: 0 },
-    });
-  }
+  // const maxImactAmount = 10;
+  // const impacts = [];
+  // const trails = [0];
+  // for (let i = 0; i < maxImactAmount; i++) {
+  //   impacts.push({
+  //     impactPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
+  //     impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),
+  //     impactRatio: 0,
+  //     prevPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
+  //     trailRatio: { value: 0 },
+  //     trailLength: { value: 0 },
+  //     linerGeometry:null
+  //   });
+  //   impacts[i].linerGeometry=new THREE.BufferGeometry().setFromPoints(
+  //     setPath(
+  //       impacts[i].impactPosition,
+  //       impacts[i].prevPosition,
+  //       1
+  //     )
+  //   );
+  // }
+  useEffect(() => {
+    if (linerRefs.current) {
+      linerRefs.current.forEach(item=>{
+        /**
+         * .computeLineDistances () : this
+            计算LineDashedMaterial所需的距离的值的数组。 对于几何体中的每一个顶点，这个方法计算出了当前点到线的起始点的累积长度。
+         */
+        item.computeLineDistances();
+        item.geometry.attributes.lineDistance.needsUpdate = true;
+      })
+      setImpacts(impacts.map((item,index)=>{
+        //记录飞行线长度
+        item.trailLength.value=linerRefs.current[index].geometry.attributes.lineDistance.array[99]
+        return item
+      }))
+    }
+  }, []);
 
-  const pts = new Array(100 * 3).fill(0);
-
-  const points = [];
-  points.push(new THREE.Vector3(-1, 0, 0));
-  points.push(new THREE.Vector3(0, 0, 0));
-  points.push(new THREE.Vector3(1, 0, 0));
-  const linerGeometry = new THREE.BufferGeometry().setFromPoints(points);
-
-  // useFrame((state, delta) => {
-  //   if (earthRef.current) {
-  //     earthRef.current.rotation.y += delta;
-  //   }
-  // });
+  useFrame((state, delta) => {
+    if (earthRef.current) {
+      earthRef.current.rotation.y += delta;
+    }
+  });
 
   return (
     <>
       <mesh ref={earthRef} geometry={geometrys}>
         {/* <sphereGeometry></sphereGeometry> */}
         <earthMaterial />
-        {trails.map((item, index) => (
-          <line key={index} position-y={item} geometry={linerGeometry}>
-            <trailLinerMaterial/>
+        {impacts.map((item, index) => (
+          <line
+            ref={(ref) => (linerRefs.current[index] = ref)}
+            key={index}
+            geometry={item.linerGeometry}
+          >
+            <trailLinerMaterial />
           </line>
         ))}
       </mesh>
@@ -210,6 +262,65 @@ function makeGlobeOfPoints() {
   return geometrys;
 }
 
-function setPath(line, startPoint, endPoint, peakHeight) {
-  const position = line.geometry.attributes;
+
+/**生成飞行线曲线的函数
+ * 
+ * @param {开始位置} startPoint 
+ * @param {结束位置} endPoint 
+ * @param {飞行线高度} peakHeight 
+ * @param {*} cycles 
+ * @returns 
+ */
+function setPath(startPoint, endPoint, peakHeight, cycles) {
+  const points = [];
+  // let pos = l.geometry.attributes.position;
+  let division = 100*3-1;
+  let cycle = cycles || 1;
+  let peak = peakHeight || 1;
+  let radius = startPoint.length();
+  let angle = startPoint.angleTo(endPoint);
+  let arcLength = radius * angle;
+  let diameterMinor = arcLength / Math.PI;
+  let radiusMinor = (diameterMinor * 0.5) / cycle;
+  let peakRatio = peak / diameterMinor;
+  let radiusMajor = startPoint.length() + radiusMinor;
+  let basisMajor = new THREE.Vector3().copy(startPoint).setLength(radiusMajor);
+  let basisMinor = new THREE.Vector3()
+    .copy(startPoint)
+    .negate()
+    .setLength(radiusMinor);
+  let tri = new THREE.Triangle(startPoint, endPoint, new THREE.Vector3());
+  let nrm = new THREE.Vector3();
+  tri.getNormal(nrm);
+  let v3Major = new THREE.Vector3();
+  let v3Minor = new THREE.Vector3();
+  let v3Inter = new THREE.Vector3();
+  let vFinal = new THREE.Vector3();
+  for (let i = 0; i <= division; i++) {
+    let divisionRatio = i / division;
+    let angleValue = angle * divisionRatio;
+    v3Major.copy(basisMajor).applyAxisAngle(nrm, angleValue);
+    v3Minor
+      .copy(basisMinor)
+      .applyAxisAngle(nrm, angleValue + Math.PI * 2 * divisionRatio * cycle);
+    v3Inter.addVectors(v3Major, v3Minor);
+    let newLength = (v3Inter.length() - radius) * peakRatio + radius;
+    vFinal.copy(v3Inter).setLength(newLength);
+    // pos.setXYZ(i, vFinal.x, vFinal.y, vFinal.z);
+    points.push(new THREE.Vector3(vFinal.x, vFinal.y, vFinal.z));
+  }
+  // pos.needsUpdate = true;
+  // l.computeLineDistances();
+  // l.geometry.attributes.lineDistance.needsUpdate = true;
+  // impacts[l.userData.idx].trailLength.value = l.geometry.attributes.lineDistance.array[99];
+  // l.material.dashSize = 3;
+  return points;
 }
+
+// function makeTrail(i, impacts) {
+//   const linerPonits = new Array(100 * 3).fill(0);
+//   const linerGeometry = new THREE.BufferGeometry();
+//   //通过点队列设置该 BufferGeometry 的 attribute
+//   linerGeometry.setFromPoints(linerPonits);
+//   setPath(linerGeometry);
+// }
