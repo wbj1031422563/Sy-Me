@@ -17,6 +17,7 @@ attribute vec2 baseUv;
 
 varying float vFinalStep;
 varying float vMap;
+varying vec2 vUv;
 
 void main(){
     
@@ -24,6 +25,9 @@ void main(){
     vMap=map;
     float pSize=map<0.5?maxSize:minSize;
     float scale=scaling;
+    vUv=baseUv;
     
+    // vec3 p=(position-center)*pSize+center;
+    // p+=normal;
     csm_Position=(position-center)*pSize+center;// scale on wave
 }

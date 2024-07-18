@@ -153,7 +153,7 @@ function makeGlobeOfPoints() {
       "center",
       new THREE.Float32BufferAttribute(centers, 3)
     );
-    geometry.setAttribute("baseUv", new THREE.Float32BufferAttribute(uvs, 3));
+    geometry.setAttribute("baseUv", new THREE.Float32BufferAttribute(uvs, 2));
     geometrys.push(geometry);
   }
   return geometrys;
