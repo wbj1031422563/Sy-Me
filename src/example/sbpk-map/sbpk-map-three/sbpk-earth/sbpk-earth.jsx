@@ -2,17 +2,20 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-17 22:06:47
+ * @LastEditTime: 2024-07-18 21:56:08
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
 import { useTexture } from "@react-three/drei";
 import CustomShaderMaterial from "three-custom-shader-material/vanilla";
-import { extend } from "@react-three/fiber";
-import vs from './shader/vs.glsl'
-import  fs from './shader/fs.glsl'
+import { extend, useFrame } from "@react-three/fiber";
+import vs from "./shader/vs.glsl";
+import fs from "./shader/fs.glsl";
+import linnerFS from "./shader/liner/liner.fs.glsl";
+import linnerVs from "./shader/liner/liner.vs.glsl";
 import * as THREE from "three";
-import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils';
+import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
+import { useRef } from "react";
 const params = {
   colors: { base: "#f9f002", gradInner: "#8ae66e", gradOuter: "#03c03c" },
 };
@@ -31,36 +34,84 @@ const uniforms = {
   // 冲击波径向渐变外侧颜色
   gradOuter: { value: new THREE.Color(params.colors.gradOuter) },
 };
-const texture = new THREE.TextureLoader().load('/img/earth.jpg')
+const texture = new THREE.TextureLoader().load("/img/earth.jpg");
 // console.log('texture',texture)
 
 class EarthMaterial extends CustomShaderMaterial {
   constructor() {
     super({
-        baseMaterial: THREE.MeshBasicMaterial,
-        color:'blue',
-        uniforms:{
-            ...uniforms,
-            tex:{value:texture}
-        },
-        vertexShader:vs,
-        fragmentShader:fs
+      baseMaterial: THREE.MeshBasicMaterial,
+      color: "blue",
+      uniforms: {
+        ...uniforms,
+        tex: { value: texture },
+      },
+      vertexShader: vs,
+      fragmentShader: fs,
     });
   }
 }
 extend({ EarthMaterial });
 
+class TrailLinerMaterial extends CustomShaderMaterial {
+  constructor(trailRatio, trailLength) {
+    super({
+      baseMaterial: THREE.LineDashedMaterial,
+      uniforms: {
+        actionRatio: { value: trailRatio },
+        lineLength: { value: trailLength },
+      },
+      linewidth: 1,
+      scale: 1,
+      dashSize: 3,
+      gapSize: 1,
+      fragmentShader: linnerFS,
+    });
+  }
+}
+extend({ TrailLinerMaterial });
+
 function SbpkEarth() {
-  //   console.log("geometrys", makeGlobeOfPoints());
-//   const texture=useTexture('/img/earth.jpg')
-  const geometrys=mergeBufferGeometries(makeGlobeOfPoints());
-  console.log('geometrys',geometrys)
+  const earthRef = useRef();
+  const geometrys = mergeBufferGeometries(makeGlobeOfPoints());
+
+  const maxImactAmount = 10;
+  const impacts = [];
+  const trails = [0, 1, 2];
+  for (let i = 0; i < maxImactAmount; i++) {
+    impacts.push({
+      impactPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
+      impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),
+      impactRatio: { value: 0 },
+      trailRatio: { value: 0 },
+      trailLength: { value: 0 },
+    });
+  }
+
+  const pts = new Array(100 * 3).fill(0);
+
+  const points = [];
+  points.push(new THREE.Vector3(-1, 0, 0));
+  points.push(new THREE.Vector3(0, 0, 0));
+  points.push(new THREE.Vector3(1, 0, 0));
+  const linerGeometry = new THREE.BufferGeometry().setFromPoints(points);
+
+  // useFrame((state, delta) => {
+  //   if (earthRef.current) {
+  //     earthRef.current.rotation.y += delta;
+  //   }
+  // });
 
   return (
     <>
-      <mesh geometry={geometrys}>
+      <mesh ref={earthRef} geometry={geometrys}>
         {/* <sphereGeometry></sphereGeometry> */}
         <earthMaterial />
+        {trails.map((item, index) => (
+          <line key={index} position-y={item} geometry={linerGeometry}>
+            <trailLinerMaterial/>
+          </line>
+        ))}
       </mesh>
     </>
   );
@@ -91,12 +142,12 @@ function makeGlobeOfPoints() {
    * 设置经纬度初始值
    */
   let longitude = 0;
-  let latitude = 1 - (latitudeStep / 2); //设置为接近于1.靠近北极作为初始值。这里减去步长，避免北极点的点的重合
+  let latitude = 1 - latitudeStep / 2; //设置为接近于1.靠近北极作为初始值。这里减去步长，避免北极点的点的重合
 
   for (let i = 0; i < count; i++) {
     // 当前纬度角对应的圆面的半径
     const r = Math.sqrt(1 - latitude * latitude);
-    const p=new THREE.Vector3();
+    const p = new THREE.Vector3();
     p.set(
       Math.cos(longitude) * r,
       latitude,
@@ -115,7 +166,7 @@ function makeGlobeOfPoints() {
     // if(isNaN(p.x)){
     //   debugger
     // }
-    geometry.translate(p.x,p.y,p.z);
+    geometry.translate(p.x, p.y, p.z);
 
     //每一个平面作为一个粒子，四个顶点，重复四次
     const centers = [
@@ -157,4 +208,8 @@ function makeGlobeOfPoints() {
     geometrys.push(geometry);
   }
   return geometrys;
+}
+
+function setPath(line, startPoint, endPoint, peakHeight) {
+  const position = line.geometry.attributes;
 }
