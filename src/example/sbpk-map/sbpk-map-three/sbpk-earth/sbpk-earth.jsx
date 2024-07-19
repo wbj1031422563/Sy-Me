@@ -16,6 +16,7 @@ import linnerVs from "./shader/liner/liner.vs.glsl";
 import * as THREE from "three";
 import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 import { useEffect, useRef, useState } from "react";
+import TWEEN from '@tweenjs/tween.js';
 const params = {
   colors: { base: "#f9f002", gradInner: "#8ae66e", gradOuter: "#03c03c" },
 };
@@ -79,6 +80,7 @@ const maxImactAmount = 10;
 function SbpkEarth() {
   const earthRef = useRef();
   const linerRefs = useRef([]);
+  const [tweens, setTweens] = useState([]);
   /**
    * 初始化飞行线与冲击波数组
    */
@@ -96,6 +98,7 @@ function SbpkEarth() {
         trailRatio: { value: 0 },
         trailLength: { value: 0 },
         linerGeometry: null,
+        runTween: null
       });
       list[i].linerGeometry = new THREE.BufferGeometry().setFromPoints(
         setPath(list[i].impactPosition, list[i].prevPosition, 1)
@@ -128,7 +131,7 @@ function SbpkEarth() {
   // }
   useEffect(() => {
     if (linerRefs.current) {
-      linerRefs.current.forEach(item=>{
+      linerRefs.current.forEach(item => {
         /**
          * .computeLineDistances () : this
             计算LineDashedMaterial所需的距离的值的数组。 对于几何体中的每一个顶点，这个方法计算出了当前点到线的起始点的累积长度。
@@ -136,18 +139,41 @@ function SbpkEarth() {
         item.computeLineDistances();
         item.geometry.attributes.lineDistance.needsUpdate = true;
       })
-      setImpacts(impacts.map((item,index)=>{
+      setImpacts(() => impacts.map((item, index) => {
         //记录飞行线长度
-        item.trailLength.value=linerRefs.current[index].geometry.attributes.lineDistance.array[99]
+        item.trailLength.value = linerRefs.current[index].geometry.attributes.lineDistance.array[99]
         return item
       }))
+
+      setImpacts(() => impacts.map((item, index) => {
+        // console.log('item.trailLength.value',item.trailLength.value)
+        item.runTween=()=>{
+          const len=item.trailLength.value;
+          const speed=3;
+          const dur=len/speed;
+          let tweenTrail = new TWEEN.Tween({value: 0})
+          .to({value: 1}, dur * 3000)
+          .onUpdate( val => {
+            // item.trailRatio = val.value;
+            linerRefs.current[index].material.uniforms.actionRatio.value = val.value;
+            // console.log('tween',val.value)
+          });
+          tweenTrail.start();
+        }
+        item.runTween();
+        return item
+      }))
+
+
     }
   }, []);
 
   useFrame((state, delta) => {
     if (earthRef.current) {
-      earthRef.current.rotation.y += delta;
+        // earthRef.current.rotation.y += delta;
     }
+    TWEEN.update();
+    // if()
   });
 
   return (
@@ -161,7 +187,7 @@ function SbpkEarth() {
             key={index}
             geometry={item.linerGeometry}
           >
-            <trailLinerMaterial />
+            <trailLinerMaterial args={[item.trailRatio,item.trailLength]}/>
           </line>
         ))}
       </mesh>
@@ -274,7 +300,7 @@ function makeGlobeOfPoints() {
 function setPath(startPoint, endPoint, peakHeight, cycles) {
   const points = [];
   // let pos = l.geometry.attributes.position;
-  let division = 100*3-1;
+  let division = 100 * 3 - 1;
   let cycle = cycles || 1;
   let peak = peakHeight || 1;
   let radius = startPoint.length();

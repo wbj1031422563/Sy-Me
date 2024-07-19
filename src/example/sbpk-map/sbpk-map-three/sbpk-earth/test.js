@@ -92,7 +92,7 @@ export default class EarthDigital extends React.Component {
         impactRatio: 0,
         prevPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
         trailRatio: { value: 0 },
-        trailLength: { value: 0 }
+        trailLength: { value: 0 },
       });
       makeTrail(i);
     }
