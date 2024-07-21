@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-19 01:17:20
+ * @LastEditTime: 2024-07-21 19:22:19
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -12,13 +12,19 @@ import { extend, useFrame } from "@react-three/fiber";
 import vs from "./shader/vs.glsl";
 import fs from "./shader/fs.glsl";
 import linnerFS from "./shader/liner/liner.fs.glsl";
-import linnerVs from "./shader/liner/liner.vs.glsl";
 import * as THREE from "three";
 import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 import { useEffect, useRef, useState } from "react";
-import TWEEN from '@tweenjs/tween.js';
+import TWEEN from "@tweenjs/tween.js";
+import { useControls } from "leva";
+import GUI from "lil-gui";
 const params = {
-  colors: { base: "#f9f002", gradInner: "#8ae66e", gradOuter: "#03c03c" },
+  colors: {
+    base: "red",
+    gradInner: "#8ae66e",
+    gradOuter: "#03c03c",
+    lineColor: 0xff0000,
+  },
 };
 const uniforms = {
   // impacts: { value: impacts },
@@ -36,16 +42,24 @@ const uniforms = {
   gradOuter: { value: new THREE.Color(params.colors.gradOuter) },
 };
 const texture = new THREE.TextureLoader().load("/img/earth.jpg");
-// console.log('texture',texture)
 
 class EarthMaterial extends CustomShaderMaterial {
-  constructor() {
+  constructor(impacts) {
     super({
       baseMaterial: THREE.MeshBasicMaterial,
       color: "blue",
       uniforms: {
         ...uniforms,
         tex: { value: texture },
+        baseColor: { value: new THREE.Color(0x0ad7e6) },
+        impactPositionList: {
+          value: impacts.map((item) => item.impactPosition),
+        },
+        impactMaxRadiusList: {
+          value: impacts.map((item) => item.impactMaxRadius),
+        },
+        impactRatioList: { value: impacts.map((item) => item.impactRatio) },
+        test3: { value: [0.5] },
       },
       vertexShader: vs,
       fragmentShader: fs,
@@ -64,12 +78,20 @@ class TrailLinerMaterial extends CustomShaderMaterial {
       uniforms: {
         actionRatio: { value: trailRatio },
         lineLength: { value: trailLength },
+        lineColor: { value: new THREE.Color(0x0b49ad) },
       },
       linewidth: 1,
       scale: 1,
       dashSize: 3,
       gapSize: 1,
-      fragmentShader: linnerFS,
+      // fragmentShader: linnerFS,
+      transparent: true,
+      onBeforeCompile: (shader) => {
+        // shader.uniforms.actionRatio = trailRatio;
+        // shader.uniforms.lineLength = trailLength;
+        shader.fragmentShader = linnerFS;
+        // console.log("shader", shader.fragmentShader);
+      },
     });
     // console.log("material执行");
   }
@@ -78,6 +100,11 @@ extend({ TrailLinerMaterial });
 
 const maxImactAmount = 10;
 function SbpkEarth() {
+  // const [color, set, get] = useControls(() => ({
+  //   color: { a: 0.4, b: 125, g: 106, r: 200 },
+  //   username: 'Mario',
+  // }));
+
   const earthRef = useRef();
   const linerRefs = useRef([]);
   const [tweens, setTweens] = useState([]);
@@ -98,7 +125,7 @@ function SbpkEarth() {
         trailRatio: { value: 0 },
         trailLength: { value: 0 },
         linerGeometry: null,
-        runTween: null
+        runTween: null,
       });
       list[i].linerGeometry = new THREE.BufferGeometry().setFromPoints(
         setPath(list[i].impactPosition, list[i].prevPosition, 1)
@@ -107,70 +134,106 @@ function SbpkEarth() {
     return list;
   });
   const geometrys = mergeBufferGeometries(makeGlobeOfPoints());
-
-  // const maxImactAmount = 10;
-  // const impacts = [];
-  // const trails = [0];
-  // for (let i = 0; i < maxImactAmount; i++) {
-  //   impacts.push({
-  //     impactPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
-  //     impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),
-  //     impactRatio: 0,
-  //     prevPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
-  //     trailRatio: { value: 0 },
-  //     trailLength: { value: 0 },
-  //     linerGeometry:null
-  //   });
-  //   impacts[i].linerGeometry=new THREE.BufferGeometry().setFromPoints(
-  //     setPath(
-  //       impacts[i].impactPosition,
-  //       impacts[i].prevPosition,
-  //       1
-  //     )
-  //   );
-  // }
   useEffect(() => {
     if (linerRefs.current) {
-      linerRefs.current.forEach(item => {
+      linerRefs.current.forEach((item) => {
         /**
          * .computeLineDistances () : this
             计算LineDashedMaterial所需的距离的值的数组。 对于几何体中的每一个顶点，这个方法计算出了当前点到线的起始点的累积长度。
          */
         item.computeLineDistances();
         item.geometry.attributes.lineDistance.needsUpdate = true;
-      })
-      setImpacts(() => impacts.map((item, index) => {
-        //记录飞行线长度
-        item.trailLength.value = linerRefs.current[index].geometry.attributes.lineDistance.array[99]
-        return item
-      }))
+        // console.log('geometry-attributes',item.geometry.attributes)
+      });
+      setImpacts(() =>
+        impacts.map((item, index) => {
+          //记录飞行线长度,获取飞行线的总长度，传入shader
+          item.trailLength.value =
+            linerRefs.current[
+              index
+            ].geometry.attributes.lineDistance.array[299];
+          linerRefs.current[index].material.uniforms.lineLength.value =
+            item.trailLength.value;
+          return item;
+        })
+      );
 
-      setImpacts(() => impacts.map((item, index) => {
-        // console.log('item.trailLength.value',item.trailLength.value)
-        item.runTween=()=>{
-          const len=item.trailLength.value;
-          const speed=3;
-          const dur=len/speed;
-          let tweenTrail = new TWEEN.Tween({value: 0})
-          .to({value: 1}, dur * 3000)
-          .onUpdate( val => {
-            // item.trailRatio = val.value;
-            linerRefs.current[index].material.uniforms.actionRatio.value = val.value;
-            // console.log('tween',val.value)
-          });
-          tweenTrail.start();
-        }
-        item.runTween();
-        return item
-      }))
+      setImpacts(() =>
+        impacts.map((item, index) => {
+          // console.log('item.trailLength.value',item.trailLength.value)
+          item.runTween = () => {
+            const len = item.trailLength.value;
+            const speed = 3;
+            const dur = len / speed;
+            let tweenTrail = new TWEEN.Tween({ value: 0 })
+              .to({ value: 1 }, dur * 1000)
+              .onUpdate((val) => {
+                linerRefs.current[index].material.uniforms.actionRatio.value =
+                  val.value;
+              });
+            let tweenImpact = new TWEEN.Tween({ value: 0 })
+              .to({ value: 1 }, THREE.MathUtils.randInt(2500, 5000))
+              .onUpdate((val) => {
+                // item.impactRatio=val;
+                earthRef.current.material.uniforms.impactRatioList.value[
+                  index
+                ] = val.value;
+              })
+              .onComplete(() => {
+                item.prevPosition.copy(impacts[index].impactPosition);
+                item.impactPosition.random().subScalar(0.5).setLength(5);
 
+                linerRefs.current[index].geometry =
+                  new THREE.BufferGeometry().setFromPoints(
+                    setPath(item.impactPosition, item.prevPosition, 1)
+                  );
+                linerRefs.current[index].computeLineDistances();
+                linerRefs.current[
+                  index
+                ].geometry.attributes.lineDistance.needsUpdate = true;
+                linerRefs.current[index].material.uniforms.lineLength.value =
+                  linerRefs.current[
+                    index
+                  ].geometry.attributes.lineDistance.array[299];
 
+                earthRef.current.material.uniforms.impactMaxRadiusList.value[
+                  index
+                ] = 5 * THREE.MathUtils.randFloat(0.5, 0.75);
+
+                // tweenTrail.start();
+                // tweenTrail.start();
+                const len =
+                  linerRefs.current[index].geometry.attributes.lineDistance
+                    .array[299];
+                const speed = 3;
+                const dur = len / speed;
+                const newTweenTrail = new TWEEN.Tween({ value: 0 })
+                  .to({ value: 1 }, dur * 1000)
+                  .onUpdate((val) => {
+                    linerRefs.current[
+                      index
+                    ].material.uniforms.actionRatio.value = val.value;
+                  });
+                newTweenTrail.chain(tweenImpact);
+                newTweenTrail.start();
+              });
+
+            tweenTrail.chain(tweenImpact);
+            tweenTrail.start();
+            // setTimeout(() => {
+            //   tweenTrail.start();
+            // }, 1500);
+          };
+          item.runTween();
+          return item;
+        })
+      );
     }
   }, []);
 
   useFrame((state, delta) => {
     if (earthRef.current) {
-        // earthRef.current.rotation.y += delta;
+      earthRef.current.rotation.y += delta * 0.25;
     }
     TWEEN.update();
     // if()
@@ -180,14 +243,14 @@ function SbpkEarth() {
     <>
       <mesh ref={earthRef} geometry={geometrys}>
         {/* <sphereGeometry></sphereGeometry> */}
-        <earthMaterial />
+        <earthMaterial args={[impacts]} />
         {impacts.map((item, index) => (
           <line
             ref={(ref) => (linerRefs.current[index] = ref)}
             key={index}
             geometry={item.linerGeometry}
           >
-            <trailLinerMaterial args={[item.trailRatio,item.trailLength]}/>
+            <trailLinerMaterial args={[item.trailRatio, item.trailLength]} />
           </line>
         ))}
       </mesh>
@@ -288,14 +351,13 @@ function makeGlobeOfPoints() {
   return geometrys;
 }
 
-
 /**生成飞行线曲线的函数
- * 
- * @param {开始位置} startPoint 
- * @param {结束位置} endPoint 
- * @param {飞行线高度} peakHeight 
- * @param {*} cycles 
- * @returns 
+ *
+ * @param {开始位置} startPoint
+ * @param {结束位置} endPoint
+ * @param {飞行线高度} peakHeight
+ * @param {*} cycles
+ * @returns
  */
 function setPath(startPoint, endPoint, peakHeight, cycles) {
   const points = [];
@@ -343,10 +405,3 @@ function setPath(startPoint, endPoint, peakHeight, cycles) {
   return points;
 }
 
-// function makeTrail(i, impacts) {
-//   const linerPonits = new Array(100 * 3).fill(0);
-//   const linerGeometry = new THREE.BufferGeometry();
-//   //通过点队列设置该 BufferGeometry 的 attribute
-//   linerGeometry.setFromPoints(linerPonits);
-//   setPath(linerGeometry);
-// }
