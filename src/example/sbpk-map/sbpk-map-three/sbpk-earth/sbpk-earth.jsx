@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-21 19:22:19
+ * @LastEditTime: 2024-07-21 22:18:08
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -199,6 +199,9 @@ function SbpkEarth() {
                 earthRef.current.material.uniforms.impactMaxRadiusList.value[
                   index
                 ] = 5 * THREE.MathUtils.randFloat(0.5, 0.75);
+                earthRef.current.material.uniforms.impactPositionList.value[
+                  index
+                ] = item.prevPosition;
 
                 // tweenTrail.start();
                 // tweenTrail.start();
@@ -241,19 +244,31 @@ function SbpkEarth() {
 
   return (
     <>
-      <mesh ref={earthRef} geometry={geometrys}>
-        {/* <sphereGeometry></sphereGeometry> */}
-        <earthMaterial args={[impacts]} />
-        {impacts.map((item, index) => (
-          <line
-            ref={(ref) => (linerRefs.current[index] = ref)}
-            key={index}
-            geometry={item.linerGeometry}
-          >
-            <trailLinerMaterial args={[item.trailRatio, item.trailLength]} />
-          </line>
-        ))}
-      </mesh>
+      <group>
+        <mesh ref={earthRef} geometry={geometrys}>
+          <earthMaterial args={[impacts]} />
+          {impacts.map((item, index) => (
+            <line
+              ref={(ref) => (linerRefs.current[index] = ref)}
+              key={index}
+              geometry={item.linerGeometry}
+            >
+              <trailLinerMaterial args={[item.trailRatio, item.trailLength]} />
+            </line>
+          ))}
+        </mesh>
+        {/* 射线捕获的目标 */}
+        <mesh
+          visible={false}
+          scale={[5.01, 5.01, 5.01]}
+          onClick={() => {
+            console.log("地球被点击了");
+          }}
+        >
+          <sphereGeometry />
+          <meshBasicMaterial />
+        </mesh>
+      </group>
     </>
   );
 }
@@ -404,4 +419,3 @@ function setPath(startPoint, endPoint, peakHeight, cycles) {
   // l.material.dashSize = 3;
   return points;
 }
-
