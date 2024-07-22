@@ -18,96 +18,16 @@ import { useEffect, useRef, useState } from "react";
 import TWEEN from "@tweenjs/tween.js";
 import { useControls } from "leva";
 import GUI from "lil-gui";
-const params = {
-  colors: {
-    base: "red",
-    gradInner: "#8ae66e",
-    gradOuter: "#03c03c",
-    lineColor: 0xff0000,
-  },
-};
-const uniforms = {
-  // impacts: { value: impacts },
-  // 陆地色块大小
-  maxSize: { value: 0.04 },
-  // 海洋色块大小
-  minSize: { value: 0.025 },
-  // 冲击波高度
-  waveHeight: { value: 0.1 },
-  // 冲击波范围
-  scaling: { value: 1 },
-  // 冲击波径向渐变内侧颜色
-  gradInner: { value: new THREE.Color(params.colors.gradInner) },
-  // 冲击波径向渐变外侧颜色
-  gradOuter: { value: new THREE.Color(params.colors.gradOuter) },
-};
-const texture = new THREE.TextureLoader().load("/img/earth.jpg");
+import EarthMaterial from "./material/earthMaterial";
+import TrailLinerMaterial from "./material/trailLinerMaterial";
 
-class EarthMaterial extends CustomShaderMaterial {
-  constructor(impacts) {
-    super({
-      baseMaterial: THREE.MeshBasicMaterial,
-      color: "blue",
-      uniforms: {
-        ...uniforms,
-        tex: { value: texture },
-        baseColor: { value: new THREE.Color(0x0ad7e6) },
-        impactPositionList: {
-          value: impacts.map((item) => item.impactPosition),
-        },
-        impactMaxRadiusList: {
-          value: impacts.map((item) => item.impactMaxRadius),
-        },
-        impactRatioList: { value: impacts.map((item) => item.impactRatio) },
-        test3: { value: [0.5] },
-      },
-      vertexShader: vs,
-      fragmentShader: fs,
-    });
-  }
-}
 extend({ EarthMaterial });
-
-class TrailLinerMaterial extends CustomShaderMaterial {
-  constructor(trailRatio, trailLength) {
-    super({
-      /**
-       * 虚线材质
-       */
-      baseMaterial: THREE.LineDashedMaterial,
-      uniforms: {
-        actionRatio: { value: trailRatio },
-        lineLength: { value: trailLength },
-        lineColor: { value: new THREE.Color(0x0b49ad) },
-      },
-      linewidth: 1,
-      scale: 1,
-      dashSize: 3,
-      gapSize: 1,
-      // fragmentShader: linnerFS,
-      transparent: true,
-      onBeforeCompile: (shader) => {
-        // shader.uniforms.actionRatio = trailRatio;
-        // shader.uniforms.lineLength = trailLength;
-        shader.fragmentShader = linnerFS;
-        // console.log("shader", shader.fragmentShader);
-      },
-    });
-    // console.log("material执行");
-  }
-}
 extend({ TrailLinerMaterial });
 
 const maxImactAmount = 10;
 function SbpkEarth() {
-  // const [color, set, get] = useControls(() => ({
-  //   color: { a: 0.4, b: 125, g: 106, r: 200 },
-  //   username: 'Mario',
-  // }));
-
   const earthRef = useRef();
   const linerRefs = useRef([]);
-  const [tweens, setTweens] = useState([]);
   /**
    * 初始化飞行线与冲击波数组
    */
@@ -118,14 +38,14 @@ function SbpkEarth() {
         impactPosition: new THREE.Vector3()
           .random()
           .subScalar(0.5)
-          .setLength(5),
-        impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),
-        impactRatio: 0,
+          .setLength(5),// 冲击波的随机起点
+        impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),// 冲击波的随机最大半径
+        impactRatio: 0,// 冲击波的动画step控制量
         prevPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
-        trailRatio: { value: 0 },
-        trailLength: { value: 0 },
+        trailRatio: { value: 0 },//飞线动画step控制量
+        trailLength: { value: 0 },//飞线长度
         linerGeometry: null,
-        runTween: null,
+        runTween: null,//飞线动画函数
       });
       list[i].linerGeometry = new THREE.BufferGeometry().setFromPoints(
         setPath(list[i].impactPosition, list[i].prevPosition, 1)
@@ -133,6 +53,7 @@ function SbpkEarth() {
     }
     return list;
   });
+  //合并几何体
   const geometrys = mergeBufferGeometries(makeGlobeOfPoints());
   useEffect(() => {
     if (linerRefs.current) {
@@ -143,11 +64,11 @@ function SbpkEarth() {
          */
         item.computeLineDistances();
         item.geometry.attributes.lineDistance.needsUpdate = true;
-        // console.log('geometry-attributes',item.geometry.attributes)
       });
       setImpacts(() =>
         impacts.map((item, index) => {
           //记录飞行线长度,获取飞行线的总长度，传入shader
+          //每条飞线有100个点。299=100*3-1
           item.trailLength.value =
             linerRefs.current[
               index
@@ -162,8 +83,12 @@ function SbpkEarth() {
         impacts.map((item, index) => {
           // console.log('item.trailLength.value',item.trailLength.value)
           item.runTween = () => {
+            /**
+             * 飞线动画
+             */
             const len = item.trailLength.value;
             const speed = 3;
+            // 确保飞线的运动速度恒定
             const dur = len / speed;
             let tweenTrail = new TWEEN.Tween({ value: 0 })
               .to({ value: 1 }, dur * 1000)
@@ -171,6 +96,9 @@ function SbpkEarth() {
                 linerRefs.current[index].material.uniforms.actionRatio.value =
                   val.value;
               });
+            /**
+             * 冲击波动画
+             */
             let tweenImpact = new TWEEN.Tween({ value: 0 })
               .to({ value: 1 }, THREE.MathUtils.randInt(2500, 5000))
               .onUpdate((val) => {
@@ -181,12 +109,15 @@ function SbpkEarth() {
               })
               .onComplete(() => {
                 item.prevPosition.copy(impacts[index].impactPosition);
+                //在球面上随机生成冲击波的起点
                 item.impactPosition.random().subScalar(0.5).setLength(5);
 
+                //重新生成飞线的几何体
                 linerRefs.current[index].geometry =
                   new THREE.BufferGeometry().setFromPoints(
                     setPath(item.impactPosition, item.prevPosition, 1)
                   );
+                //重新计算飞线长度并传入shader中
                 linerRefs.current[index].computeLineDistances();
                 linerRefs.current[
                   index
@@ -195,7 +126,8 @@ function SbpkEarth() {
                   linerRefs.current[
                     index
                   ].geometry.attributes.lineDistance.array[299];
-
+                
+                //重新生成冲击波的最大半径和位置，将飞线的落地点作为冲击波的起点中心，随机生成冲击波动画半径
                 earthRef.current.material.uniforms.impactMaxRadiusList.value[
                   index
                 ] = 5 * THREE.MathUtils.randFloat(0.5, 0.75);
@@ -203,8 +135,8 @@ function SbpkEarth() {
                   index
                 ] = item.prevPosition;
 
-                // tweenTrail.start();
-                // tweenTrail.start();
+
+                //冲击波动画完成后，重新生成飞线动画
                 const len =
                   linerRefs.current[index].geometry.attributes.lineDistance
                     .array[299];
@@ -217,15 +149,14 @@ function SbpkEarth() {
                       index
                     ].material.uniforms.actionRatio.value = val.value;
                   });
+                
+                //再次链接冲击波动画，实现循环
                 newTweenTrail.chain(tweenImpact);
                 newTweenTrail.start();
               });
 
             tweenTrail.chain(tweenImpact);
             tweenTrail.start();
-            // setTimeout(() => {
-            //   tweenTrail.start();
-            // }, 1500);
           };
           item.runTween();
           return item;
@@ -409,13 +340,7 @@ function setPath(startPoint, endPoint, peakHeight, cycles) {
     v3Inter.addVectors(v3Major, v3Minor);
     let newLength = (v3Inter.length() - radius) * peakRatio + radius;
     vFinal.copy(v3Inter).setLength(newLength);
-    // pos.setXYZ(i, vFinal.x, vFinal.y, vFinal.z);
     points.push(new THREE.Vector3(vFinal.x, vFinal.y, vFinal.z));
   }
-  // pos.needsUpdate = true;
-  // l.computeLineDistances();
-  // l.geometry.attributes.lineDistance.needsUpdate = true;
-  // impacts[l.userData.idx].trailLength.value = l.geometry.attributes.lineDistance.array[99];
-  // l.material.dashSize = 3;
   return points;
 }

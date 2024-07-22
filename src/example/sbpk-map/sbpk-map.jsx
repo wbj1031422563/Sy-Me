@@ -8,7 +8,7 @@
  */
 import SbpkEchart from "./sbpk-echart/sbpk-echart.jsx";
 import SbpkMapThree from "./sbpk-map-three/sbpk-map-three.jsx";
-
+import "./sbpk-map.less";
 function SbpkMap() {
   return (
     <>

@@ -1,3 +1,9 @@
+/**
+这部分shader是根据 node_modules\three\src\renderers\shaders\ShaderLib\linedashed.glsl.js
+ 中的选线材质进行，修改而实现的
+*/
+
+
 uniform float actionRatio;
 uniform float lineLength;
 uniform vec3 lineColor;
@@ -15,10 +21,9 @@ varying float vLineDistance;
 
 void main() {
 	#include <clipping_planes_fragment>
-
-  float halfDash = dashSize * 0.5;
-  float currPos = (lineLength + dashSize) * actionRatio;
-  float d = (vLineDistance + halfDash) - currPos;
+  float halfDash = dashSize * 0.5;//虚线长度的一半
+  float currPos = (lineLength + dashSize) * actionRatio;//当前位置,actionRatio为动画step的值
+  float d = (vLineDistance + halfDash) - currPos;//
   if (abs(d) > halfDash ) discard;
 
   float grad = ((vLineDistance + halfDash) - (currPos - halfDash)) / halfDash;
