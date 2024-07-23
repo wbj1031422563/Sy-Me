@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import * as echarts from "echarts";
 import "./sbpk-echart.less";
 import SbpkLeftOne from "./sbpk-left-one/sbpk-left-one";
+import SbpkRightOne from "./sbpk-right-one/sbpk-right-one";
 function SbpkEchart() {
   const chartRef = useRef(null);
   const [time, setTime] = useState(new Date());
@@ -40,7 +41,9 @@ function SbpkEchart() {
         <div className="sbpk-echarts-left">
             <SbpkLeftOne/>
         </div>
-        <div className="sbpk-echarts-right"> </div>
+        <div className="sbpk-echarts-right">
+            <SbpkRightOne/>
+           </div>
       </div>
     </div>
   );

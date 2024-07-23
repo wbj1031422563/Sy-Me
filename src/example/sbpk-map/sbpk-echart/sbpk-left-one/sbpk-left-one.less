@@ -1,4 +1,6 @@
 .sbpk-left-one {
+  background-color: rgb(12, 77, 116);
+  clip-path: polygon(0px 25px, 26px 0px, calc(60% - 25px) 0px, 60% 25px, 100% 25px, 100% calc(100% - 10px), calc(100% - 15px) calc(100% - 10px), calc(80% - 10px) calc(100% - 10px), calc(80% - 15px) 100%, 80px calc(100% - 0px), 65px calc(100% - 15px), 0% calc(100% - 15px));
   padding: 15px;
   &-header {
     color: #61f8f7;
@@ -32,69 +34,6 @@
     font-size: 16px;
   }
 
-  .music{
-    width: 100%;
-    height: 80px;
-    .item {
-      position: absolute;
-      width: 8px;
-      height: 100%;
-      border-radius: 6px;
-      background-color: #1f94ea;
-    .one {
-        height: 18px;
-        transform: translateX(-60px);
-        animation: radius-animation .3s ease;
-    }
-    .two {
-        height: 53px;
-        transform: translateX(-40px);
-        animation: radius-animation .6s ease;
-    }
-    .three {
-        height: 36px;
-        transform: translateX(-20px);
-        animation: radius-animation .57s ease;
-    }
-     .four {
-        height: 70px;
-        transform: translateX(0);
-        animation: radius-animation .52s ease;
-    }
 
-    .five {
-        height: 30px;
-        transform: translateX(20px);
-        animation: radius-animation .4s ease;
-    }
-
-    .six {
-        height: 40px;
-        transform: translateX(40px);
-        animation: radius-animation .3s ease;
-    }
-    .seven {
-        height: 50px;
-        transform: translateX(60px);
-        animation: radius-animation .7s ease;
-    }
-    .item {
-      animation-iteration-count: infinite;
-      -webkit-animation-iteration-count: infinite;
-      animation-direction: alternate;
-      -webkit-animation-direction: alternate; 
- }
-
-
-  }  
-
-  }
-  @keyframes radius-animation {
-    100% {
-        height: 10px;
-        border-radius: 50%;
-        filter: contrast(2);
-    }
-}
 
 }

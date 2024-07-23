@@ -1,0 +1,54 @@
+
+.sbpk-right-one{
+    padding: 10px 20px ;
+    position: relative;
+    width: 100%;
+    min-height: 300px;
+    background-color: rgb(12, 77, 116);
+    clip-path: polygon(0px 25px, 26px 0px, calc(60% - 25px) 0px, 60% 25px, 100% 25px, 100% calc(100% - 10px), calc(100% - 15px) calc(100% - 10px), calc(80% - 10px) calc(100% - 10px), calc(80% - 15px) 100%, 80px calc(100% - 0px), 65px calc(100% - 15px), 0% calc(100% - 15px));
+    
+    &-header{
+        position: absolute;
+        left: 8%;
+        top: 2%;
+    }
+    &-body{
+        padding-top: 3rem;
+    }
+    &-item{
+        height: 3rem;
+        line-height: 3rem;
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        // border-bottom:1px solid;
+        // border-image: linear-gradient(to right, black 50%, rgba(255, 255, 255, 0) 0%);
+        // border-image-slice: 1;
+        // border-image-width: 10px; /* 控制虚线边框中破折号的长度 */    
+    }
+    &-item:last-child{
+        margin-bottom: 1rem;
+    }
+    .line{
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        height: 1px;
+        // height: 100%;
+        background-image: linear-gradient(to right, #909399 0%, #909399 80%, transparent 50%);
+        background-size: 3% 100%;
+        background-repeat: repeat-x
+    }
+    .right-container{
+        display: flex;
+    }
+    .right-text{
+        display: flex;
+        align-items: flex-end;
+        font-size: 12px;
+        margin-left: 10px;
+        span{
+            line-height: 24px;
+        }
+    }
+}
