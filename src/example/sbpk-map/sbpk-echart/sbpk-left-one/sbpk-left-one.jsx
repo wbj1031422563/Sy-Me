@@ -13,6 +13,7 @@ var zongjine = [2600, 1100, 4200, 40,];
 var xingm = [ "一般事件","较大事件","重大事件",  "特别重大事件"];
 import * as echarts from "echarts";
 import { useEffect, useState, useRef } from "react";
+import { getData } from "../../service";
 import "./sbpk-left-one.less";
 function SbpkLeftOne() {
   const chartRef = useRef(null);
@@ -179,6 +180,10 @@ function SbpkLeftOne() {
     };
     chartInstance.setOption(option);
   }, []);
+  useEffect(()=>{
+    getData().then(res=>{
+    })
+  },[])
   return (
     <div className="sbpk-left-one">
       <div className="sbpk-left-one-header">
