@@ -188,14 +188,27 @@ function SbpkEarth() {
 
 
     // var coords = [-122.4194, 37.7749]; // 经纬度坐标
-    
+
     let china = geo.features[0].geometry.coordinates[0][0]
-    china.forEach(item => {
+    const chianBorde=china.map(item=>{
       const latlong = [item[0],  item[1]]; // 经纬度坐标
       const [x, y] = aProjection(latlong);
-      console.log('x,y',[x, y])
+      return [x, y]
     })
-
+    const shape=new THREE.Shape();
+    chianBorde.forEach((item,index)=>{
+      if(index===0){
+        shape.moveTo(item[0],item[1])
+      }else{
+        shape.lineTo(item[0],item[1])
+      }
+    })
+    const geometry = new THREE.ExtrudeGeometry(shape,{
+      depth: 10,
+      bevelEnabled:false
+    });
+    // debugger
+    chinaBorderRefs.current.geometry=geometry;
   });
 
 
@@ -226,9 +239,9 @@ function SbpkEarth() {
           <sphereGeometry />
           <meshBasicMaterial />
         </mesh> */}
-        <lineSegments ref={chinaBorderRefs}>
-          <lineBasicMaterial color={'red'} />
-        </lineSegments>
+        <mesh scale={[0.05,0.05,0.05]} ref={chinaBorderRefs}>
+          <meshBasicMaterial color={'red'}/>
+        </mesh>
 
       </group>
     </>
