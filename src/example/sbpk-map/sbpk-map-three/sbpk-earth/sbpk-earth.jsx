@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-21 22:18:08
+ * @LastEditTime: 2024-07-26 00:01:17
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -34,33 +34,32 @@ function SbpkEarth() {
   /**
    * 初始化飞行线与冲击波数组
    */
-  // const [impacts, setImpacts] = useState(() => {
-  //   const list = [];
-  //   for (let i = 0; i < maxImactAmount; i++) {
-  //     list.push({
-  //       impactPosition: new THREE.Vector3()
-  //         .random()
-  //         .subScalar(0.5)
-  //         .setLength(5),// 冲击波的随机起点
-  //       impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),// 冲击波的随机最大半径
-  //       impactRatio: 0,// 冲击波的动画step控制量
-  //       prevPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
-  //       trailRatio: { value: 0 },//飞线动画step控制量
-  //       trailLength: { value: 0 },//飞线长度
-  //       linerGeometry: null,
-  //       runTween: null,//飞线动画函数
-  //     });
-  //     list[i].linerGeometry = new THREE.BufferGeometry().setFromPoints(
-  //       setPath(list[i].impactPosition, list[i].prevPosition, 1)
-  //     );
-  //   }
-  //   return list;
-  // });
-  //合并几何体
-  // const geometrys = mergeBufferGeometries(makeGlobeOfPoints());
+  const [impacts, setImpacts] = useState(() => {
+    const list = [];
+    for (let i = 0; i < maxImactAmount; i++) {
+      list.push({
+        impactPosition: new THREE.Vector3()
+          .random()
+          .subScalar(0.5)
+          .setLength(5),// 冲击波的随机起点
+        impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),// 冲击波的随机最大半径
+        impactRatio: 0,// 冲击波的动画step控制量
+        prevPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
+        trailRatio: { value: 0 },//飞线动画step控制量
+        trailLength: { value: 0 },//飞线长度
+        linerGeometry: null,
+        runTween: null,//飞线动画函数
+      });
+      list[i].linerGeometry = new THREE.BufferGeometry().setFromPoints(
+        setPath(list[i].impactPosition, list[i].prevPosition, 1)
+      );
+    }
+    return list;
+  });
+  // 合并几何体
+  const geometrys = mergeBufferGeometries(makeGlobeOfPoints());
   useEffect(() => {
     if (linerRefs.current && linerRefs.current.length > 0) {
-      debugger
       linerRefs.current.forEach((item) => {
         /**
          * .computeLineDistances () : this
@@ -139,7 +138,6 @@ function SbpkEarth() {
                   index
                 ] = item.prevPosition;
 
-
                 //冲击波动画完成后，重新生成飞线动画
                 const len =
                   linerRefs.current[index].geometry.attributes.lineDistance
@@ -173,50 +171,73 @@ function SbpkEarth() {
     // if (earthRef.current) {
     //   earthRef.current.rotation.y += delta * 0.25;
     // }
-    // TWEEN.update();
+    TWEEN.update();
   });
   const fileLoader = new THREE.FileLoader();
-  fileLoader.load('https://geo.datav.aliyun.com/areas_v3/bound/100000.json', (geoJson) => {
-    // console.log('geoJson',JSON.parse(geoJson))
-    const geo = JSON.parse(geoJson)
+  fileLoader.load(
+    "https://geo.datav.aliyun.com/areas_v3/bound/100000.json",
+    (geoJson) => {
+      console.log("geoJson", JSON.parse(geoJson));
+      const geo = JSON.parse(geoJson);
 
-    const aProjection = d3.geoMercator();
-    // // aProjection.scale(10)
-    // const latlong = [124.515065, 40.22019]; // 经纬度坐标
-    // const [x, y] = aProjection(latlong);
-    // debugger
+      const aProjection = d3.geoMercator().scale(100).translate([0, 0]);
+      const bProjection = d3.geoOrthographic().scale(50).translate([0, 0]);
+      let china = geo.features[0].geometry.coordinates;
+      china = china.slice(0, 15);
+      // const geometries = [];
+      const shapes = [];
+      /**
+       * 中国地图GeoJson转化为平面
+       */
+      china.forEach((item1) => {
+        const shape = new THREE.Shape();
+        item1[0].forEach((item2, index) => {
+          const [x, y] = aProjection(item2);
+          if (index === 0) {
+            shape.moveTo(x, -y);
+          } else {
+            shape.lineTo(x, -y);
+          }
+        });
+        shapes.push(shape);
+      });
+      // chinaBorderRefs.current.geometry = new THREE.ExtrudeGeometry(shapes, {
+      //   depth: 0.05,
+      //   bevelEnabled: false,
+      // });
 
-
-    // var coords = [-122.4194, 37.7749]; // 经纬度坐标
-
-    let china = geo.features[0].geometry.coordinates[0][0]
-    const chianBorde=china.map(item=>{
-      const latlong = [item[0],  item[1]]; // 经纬度坐标
-      const [x, y] = aProjection(latlong);
-      return [x, y]
-    })
-    const shape=new THREE.Shape();
-    chianBorde.forEach((item,index)=>{
-      if(index===0){
-        shape.moveTo(item[0],item[1])
-      }else{
-        shape.lineTo(item[0],item[1])
-      }
-    })
-    const geometry = new THREE.ExtrudeGeometry(shape,{
-      depth: 10,
-      bevelEnabled:false
-    });
-    // debugger
-    chinaBorderRefs.current.geometry=geometry;
-  });
-
-
-
+      /**
+       * 中国地图转球面坐标系
+       */
+      const sphGeometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(5384 * 3);
+      const radius = 5; //球坐标系半径
+      let positionIndex = 0;
+      china.forEach((item1) => {
+        item1[0].forEach(([lon, lat], index) => {
+          const spherical = new THREE.Spherical(
+            radius,
+            THREE.MathUtils.degToRad(90 - lat),
+            THREE.MathUtils.degToRad(lon)
+          );
+          const position = new THREE.Vector3().setFromSpherical(spherical);
+          positions[positionIndex] = position.x;
+          positions[positionIndex + 1] = position.y;
+          positions[positionIndex + 2] = position.z;
+          positionIndex += 3;
+        });
+      });
+      sphGeometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(positions, 3)
+      );
+      chinaBorderRefs.current.geometry = sphGeometry;
+    }
+  );
   return (
     <>
       <group>
-        {/* <mesh ref={earthRef} geometry={geometrys}>
+        <mesh ref={earthRef} geometry={geometrys}>
           <earthMaterial args={[impacts]} />
           {impacts.map((item, index) => (
             <line
@@ -227,7 +248,7 @@ function SbpkEarth() {
               <trailLinerMaterial args={[item.trailRatio, item.trailLength]} />
             </line>
           ))}
-        </mesh> */}
+        </mesh>
         {/* 射线捕获的目标 */}
         {/* <mesh
           visible={true}
@@ -239,10 +260,19 @@ function SbpkEarth() {
           <sphereGeometry />
           <meshBasicMaterial />
         </mesh> */}
-        <mesh scale={[0.05,0.05,0.05]} ref={chinaBorderRefs}>
-          <meshBasicMaterial color={'red'}/>
-        </mesh>
 
+        {/* 平面中国地图 */}
+        {/* <mesh ref={chinaBorderRefs} scale={[0.05, 0.05, 1]}>
+          <meshBasicMaterial color={"red"} />
+        </mesh> */}
+        {/* 球坐标系中国地图 */}
+        <points ref={chinaBorderRefs}>
+          <pointsMaterial color={"red"} size={0.05} />
+        </points>
+        {/* <mesh scale={[5, 5, 5]}>
+          <sphereGeometry />
+          <meshBasicMaterial wireframe={true} />
+        </mesh> */}
       </group>
     </>
   );

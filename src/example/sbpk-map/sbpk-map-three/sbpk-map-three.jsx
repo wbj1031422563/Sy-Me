@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:16:27
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-21 22:20:29
+ * @LastEditTime: 2024-07-25 21:57:48
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-map-three.jsx
  * @Description:
  */
@@ -32,7 +32,7 @@ function SbpkMapThree() {
         <color args={["#031D34"]} attach={"background"} />
         <SbpkBaseEnv />
         <SbpkEarth />
-        {/* <axesHelper /> */}
+        <axesHelper />
       </Canvas>
     </div>
   );
