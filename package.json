@@ -16,6 +16,7 @@
     "@react-three/rapier": "^1.4.0",
     "@tweenjs/tween.js": "^23.1.2",
     "axios": "^1.7.2",
+    "d3": "^7.9.0",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
     "less": "^4.2.0",
