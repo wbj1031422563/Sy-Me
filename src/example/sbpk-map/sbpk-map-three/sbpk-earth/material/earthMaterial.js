@@ -45,6 +45,8 @@ const params = {
             value: impacts.map((item) => item.impactMaxRadius),
           },
           impactRatioList: { value: impacts.map((item) => item.impactRatio) },
+          mapTexture: { value: texture },
+          numCoords:{value:5384},
           test3: { value: [0.5] },
         },
         vertexShader: vs,

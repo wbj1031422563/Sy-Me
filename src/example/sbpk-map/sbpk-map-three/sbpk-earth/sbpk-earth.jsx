@@ -183,7 +183,7 @@ function SbpkEarth() {
       const aProjection = d3.geoMercator().scale(100).translate([0, 0]);
       const bProjection = d3.geoOrthographic().scale(50).translate([0, 0]);
       let china = geo.features[0].geometry.coordinates;
-      china = china.slice(0, 15);
+      china = china.slice(0, 1);
       // const geometries = [];
       const shapes = [];
       /**
@@ -211,6 +211,7 @@ function SbpkEarth() {
        */
       const sphGeometry = new THREE.BufferGeometry();
       const positions = new Float32Array(5384 * 3);
+      const  mapCoordinates=[];
       const radius = 5; //球坐标系半径
       let positionIndex = 0;
       china.forEach((item1) => {
@@ -225,6 +226,8 @@ function SbpkEarth() {
           positions[positionIndex + 1] = position.y;
           positions[positionIndex + 2] = position.z;
           positionIndex += 3;
+
+          mapCoordinates.push(position);
         });
       });
       sphGeometry.setAttribute(
@@ -232,6 +235,12 @@ function SbpkEarth() {
         new THREE.BufferAttribute(positions, 3)
       );
       chinaBorderRefs.current.geometry = sphGeometry;
+
+      // 创建纹理
+      const texture = new THREE.DataTexture(positions, positions.length/3, 1, THREE.RGBFormat, THREE.FloatType);
+      texture.needsUpdate = true;
+      // console.log('positions/3',positions.length/3)
+      earthRef.current.material.uniforms.mapTexture.value=texture;
     }
   );
   return (

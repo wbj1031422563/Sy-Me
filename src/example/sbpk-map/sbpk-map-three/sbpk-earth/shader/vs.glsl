@@ -17,6 +17,32 @@ uniform float impactRatioList[10];
 varying float vFinalStep;
 varying float vMap;
 varying vec2 vUv;
+varying float inside;
+
+uniform sampler2D mapTexture;
+  uniform int numCoords;
+  
+  vec2 projectTo2D(vec3 point) {
+    float latitude = asin(point.y / 5.0); // 假设半径为5
+    float longitude = atan(point.z, point.x);
+    return vec2(longitude, latitude);
+  }
+  
+  bool isPointInPolygon(vec2 point, int numPoints) {
+    bool inside = false;
+    vec2 prevCoord = texture2D(mapTexture, vec2(0.0, 0.0)).xy;
+    vec2 currCoord;
+
+    for (int i = 1; i < numPoints; i++) {
+      currCoord = texture2D(mapTexture, vec2(float(i) / float(numPoints), 0.0)).xy;
+      if (((currCoord.y > point.y) != (prevCoord.y > point.y)) &&
+          (point.x < (prevCoord.x - currCoord.x) * (point.y - currCoord.y) / (prevCoord.y - currCoord.y) + currCoord.x)) {
+        inside = !inside;
+      }
+      prevCoord = currCoord;
+    }
+    return inside;
+  }
 
 void main(){
     
@@ -53,5 +79,51 @@ void main(){
     
     // vec3 p=(position-center)*pSize+center;
     // p+=normal;
+
+
+
     csm_Position=myTransformed;// scale on wave
+
+
+    /**
+    判断是否在中国区域内
+    */
+
+     vec2 point2D = projectTo2D(center);
+     inside = 0.0;
+    //  if(isPointInPolygon(point2D, numCoords)){
+    //     inside = 1.0;
+    //  }else{
+    //     inside = 0.0;
+    //  }
+    // bool insideRegion = isPointInPolygon(point2D, numCoords);
 }
+
+
+/*改进后的判断算法
+*/
+
+
+// bool isPointInPolygon(vec2 point, int numPoints) {
+//     bool inside = false;
+//     vec2 prevCoord = texture2D(mapCoordinates, vec2(0.0, 0.0)).xy;
+//     vec2 currCoord;
+
+//     for (int i = 1; i < numPoints; i++) {
+//         currCoord = texture2D(mapCoordinates, vec2(float(i) / float(numPoints), 0.0)).xy;
+//         if (((currCoord.y > point.y) != (prevCoord.y > point.y)) &&
+//             (point.x < (prevCoord.x - currCoord.x) * (point.y - currCoord.y) / (prevCoord.y - currCoord.y) + currCoord.x)) {
+//             inside = !inside;
+//         }
+//         prevCoord = currCoord;
+//     }
+
+//     // 最后一个点和第一个点之间的边
+//     currCoord = texture2D(mapCoordinates, vec2(0.0, 0.0)).xy;
+//     if (((currCoord.y > point.y) != (prevCoord.y > point.y)) &&
+//         (point.x < (prevCoord.x - currCoord.x) * (point.y - currCoord.y) / (prevCoord.y - currCoord.y) + currCoord.x)) {
+//         inside = !inside;
+//     }
+
+//     return inside;
+// }

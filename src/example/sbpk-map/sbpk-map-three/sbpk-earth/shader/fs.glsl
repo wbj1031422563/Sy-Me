@@ -5,6 +5,7 @@ uniform vec3 baseColor;
 varying float vFinalStep;
 varying float vMap;
 varying vec2 vUv;
+varying float inside;
 
 uniform float test3[1];
 
@@ -23,7 +24,10 @@ void main(){
     vec3 diffuseMap=myColor*((vMap>.5)?.5:1.);
     vec3 col=mix(diffuseMap,grad,vFinalStep);// color on wave
 
-
+    // if(inside>0.0){
+    //     col=vec3(1.0,0.0,0.0);
+    // }
+    col=mix(col,vec3(1.0,0.0,0.0),inside);
     
     csm_DiffuseColor=vec4(col,1.0);
     
