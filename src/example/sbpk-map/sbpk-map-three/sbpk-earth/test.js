@@ -509,3 +509,12 @@ export default class EarthDigital extends React.Component {
     )
   }
 }
+
+
+theta (θ): 通常表示经度（Longitude）。它的取值范围是 [0, 2π)，表示绕Y轴的旋转角度。
+  phi (φ): 通常表示纬度（Latitude）。它的取值范围是 [0, π]，表示从顶部（北极）到底部（南极）的角度。
+
+
+  7，8 台湾
+  0,1 中国
+  6,7 海南

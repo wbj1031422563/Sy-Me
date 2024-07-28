@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-28 11:17:01
+ * @LastEditTime: 2024-07-28 15:33:30
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -20,7 +20,7 @@ import { useControls } from "leva";
 import GUI from "lil-gui";
 import EarthMaterial from "./material/earthMaterial";
 import TrailLinerMaterial from "./material/trailLinerMaterial";
-// import chinaMap from './map.json';
+import chinaMap from "./map.json";
 
 import * as d3 from "d3";
 
@@ -42,14 +42,14 @@ function SbpkEarth() {
         impactPosition: new THREE.Vector3()
           .random()
           .subScalar(0.5)
-          .setLength(5),// 冲击波的随机起点
-        impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75),// 冲击波的随机最大半径
-        impactRatio: 0,// 冲击波的动画step控制量
+          .setLength(5), // 冲击波的随机起点
+        impactMaxRadius: 5 * THREE.MathUtils.randFloat(0.5, 0.75), // 冲击波的随机最大半径
+        impactRatio: 0, // 冲击波的动画step控制量
         prevPosition: new THREE.Vector3().random().subScalar(0.5).setLength(5),
-        trailRatio: { value: 0 },//飞线动画step控制量
-        trailLength: { value: 0 },//飞线长度
+        trailRatio: { value: 0 }, //飞线动画step控制量
+        trailLength: { value: 0 }, //飞线长度
         linerGeometry: null,
-        runTween: null,//飞线动画函数
+        runTween: null, //飞线动画函数
       });
       list[i].linerGeometry = new THREE.BufferGeometry().setFromPoints(
         setPath(list[i].impactPosition, list[i].prevPosition, 1)
@@ -59,6 +59,7 @@ function SbpkEarth() {
   });
   // 合并几何体
   const geometrys = mergeBufferGeometries(makeGlobeOfPoints());
+  console.log(geometrys);
   useEffect(() => {
     if (linerRefs.current && linerRefs.current.length > 0) {
       linerRefs.current.forEach((item) => {
@@ -168,10 +169,6 @@ function SbpkEarth() {
     }
   }, []);
 
-  useEffect(()=>{
-    makeGlobeOfPointsChina();
-  },[])
-
   useFrame((state, delta) => {
     // if (earthRef.current) {
     //   earthRef.current.rotation.y += delta * 0.25;
@@ -216,7 +213,7 @@ function SbpkEarth() {
        */
       const sphGeometry = new THREE.BufferGeometry();
       const positions = new Float32Array(5384 * 3);
-      const  mapCoordinates=[];
+      const mapCoordinates = [];
       const radius = 5; //球坐标系半径
       let positionIndex = 0;
       china.forEach((item1) => {
@@ -226,6 +223,10 @@ function SbpkEarth() {
             THREE.MathUtils.degToRad(90 - lat),
             THREE.MathUtils.degToRad(lon)
           );
+          // const uv = new THREE.Vector2(
+          //   (spherical.theta + Math.PI) / (2 * Math.PI),
+          //   1 - spherical.phi / Math.PI
+          // );
           const position = new THREE.Vector3().setFromSpherical(spherical);
           positions[positionIndex] = position.x;
           positions[positionIndex + 1] = position.y;
@@ -239,13 +240,19 @@ function SbpkEarth() {
         "position",
         new THREE.BufferAttribute(positions, 3)
       );
-      chinaBorderRefs.current.geometry = sphGeometry;
+      // chinaBorderRefs.current.geometry = sphGeometry;
 
       // 创建纹理
-      const texture = new THREE.DataTexture(positions, positions.length/3, 1, THREE.RGBFormat, THREE.FloatType);
+      const texture = new THREE.DataTexture(
+        positions,
+        positions.length / 3,
+        1,
+        THREE.RGBFormat,
+        THREE.FloatType
+      );
       texture.needsUpdate = true;
       // console.log('positions/3',positions.length/3)
-      earthRef.current.material.uniforms.mapTexture.value=texture;
+      earthRef.current.material.uniforms.mapTexture.value = texture;
     }
   );
   return (
@@ -264,16 +271,16 @@ function SbpkEarth() {
           ))}
         </mesh>
         {/* 射线捕获的目标 */}
-        {/* <mesh
+        <mesh
           visible={true}
-          scale={[5.01, 5.01, 5.01]}
-          onClick={() => {
-            console.log("地球被点击了");
+          scale={[5.02, 5.02, 5.02]}
+          onClick={(e) => {
+            handleClickChina(e.uv);
           }}
         >
           <sphereGeometry />
           <meshBasicMaterial />
-        </mesh> */}
+        </mesh>
 
         {/* 平面中国地图 */}
         {/* <mesh ref={chinaBorderRefs} scale={[0.05, 0.05, 1]}>
@@ -294,6 +301,9 @@ function SbpkEarth() {
 export default SbpkEarth;
 
 function makeGlobeOfPoints() {
+  const   China = getPlane();
+  const HaiNan = getPlane("海南");
+  const TaiWan = getPlane("台湾");
   let dummyObj = new THREE.Object3D();
   let sph = new THREE.Spherical();
   // THREE.BoxGeometry
@@ -328,6 +338,8 @@ function makeGlobeOfPoints() {
       latitude,
       -Math.sin(longitude) * r
     ).multiplyScalar(sphRadius);
+    const offsetLatitude = latitude - latitudeStep * 0;
+    const offsetLongitude = longitude + longitudeStep * 155.1178;
     longitude += longitudeStep;
     latitude -= latitudeStep;
     sph.setFromVector3(p);
@@ -358,12 +370,45 @@ function makeGlobeOfPoints() {
       p.y,
       p.z,
     ];
-    const aInside=[
-      0,
-      0,
-      0,
-      0,
-    ]
+    const offsetP = new THREE.Vector3();
+    offsetP
+      .set(
+        Math.cos(offsetLongitude) * r,
+        offsetLatitude,
+        -Math.sin(offsetLatitude) * r
+      )
+      .multiplyScalar(sphRadius);
+
+    // const insideFlag=makeGlobeOfPointsChina(
+    //   offsetP,
+    //   normal,
+    //   planePoint,
+    //   projectedPolygon
+    // );
+    // const { normal, planePoint, projectedPolygon } = getPlane();
+    let inside1 = makeGlobeOfPointsChina(
+      offsetP,
+      China.normal,
+      China.planePoint,
+      China.projectedPolygon
+    );
+    // const HaiNan = getPlane("海南");
+    let insideHaiNan = makeGlobeOfPointsChina(
+      offsetP,
+      HaiNan.normal,
+      HaiNan.planePoint,
+     HaiNan.projectedPolygon
+    );
+
+    // const TaiWan = getPlane("台湾");
+    let insideTaiWan = makeGlobeOfPointsChina(
+      offsetP,
+      TaiWan.normal,
+      TaiWan.planePoint,
+      TaiWan.projectedPolygon
+    );
+    inside1=inside1||insideHaiNan||insideTaiWan;
+    let inside2 = false;
 
     /**
      * u 计算:
@@ -379,6 +424,11 @@ function makeGlobeOfPoints() {
       (sph.theta + Math.PI) / (2 * Math.PI),
       1 - sph.phi / Math.PI
     );
+    if (inside1 && uv.x > 0.5) {
+      inside2 = true;
+    }
+    const inside = inside1 && inside2;
+    const aInside = [inside, inside, inside, inside];
     //每个粒子是一个PlaneGeometry，它有四个顶点，所以这里重复的4次
     let uvs = [uv.x, uv.y, uv.x, uv.y, uv.x, uv.y, uv.x, uv.y];
     geometry.setAttribute(
@@ -392,6 +442,11 @@ function makeGlobeOfPoints() {
     geometry.setAttribute("baseUv", new THREE.Float32BufferAttribute(uvs, 2));
     geometrys.push(geometry);
   }
+  // 37668
+  // console.log('lonRange',lonRange.length)
+  // console.log('max',Math.max(...lonRange))
+  // console.log('min',Math.min(...lonRange))
+  // console.log('mid',getMedian(lonRange))
   return geometrys;
 }
 
@@ -443,65 +498,50 @@ function setPath(startPoint, endPoint, peakHeight, cycles) {
   return points;
 }
 
-
- function makeGlobeOfPointsChina() {
-  const fileLoader = new THREE.FileLoader();
-  fileLoader.load(
-    "https://geo.datav.aliyun.com/areas_v3/bound/100000.json",
-    (geoJson) => {
-      const geo = JSON.parse(geoJson);
-      let china = geo.features[0].geometry.coordinates;
-      china = china.slice(0, 1);
-      const polygon = [];
-      /**
-       * 中国地图转球面坐标系
-       */
-      china.forEach((item1) => {
-        item1[0].forEach(([lon, lat], index) => {
-          polygon.push(latLonToCartesian(lat, lon, 5));
-        });
-      });
-      console.log('polygon', polygon);
-
-      const points = [];
-      // let sph = new THREE.Spherical();
-      let count = 75000; // 点的数量
-      let sphRadius = 5; // 球体半径
-      const longitudeStep = Math.PI * (3 - Math.sqrt(5));
-      const latitudeStep = 2 / count;
-      let longitude = 0;
-      let latitude = 1 - latitudeStep / 2; // 设置为接近于1.靠近北极作为初始值。这里减去步长，避免北极点的点的重合
-      for (let i = 0; i < count; i++) {
-        // 当前纬度角对应的圆面的半径
-        const r = Math.sqrt(1 - latitude * latitude);
-        const p = new THREE.Vector3();
-        p.set(
-          Math.cos(longitude) * r,
-          latitude,
-          -Math.sin(longitude) * r
-        ).multiplyScalar(sphRadius);
-        longitude += longitudeStep;
-        latitude -= latitudeStep;
-        points.push(p);
-      }
-      console.log('points', points);
-
-      const mid=Math.floor((polygon.length-1)*0.5)
-      const normal = computeNormal(polygon[0], polygon[1], polygon[2]);
-      const planePoint = polygon[0];
-      const projectedPolygon = polygon.map(p => projectToPlane(p, normal, planePoint));
-      const res = points.filter((point,index) => {
-        const projectedPoint = projectToPlane(point, normal, planePoint);
-        return isPointInPolygon(projectedPoint, projectedPolygon);
-      });
-
-      // points.forEach(item=>{})
-      console.log('total', count);
-      console.log('inside', res.length);
-    }
-  );
+function makeGlobeOfPointsChina(ponit, normal, planePoint, projectedPolygon) {
+  const projectedPoint = projectToPlane(ponit, normal, planePoint);
+  return isPointInPolygon(projectedPoint, projectedPolygon);
 }
+function getPlane(type="中国") {
+  const geo = chinaMap;
+  let china = geo.features[0].geometry.coordinates;
+  switch (type) {
+    case "中国":
+      china = china.slice(0, 1);
+      break;
+    case "海南":
+      china = china.slice(6, 7);
+      break;
+    case "台湾":
+      china = china.slice(7, 8);
+      break;
 
+    default:
+      break;
+  }
+  const polygon = [];
+  /**
+   * 中国地图转球面坐标系
+   */
+  china.forEach((item1) => {
+    item1[0].forEach(([lon, lat], index) => {
+      polygon.push(latLonToCartesian(lat, lon, 5));
+    });
+  });
+  // console.log("polygon", polygon);
+  const end = polygon.length - 1;
+  const mid = Math.floor(end * 0.5);
+  const normal = computeNormal(polygon[0], polygon[mid], polygon[end]);
+  const planePoint = polygon[mid];
+  const projectedPolygon = polygon.map((p) =>
+    projectToPlane(p, normal, planePoint)
+  );
+  return {
+    normal,
+    planePoint,
+    projectedPolygon,
+  };
+}
 
 function computeNormal(p1, p2, p3) {
   const u = new THREE.Vector3().subVectors(p2, p1);
@@ -525,11 +565,18 @@ function latLonToCartesian(lat, lon, radius) {
 function isPointInPolygon(point, polygon) {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].x, yi = polygon[i].y;
-    const xj = polygon[j].x, yj = polygon[j].y;
+    const xi = polygon[i].x,
+      yi = polygon[i].y;
+    const xj = polygon[j].x,
+      yj = polygon[j].y;
 
-    const intersect = ((yi > point.y) !== (yj > point.y)) &&
-      (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    // const intersect =
+    //   yi > point.y !== yj > point.y &&
+    //   point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+    // if (intersect) inside = !inside;
+    const intersect =
+      yi > point.y !== yj > point.y &&
+      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
     if (intersect) inside = !inside;
   }
   return inside;
@@ -538,4 +585,31 @@ function projectToPlane(point, planeNormal, planePoint) {
   const toPoint = new THREE.Vector3().subVectors(point, planePoint);
   const distance = toPoint.dot(planeNormal);
   return point.clone().sub(planeNormal.clone().multiplyScalar(distance));
+}
+
+
+// UV 转球面坐标
+function uvToSpherical(u, v) {
+  const theta = u * 2 * Math.PI - Math.PI;
+  const phi = Math.PI * (1 - v);
+  return { theta, phi };
+}
+function handleClickChina(uv){
+  const {theta, phi }=uvToSpherical(uv.x,uv.y)
+  const   China = getPlane();
+  const ponit=new THREE.Vector3();
+  ponit.setFromSphericalCoords(5,phi,theta);
+
+  const inside=makeGlobeOfPointsChina(
+    ponit,
+    China.normal,
+    China.planePoint,
+    China.projectedPolygon
+  );
+  if(inside){
+    console.log('点击到中国了')
+  }else{
+    console.log('没有点到中国')
+  }
+
 }
