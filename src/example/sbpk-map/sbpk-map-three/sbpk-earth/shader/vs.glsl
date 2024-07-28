@@ -19,6 +19,7 @@ varying float vFinalStep;
 varying float vMap;
 varying vec2 vUv;
 varying float inside;
+varying float isStart;
 
 uniform sampler2D mapTexture;
 uniform int numCoords;
@@ -71,6 +72,13 @@ void main(){
   */
   
   inside = aInside;
+
+  if(baseUv.x>0.001){
+    isStart=0.0;
+  }else{
+    isStart=1.0;
+  }
+  // isStart=baseUv.x==0.0?1.0:0.0;
 }
 
 

@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-28 15:33:30
+ * @LastEditTime: 2024-07-28 17:30:19
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -32,6 +32,7 @@ function SbpkEarth() {
   const earthRef = useRef();
   const linerRefs = useRef([]);
   const chinaBorderRefs = useRef(null);
+  const sbpkMapRef=useRef(null);
   /**
    * 初始化飞行线与冲击波数组
    */
@@ -59,7 +60,6 @@ function SbpkEarth() {
   });
   // 合并几何体
   const geometrys = mergeBufferGeometries(makeGlobeOfPoints());
-  console.log(geometrys);
   useEffect(() => {
     if (linerRefs.current && linerRefs.current.length > 0) {
       linerRefs.current.forEach((item) => {
@@ -170,16 +170,15 @@ function SbpkEarth() {
   }, []);
 
   useFrame((state, delta) => {
-    // if (earthRef.current) {
-    //   earthRef.current.rotation.y += delta * 0.25;
-    // }
+    if ( sbpkMapRef.current) {
+      sbpkMapRef.current.rotation.y += delta * 0.25;
+    }
     TWEEN.update();
   });
   const fileLoader = new THREE.FileLoader();
   fileLoader.load(
     "https://geo.datav.aliyun.com/areas_v3/bound/100000.json",
     (geoJson) => {
-      console.log("geoJson", JSON.parse(geoJson));
       const geo = JSON.parse(geoJson);
 
       const aProjection = d3.geoMercator().scale(100).translate([0, 0]);
@@ -257,7 +256,7 @@ function SbpkEarth() {
   );
   return (
     <>
-      <group>
+      <group ref={sbpkMapRef}>
         <mesh ref={earthRef} geometry={geometrys}>
           <earthMaterial args={[impacts]} />
           {impacts.map((item, index) => (
@@ -272,11 +271,12 @@ function SbpkEarth() {
         </mesh>
         {/* 射线捕获的目标 */}
         <mesh
-          visible={true}
+          visible={false}
           scale={[5.02, 5.02, 5.02]}
           onClick={(e) => {
             handleClickChina(e.uv);
           }}
+          onPointerMove={(e) => handleOver(e.uv)}
         >
           <sphereGeometry />
           <meshBasicMaterial />
@@ -339,6 +339,7 @@ function makeGlobeOfPoints() {
       -Math.sin(longitude) * r
     ).multiplyScalar(sphRadius);
     const offsetLatitude = latitude - latitudeStep * 0;
+    // 155.1178
     const offsetLongitude = longitude + longitudeStep * 155.1178;
     longitude += longitudeStep;
     latitude -= latitudeStep;
@@ -595,21 +596,60 @@ function uvToSpherical(u, v) {
   return { theta, phi };
 }
 function handleClickChina(uv){
-  const {theta, phi }=uvToSpherical(uv.x,uv.y)
+  const longitudeStep = Math.PI * (3 - Math.sqrt(5));
+  // 归一化UV坐标
+  let res=uv.x-0.75;
+
+  if(res<0){
+    res+=1;
+  }else if(res>1){
+    res-=1;
+  }
+  let {theta, phi }=uvToSpherical(res,uv.y);
+  theta=theta + longitudeStep * 155.1178;
   const   China = getPlane();
   const ponit=new THREE.Vector3();
   ponit.setFromSphericalCoords(5,phi,theta);
-
   const inside=makeGlobeOfPointsChina(
     ponit,
     China.normal,
     China.planePoint,
     China.projectedPolygon
   );
-  if(inside){
+  if(inside&&res>0.5){
     console.log('点击到中国了')
   }else{
     console.log('没有点到中国')
+  }
+
+}
+function handleOver(uv){
+  const longitudeStep = Math.PI * (3 - Math.sqrt(5));
+  // 归一化UV坐标
+  let res=uv.x-0.75;
+
+  if(res<0){
+    res+=1;
+  }else if(res>1){
+    res-=1;
+  }
+  let {theta, phi }=uvToSpherical(res,uv.y);
+  theta=theta + longitudeStep * 155.1178;
+  const   China = getPlane();
+  const ponit=new THREE.Vector3();
+  ponit.setFromSphericalCoords(5,phi,theta);
+  const inside=makeGlobeOfPointsChina(
+    ponit,
+    China.normal,
+    China.planePoint,
+    China.projectedPolygon
+  );
+  if(inside&&res>0.5){
+    console.log('悬浮到中国了')
+    document.body.style.cursor = 'pointer';
+  }else{
+    document.body.style.cursor = 'default';
+    console.log('没有悬浮到中国')
   }
 
 }
