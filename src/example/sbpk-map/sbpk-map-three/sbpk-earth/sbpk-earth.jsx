@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-26 00:01:17
+ * @LastEditTime: 2024-07-28 11:17:01
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -20,6 +20,7 @@ import { useControls } from "leva";
 import GUI from "lil-gui";
 import EarthMaterial from "./material/earthMaterial";
 import TrailLinerMaterial from "./material/trailLinerMaterial";
+// import chinaMap from './map.json';
 
 import * as d3 from "d3";
 
@@ -166,6 +167,10 @@ function SbpkEarth() {
       );
     }
   }, []);
+
+  useEffect(()=>{
+    makeGlobeOfPointsChina();
+  },[])
 
   useFrame((state, delta) => {
     // if (earthRef.current) {
@@ -353,6 +358,12 @@ function makeGlobeOfPoints() {
       p.y,
       p.z,
     ];
+    const aInside=[
+      0,
+      0,
+      0,
+      0,
+    ]
 
     /**
      * u 计算:
@@ -373,6 +384,10 @@ function makeGlobeOfPoints() {
     geometry.setAttribute(
       "center",
       new THREE.Float32BufferAttribute(centers, 3)
+    );
+    geometry.setAttribute(
+      "aInside",
+      new THREE.Float32BufferAttribute(aInside, 1)
     );
     geometry.setAttribute("baseUv", new THREE.Float32BufferAttribute(uvs, 2));
     geometrys.push(geometry);
@@ -426,4 +441,101 @@ function setPath(startPoint, endPoint, peakHeight, cycles) {
     points.push(new THREE.Vector3(vFinal.x, vFinal.y, vFinal.z));
   }
   return points;
+}
+
+
+ function makeGlobeOfPointsChina() {
+  const fileLoader = new THREE.FileLoader();
+  fileLoader.load(
+    "https://geo.datav.aliyun.com/areas_v3/bound/100000.json",
+    (geoJson) => {
+      const geo = JSON.parse(geoJson);
+      let china = geo.features[0].geometry.coordinates;
+      china = china.slice(0, 1);
+      const polygon = [];
+      /**
+       * 中国地图转球面坐标系
+       */
+      china.forEach((item1) => {
+        item1[0].forEach(([lon, lat], index) => {
+          polygon.push(latLonToCartesian(lat, lon, 5));
+        });
+      });
+      console.log('polygon', polygon);
+
+      const points = [];
+      // let sph = new THREE.Spherical();
+      let count = 75000; // 点的数量
+      let sphRadius = 5; // 球体半径
+      const longitudeStep = Math.PI * (3 - Math.sqrt(5));
+      const latitudeStep = 2 / count;
+      let longitude = 0;
+      let latitude = 1 - latitudeStep / 2; // 设置为接近于1.靠近北极作为初始值。这里减去步长，避免北极点的点的重合
+      for (let i = 0; i < count; i++) {
+        // 当前纬度角对应的圆面的半径
+        const r = Math.sqrt(1 - latitude * latitude);
+        const p = new THREE.Vector3();
+        p.set(
+          Math.cos(longitude) * r,
+          latitude,
+          -Math.sin(longitude) * r
+        ).multiplyScalar(sphRadius);
+        longitude += longitudeStep;
+        latitude -= latitudeStep;
+        points.push(p);
+      }
+      console.log('points', points);
+
+      const mid=Math.floor((polygon.length-1)*0.5)
+      const normal = computeNormal(polygon[0], polygon[1], polygon[2]);
+      const planePoint = polygon[0];
+      const projectedPolygon = polygon.map(p => projectToPlane(p, normal, planePoint));
+      const res = points.filter((point,index) => {
+        const projectedPoint = projectToPlane(point, normal, planePoint);
+        return isPointInPolygon(projectedPoint, projectedPolygon);
+      });
+
+      // points.forEach(item=>{})
+      console.log('total', count);
+      console.log('inside', res.length);
+    }
+  );
+}
+
+
+function computeNormal(p1, p2, p3) {
+  const u = new THREE.Vector3().subVectors(p2, p1);
+  const v = new THREE.Vector3().subVectors(p3, p1);
+  return new THREE.Vector3().crossVectors(u, v).normalize();
+}
+
+// 经纬度转换为笛卡尔坐标
+function latLonToCartesian(lat, lon, radius) {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+
+  const x = -(radius * Math.sin(phi) * Math.cos(theta));
+  const y = radius * Math.cos(phi);
+  const z = radius * Math.sin(phi) * Math.sin(theta);
+
+  return new THREE.Vector3(x, y, z);
+}
+
+// Ray-Casting Algorithm
+function isPointInPolygon(point, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+
+    const intersect = ((yi > point.y) !== (yj > point.y)) &&
+      (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+function projectToPlane(point, planeNormal, planePoint) {
+  const toPoint = new THREE.Vector3().subVectors(point, planePoint);
+  const distance = toPoint.dot(planeNormal);
+  return point.clone().sub(planeNormal.clone().multiplyScalar(distance));
 }
