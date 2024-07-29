@@ -500,6 +500,7 @@ function setPath(startPoint, endPoint, peakHeight, cycles) {
 }
 
 function makeGlobeOfPointsChina(ponit, normal, planePoint, projectedPolygon) {
+  //将点投影到平面上
   const projectedPoint = projectToPlane(ponit, normal, planePoint);
   return isPointInPolygon(projectedPoint, projectedPolygon);
 }
@@ -543,7 +544,9 @@ function getPlane(type="中国") {
     projectedPolygon,
   };
 }
-
+/**
+ * 计算多边形的法向量，p1,p2,p3为多边形的三个顶点，这里取得近似的法向量
+ */
 function computeNormal(p1, p2, p3) {
   const u = new THREE.Vector3().subVectors(p2, p1);
   const v = new THREE.Vector3().subVectors(p3, p1);
@@ -562,7 +565,14 @@ function latLonToCartesian(lat, lon, radius) {
   return new THREE.Vector3(x, y, z);
 }
 
-// Ray-Casting Algorithm
+// Ray-Casting Algorithm。
+//https://blog.csdn.net/zsjzliziyang/article/details/108813349
+/**
+ * 
+ * @param {点的三维坐标} point 
+ * @param {多边形} polygon 
+ * @returns 
+ */
 function isPointInPolygon(point, polygon) {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -570,11 +580,6 @@ function isPointInPolygon(point, polygon) {
       yi = polygon[i].y;
     const xj = polygon[j].x,
       yj = polygon[j].y;
-
-    // const intersect =
-    //   yi > point.y !== yj > point.y &&
-    //   point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
-    // if (intersect) inside = !inside;
     const intersect =
       yi > point.y !== yj > point.y &&
       point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
@@ -582,6 +587,13 @@ function isPointInPolygon(point, polygon) {
   }
   return inside;
 }
+/**
+ * 将点投影到平面上
+ * @param {点的三维坐标} point 
+ * @param {平面法向量} planeNormal 
+ * @param {平面参考点} planePoint 
+ * @returns 
+ */
 function projectToPlane(point, planeNormal, planePoint) {
   const toPoint = new THREE.Vector3().subVectors(point, planePoint);
   const distance = toPoint.dot(planeNormal);
@@ -597,26 +609,32 @@ function uvToSpherical(u, v) {
 }
 function handleClickChina(uv){
   const longitudeStep = Math.PI * (3 - Math.sqrt(5));
-  // 归一化UV坐标
-  let res=uv.x-0.75;
-
-  if(res<0){
-    res+=1;
-  }else if(res>1){
-    res-=1;
+  /**
+   * 调整UV坐标，事件传入的uv坐标与纹理uv坐标保持一致,这里的
+   */
+  const offset=0.75;
+  const evevtUv=new THREE.Vector2();
+  evevtUv.x=uv.x-offset;
+  if(evevtUv.x<0){
+    evevtUv.x+=1;
+  }else if(evevtUv.x>1){
+    evevtUv.x-=1;
   }
-  let {theta, phi }=uvToSpherical(res,uv.y);
-  theta=theta + longitudeStep * 155.1178;
-  const   China = getPlane();
+  evevtUv.y=uv.y;
+  //uv坐标转球坐标
+  let {theta, phi }=uvToSpherical( evevtUv.x,evevtUv.y);
+  theta=theta + longitudeStep * 155.1178;//155.1178是中国经度偏移量，确保中国在正确的位置
+  const China = getPlane();
   const ponit=new THREE.Vector3();
   ponit.setFromSphericalCoords(5,phi,theta);
+  //判断是否在中国区域内
   const inside=makeGlobeOfPointsChina(
     ponit,
     China.normal,
     China.planePoint,
     China.projectedPolygon
   );
-  if(inside&&res>0.5){
+  if(inside&&evevtUv.x>0.5){
     console.log('点击到中国了')
   }else{
     console.log('没有点到中国')

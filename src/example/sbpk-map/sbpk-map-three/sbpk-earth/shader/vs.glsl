@@ -72,13 +72,6 @@ void main(){
   */
   
   inside = aInside;
-
-  if(baseUv.x>0.001){
-    isStart=0.0;
-  }else{
-    isStart=1.0;
-  }
-  // isStart=baseUv.x==0.0?1.0:0.0;
 }
 
 

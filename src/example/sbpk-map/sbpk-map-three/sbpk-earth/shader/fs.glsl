@@ -29,7 +29,6 @@ void main(){
     //     col=vec3(1.0,0.0,0.0);
     // }
     col=mix(col,vec3(1.0,0.0,0.0),inside);
-    col=mix(col,vec3(0.0,1.0 ,0.0 ),isStart);
     
     csm_DiffuseColor=vec4(col,1.0);
     

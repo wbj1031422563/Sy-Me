@@ -32,7 +32,7 @@ function SbpkMapThree() {
         <color args={["#031D34"]} attach={"background"} />
         <SbpkBaseEnv />
         <SbpkEarth />
-        <axesHelper />
+        {/* <axesHelper /> */}
       </Canvas>
     </div>
   );
