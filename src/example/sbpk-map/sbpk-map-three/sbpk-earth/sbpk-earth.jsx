@@ -2,24 +2,20 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-28 17:30:19
+ * @LastEditTime: 2024-07-29 21:08:47
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
-import { useTexture } from "@react-three/drei";
-import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import { extend, useFrame } from "@react-three/fiber";
-import vs from "./shader/vs.glsl";
-import fs from "./shader/fs.glsl";
-import linnerFS from "./shader/liner/liner.fs.glsl";
 import * as THREE from "three";
 import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 import { useEffect, useRef, useState } from "react";
 import TWEEN from "@tweenjs/tween.js";
-import { useControls } from "leva";
-import GUI from "lil-gui";
+// import { useControls } from "leva";
+// import GUI from "lil-gui";
 import EarthMaterial from "./material/earthMaterial";
 import TrailLinerMaterial from "./material/trailLinerMaterial";
+import {SCENE_TYPE} from '../enum/scene-type.enum.js'
 import chinaMap from "./map.json";
 
 import * as d3 from "d3";
@@ -28,7 +24,7 @@ extend({ EarthMaterial });
 extend({ TrailLinerMaterial });
 
 const maxImactAmount = 10;
-function SbpkEarth() {
+function SbpkEarth({handelChangeScene}) {
   const earthRef = useRef();
   const linerRefs = useRef([]);
   const chinaBorderRefs = useRef(null);
@@ -254,6 +250,72 @@ function SbpkEarth() {
       earthRef.current.material.uniforms.mapTexture.value = texture;
     }
   );
+  const handleClickChina=(uv)=>{
+    const longitudeStep = Math.PI * (3 - Math.sqrt(5));
+    /**
+     * 调整UV坐标，事件传入的uv坐标与纹理uv坐标保持一致,这里的
+     */
+    const offset=0.75;
+    const evevtUv=new THREE.Vector2();
+    evevtUv.x=uv.x-offset;
+    if(evevtUv.x<0){
+      evevtUv.x+=1;
+    }else if(evevtUv.x>1){
+      evevtUv.x-=1;
+    }
+    evevtUv.y=uv.y;
+    //uv坐标转球坐标
+    let {theta, phi }=uvToSpherical( evevtUv.x,evevtUv.y);
+    theta=theta + longitudeStep * 155.1178;//155.1178是中国经度偏移量，确保中国在正确的位置
+    const China = getPlane();
+    const ponit=new THREE.Vector3();
+    ponit.setFromSphericalCoords(5,phi,theta);
+    //判断是否在中国区域内
+    const inside=makeGlobeOfPointsChina(
+      ponit,
+      China.normal,
+      China.planePoint,
+      China.projectedPolygon
+    );
+    if(inside&&evevtUv.x>0.5){
+      console.log('点击到中国了')
+      document.body.style.cursor = 'default';
+      handelChangeScene(SCENE_TYPE.CHINA)
+    }else{
+      console.log('没有点到中国')
+    }
+  
+  }
+  const handleOver=(uv)=>{
+    const longitudeStep = Math.PI * (3 - Math.sqrt(5));
+    // 归一化UV坐标
+    let res=uv.x-0.75;
+  
+    if(res<0){
+      res+=1;
+    }else if(res>1){
+      res-=1;
+    }
+    let {theta, phi }=uvToSpherical(res,uv.y);
+    theta=theta + longitudeStep * 155.1178;
+    const   China = getPlane();
+    const ponit=new THREE.Vector3();
+    ponit.setFromSphericalCoords(5,phi,theta);
+    const inside=makeGlobeOfPointsChina(
+      ponit,
+      China.normal,
+      China.planePoint,
+      China.projectedPolygon
+    );
+    if(inside&&res>0.5){
+      console.log('悬浮到中国了')
+      document.body.style.cursor = 'pointer';
+    }else{
+      document.body.style.cursor = 'default';
+      console.log('没有悬浮到中国')
+    }
+  
+  }
   return (
     <>
       <group ref={sbpkMapRef}>
@@ -499,6 +561,9 @@ function setPath(startPoint, endPoint, peakHeight, cycles) {
   return points;
 }
 
+/**
+ * 判断一个点是否在中国区域内部
+ */
 function makeGlobeOfPointsChina(ponit, normal, planePoint, projectedPolygon) {
   //将点投影到平面上
   const projectedPoint = projectToPlane(ponit, normal, planePoint);
@@ -606,68 +671,4 @@ function uvToSpherical(u, v) {
   const theta = u * 2 * Math.PI - Math.PI;
   const phi = Math.PI * (1 - v);
   return { theta, phi };
-}
-function handleClickChina(uv){
-  const longitudeStep = Math.PI * (3 - Math.sqrt(5));
-  /**
-   * 调整UV坐标，事件传入的uv坐标与纹理uv坐标保持一致,这里的
-   */
-  const offset=0.75;
-  const evevtUv=new THREE.Vector2();
-  evevtUv.x=uv.x-offset;
-  if(evevtUv.x<0){
-    evevtUv.x+=1;
-  }else if(evevtUv.x>1){
-    evevtUv.x-=1;
-  }
-  evevtUv.y=uv.y;
-  //uv坐标转球坐标
-  let {theta, phi }=uvToSpherical( evevtUv.x,evevtUv.y);
-  theta=theta + longitudeStep * 155.1178;//155.1178是中国经度偏移量，确保中国在正确的位置
-  const China = getPlane();
-  const ponit=new THREE.Vector3();
-  ponit.setFromSphericalCoords(5,phi,theta);
-  //判断是否在中国区域内
-  const inside=makeGlobeOfPointsChina(
-    ponit,
-    China.normal,
-    China.planePoint,
-    China.projectedPolygon
-  );
-  if(inside&&evevtUv.x>0.5){
-    console.log('点击到中国了')
-  }else{
-    console.log('没有点到中国')
-  }
-
-}
-function handleOver(uv){
-  const longitudeStep = Math.PI * (3 - Math.sqrt(5));
-  // 归一化UV坐标
-  let res=uv.x-0.75;
-
-  if(res<0){
-    res+=1;
-  }else if(res>1){
-    res-=1;
-  }
-  let {theta, phi }=uvToSpherical(res,uv.y);
-  theta=theta + longitudeStep * 155.1178;
-  const   China = getPlane();
-  const ponit=new THREE.Vector3();
-  ponit.setFromSphericalCoords(5,phi,theta);
-  const inside=makeGlobeOfPointsChina(
-    ponit,
-    China.normal,
-    China.planePoint,
-    China.projectedPolygon
-  );
-  if(inside&&res>0.5){
-    console.log('悬浮到中国了')
-    document.body.style.cursor = 'pointer';
-  }else{
-    document.body.style.cursor = 'default';
-    console.log('没有悬浮到中国')
-  }
-
 }
