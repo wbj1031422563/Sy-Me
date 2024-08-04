@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-04 15:05:55
+ * @LastEditTime: 2024-08-04 15:53:35
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -33,6 +33,7 @@ extend({ BlockMaterial });
 
 function SbpkChina() {
   const chinaRef = useRef(null);
+  const provinces=useRef([]);
   const [edge, setEdge] = useState([]);
 
   const adjustUVs = (geometry) => {
@@ -116,19 +117,27 @@ function SbpkChina() {
         // let china = geo.features[0].geometry.coordinates;
         // // let china = geo.features.map(item=>item.geometry.coordinates)
         // china = china.slice(0, 8);
-        const shapes = [];
-        const ps = geo.features.slice(0, 34);
+        const provinceList = [];
+        const ps = geo.features.slice(0, 32);
 
         ps.forEach((c) => {
-          let china = c.geometry.coordinates;
+          const province={
+            key:c.properties.adcode,
+            name:c.properties.name,
+            border:[],
+            info:c.properties
+          }
+          province.center=aProjection(c.properties.center);
+          let border = c.geometry.coordinates;
+          // let info=c.properties;
+          // console.log('china',c);
 
           /**
            * 中国地图GeoJson转化为平面
            */
-          china.forEach((item1) => {
+          border.forEach((item1) => {
             const shape = new THREE.Shape();
-            if(item1[0].length===2){
-              //
+            if (item1[0].length === 2) {
               item1.forEach((item2, index) => {
                 const [x, y] = aProjection(item2);
                 if (index === 0) {
@@ -137,7 +146,8 @@ function SbpkChina() {
                   shape.lineTo(x, -y);
                 }
               });
-            }else{
+            } else {
+              // console.log('item',item1)
               item1[0].forEach((item2, index) => {
                 const [x, y] = aProjection(item2);
                 if (index === 0) {
@@ -147,12 +157,15 @@ function SbpkChina() {
                 }
               });
             }
-            shapes.push(shape);
+            province.border.push(shape);
           });
-        });
-        console.log("shapes", shapes);
 
-        chinaRef.current.geometry = new THREE.ExtrudeGeometry(shapes, {
+          provinceList.push(province);
+        });
+        const shapes=provinceList.map(item=>item.border);
+        console.log("provinceList", provinceList);
+
+        chinaRef.current.geometry = new THREE.ExtrudeGeometry(shapes.flat(), {
           depth: 0.05,
           bevelEnabled: false,
         });
@@ -160,20 +173,23 @@ function SbpkChina() {
         chinaRef.current.geometry.rotateX(-Math.PI * 0.5);
         adjustUVs(chinaRef.current.geometry);
         addEdge(chinaRef.current);
+        console.log("chinaRef.current", chinaRef.current);
       }
     );
   }, []);
 
   return (
     <>
-      <mesh ref={chinaRef} scale={[1, 1, 1]} position={[-15, 0, 0]}>
-        {/* <meshBasicMaterial color={"red"} /> */}
-        {/* <Helper type={THREE.BoxHelper}></Helper> */}
-        <blockMaterial />
-        {edge.length > 0 && (
-          <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
-        )}
-      </mesh>
+      <group scale={[1, 1, 1]} position={[-15, 0, 0]}>
+        <mesh ref={chinaRef}>
+          {/* <meshBasicMaterial color={"red"} /> */}
+          {/* <Helper type={THREE.BoxHelper}></Helper> */}
+          <blockMaterial />
+          {edge.length > 0 && (
+            <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
+          )}
+        </mesh>
+      </group>
 
       {/* <mesh scale={[5, 5, 0.1]} rotation-x={Math.PI*0.5}>
         <boxGeometry></boxGeometry>
