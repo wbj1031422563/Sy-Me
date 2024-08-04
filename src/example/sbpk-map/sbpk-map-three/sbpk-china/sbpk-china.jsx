@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-04 13:36:39
+ * @LastEditTime: 2024-08-04 15:05:55
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -67,7 +67,7 @@ function SbpkChina() {
     // 获取 mapBlockMesh 的顶点位置
     const positions = mapBlockMesh.geometry.attributes.position.array;
     const vertexCount = mapBlockMesh.geometry.attributes.position.count;
-  
+
     // 创建用于存储线段端点的数组
     const linePoints = [];
     for (let i = 0; i < vertexCount; i++) {
@@ -76,62 +76,81 @@ function SbpkChina() {
         new THREE.Vector3(positions[index], depth, positions[index + 2])
       );
     }
-  
+
     // 创建一个 BufferGeometry 对象来生成边缘
     const bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setFromPoints(linePoints);
-  
+
     // 生成边缘几何体
     const edgesGeometry = new THREE.EdgesGeometry(bufferGeometry);
-  
+
     // 获取边缘几何体的顶点位置属性
-    const edgePositionAttribute = edgesGeometry.getAttribute('position');
+    const edgePositionAttribute = edgesGeometry.getAttribute("position");
     const edgeVertices = [];
     const edgeVertexCount = edgePositionAttribute.count;
-  
+
     // 从顶点位置属性中提取边缘顶点
     for (let i = 0; i < edgeVertexCount; i++) {
       const index = i * 3;
       edgeVertices.push([
         edgePositionAttribute.array[index],
         edgePositionAttribute.array[index + 1],
-        edgePositionAttribute.array[index + 2]
+        edgePositionAttribute.array[index + 2],
       ]);
     }
-  
+
     // 更新边缘数据状态
     setEdge(edgeVertices);
   };
-  
+
   useEffect(() => {
     const fileLoader = new THREE.FileLoader();
     fileLoader.load(
-      "https://geo.datav.aliyun.com/areas_v3/bound/100000.json",
+      "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",
       (geoJson) => {
         const geo = JSON.parse(geoJson);
-        // console.log("geo", geo);
-
+        console.log("geo", geo);
+        // 104.065735, 30.659462
         const aProjection = d3.geoMercator().scale(10).translate([0, 0]);
-        let china = geo.features[0].geometry.coordinates;
-        china = china.slice(0, 1);
-        const geometries = [];
-        const shapes = [];
 
-        /**
-         * 中国地图GeoJson转化为平面
-         */
-        china.forEach((item1) => {
-          const shape = new THREE.Shape();
-          item1[0].forEach((item2, index) => {
-            const [x, y] = aProjection(item2);
-            if (index === 0) {
-              shape.moveTo(x, -y);
-            } else {
-              shape.lineTo(x, -y);
+        // let china = geo.features[0].geometry.coordinates;
+        // // let china = geo.features.map(item=>item.geometry.coordinates)
+        // china = china.slice(0, 8);
+        const shapes = [];
+        const ps = geo.features.slice(0, 34);
+
+        ps.forEach((c) => {
+          let china = c.geometry.coordinates;
+
+          /**
+           * 中国地图GeoJson转化为平面
+           */
+          china.forEach((item1) => {
+            const shape = new THREE.Shape();
+            if(item1[0].length===2){
+              //
+              item1.forEach((item2, index) => {
+                const [x, y] = aProjection(item2);
+                if (index === 0) {
+                  shape.moveTo(x, -y);
+                } else {
+                  shape.lineTo(x, -y);
+                }
+              });
+            }else{
+              item1[0].forEach((item2, index) => {
+                const [x, y] = aProjection(item2);
+                if (index === 0) {
+                  shape.moveTo(x, -y);
+                } else {
+                  shape.lineTo(x, -y);
+                }
+              });
             }
+            shapes.push(shape);
           });
-          shapes.push(shape);
         });
+        console.log("shapes", shapes);
 
         chinaRef.current.geometry = new THREE.ExtrudeGeometry(shapes, {
           depth: 0.05,
@@ -149,17 +168,13 @@ function SbpkChina() {
     <>
       <mesh ref={chinaRef} scale={[1, 1, 1]} position={[-15, 0, 0]}>
         {/* <meshBasicMaterial color={"red"} /> */}
-        <Helper type={THREE.BoxHelper}></Helper>
+        {/* <Helper type={THREE.BoxHelper}></Helper> */}
         <blockMaterial />
         {edge.length > 0 && (
-          <Line
-            points={edge}
-            color="#66D4E5"
-            segments={true}
-            lineWidth={5}
-          />
+          <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
         )}
       </mesh>
+
       {/* <mesh scale={[5, 5, 0.1]} rotation-x={Math.PI*0.5}>
         <boxGeometry></boxGeometry>
         <blockMaterial />
