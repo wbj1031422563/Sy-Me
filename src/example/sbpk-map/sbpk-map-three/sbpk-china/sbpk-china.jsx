@@ -2,14 +2,14 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-04 11:52:36
+ * @LastEditTime: 2024-08-04 13:36:39
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
 import * as THREE from "three";
 import * as d3 from "d3";
-import { useRef } from "react";
-import { Center, Helper, shaderMaterial } from "@react-three/drei";
+import { useEffect, useRef, useState } from "react";
+import { Center, Helper, shaderMaterial, Line } from "@react-three/drei";
 import { Line2 } from "three/examples/jsm/lines/Line2";
 // import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry';
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
@@ -33,6 +33,7 @@ extend({ BlockMaterial });
 
 function SbpkChina() {
   const chinaRef = useRef(null);
+  const [edge, setEdge] = useState([]);
 
   const adjustUVs = (geometry) => {
     geometry.computeBoundingBox();
@@ -63,94 +64,86 @@ function SbpkChina() {
     color = 0x66d4e5,
     linewidth = 3
   ) => {
-    //上表面几何体
-    const pointsPositions = mapBlockMesh.geometry.attributes.position.array;
-    const count = mapBlockMesh.geometry.attributes.position.count;
-    const ponitsGeometry = new THREE.BufferGeometry();
-    const lp = [];
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      lp.push(
-        new THREE.Vector3(pointsPositions[i3], depth, pointsPositions[i3 + 2])
+    // 获取 mapBlockMesh 的顶点位置
+    const positions = mapBlockMesh.geometry.attributes.position.array;
+    const vertexCount = mapBlockMesh.geometry.attributes.position.count;
+  
+    // 创建用于存储线段端点的数组
+    const linePoints = [];
+    for (let i = 0; i < vertexCount; i++) {
+      const index = i * 3;
+      linePoints.push(
+        new THREE.Vector3(positions[index], depth, positions[index + 2])
       );
     }
-    ponitsGeometry.setFromPoints(lp);
-    // 基于地图块的上表面几何体，生成边缘几何体
-    const edges = new THREE.EdgesGeometry(ponitsGeometry);
-    const edgesMaterial = new THREE.LineBasicMaterial({
-      color: color,
-      linewidth: linewidth,
-    });
-    // edges.scale(2.0);
-    const edgesLines = new THREE.LineSegments(edges, edgesMaterial);
-    mapBlockMesh.add(edgesLines);
-  };
-
-  const fileLoader = new THREE.FileLoader();
-  fileLoader.load(
-    "https://geo.datav.aliyun.com/areas_v3/bound/100000.json",
-    (geoJson) => {
-      const geo = JSON.parse(geoJson);
-      // console.log("geo", geo);
-
-      const aProjection = d3.geoMercator().scale(10).translate([0, 0]);
-      let china = geo.features[0].geometry.coordinates;
-      china = china.slice(0, 1);
-      const geometries = [];
-      const shapes = [];
-
-      /**
-       * 中国地图GeoJson转化为平面
-       */
-      china.forEach((item1) => {
-        const shape = new THREE.Shape();
-        item1[0].forEach((item2, index) => {
-          const [x, y] = aProjection(item2);
-          if (index === 0) {
-            shape.moveTo(x, -y);
-          } else {
-            shape.lineTo(x, -y);
-          }
-        });
-        shapes.push(shape);
-      });
-
-      chinaRef.current.geometry = new THREE.ExtrudeGeometry(shapes, {
-        depth: 0.05,
-        bevelEnabled: false,
-      });
-
-      chinaRef.current.geometry.rotateX(-Math.PI * 0.5);
-      adjustUVs(chinaRef.current.geometry);
-      addEdge(chinaRef.current);
-      console.log("chinaRef.current.geometry", chinaRef.current.geometry);
-
-      // const pointsPositions = chinaRef.current.geometry.attributes.position.array;
-      // const count = chinaRef.current.geometry.attributes.position.count;
-      // const ponitsGeometry = new THREE.BufferGeometry();
-      // const lp = [];
-      // for (let i = 0; i < count; i++) {
-      //   const i3 = i * 3;
-      //   // lp[i3] = pointsPositions[i3];
-      //   // lp[i3 + 1] = 5.0;
-      //   // lp[i3 + 2] = pointsPositions[i3 + 2];
-      //   lp.push(new THREE.Vector3(
-      //     pointsPositions[i3],
-      //     0.05,
-      //     pointsPositions[i3 + 2]
-      //   ))
-      // }
-      // ponitsGeometry.setFromPoints(lp);
-      // // 2. 生成边缘几何体
-      // const edges = new THREE.EdgesGeometry(ponitsGeometry);
-      // const edgesMaterial = new THREE.LineBasicMaterial({
-      //   color:0x66D4E5,
-      //   linewidth: 3,
-      // });
-      // const edgesLines = new THREE.LineSegments(edges, edgesMaterial);
-      // chinaRef.current.add(edgesLines);
+  
+    // 创建一个 BufferGeometry 对象来生成边缘
+    const bufferGeometry = new THREE.BufferGeometry();
+    bufferGeometry.setFromPoints(linePoints);
+  
+    // 生成边缘几何体
+    const edgesGeometry = new THREE.EdgesGeometry(bufferGeometry);
+  
+    // 获取边缘几何体的顶点位置属性
+    const edgePositionAttribute = edgesGeometry.getAttribute('position');
+    const edgeVertices = [];
+    const edgeVertexCount = edgePositionAttribute.count;
+  
+    // 从顶点位置属性中提取边缘顶点
+    for (let i = 0; i < edgeVertexCount; i++) {
+      const index = i * 3;
+      edgeVertices.push([
+        edgePositionAttribute.array[index],
+        edgePositionAttribute.array[index + 1],
+        edgePositionAttribute.array[index + 2]
+      ]);
     }
-  );
+  
+    // 更新边缘数据状态
+    setEdge(edgeVertices);
+  };
+  
+  useEffect(() => {
+    const fileLoader = new THREE.FileLoader();
+    fileLoader.load(
+      "https://geo.datav.aliyun.com/areas_v3/bound/100000.json",
+      (geoJson) => {
+        const geo = JSON.parse(geoJson);
+        // console.log("geo", geo);
+
+        const aProjection = d3.geoMercator().scale(10).translate([0, 0]);
+        let china = geo.features[0].geometry.coordinates;
+        china = china.slice(0, 1);
+        const geometries = [];
+        const shapes = [];
+
+        /**
+         * 中国地图GeoJson转化为平面
+         */
+        china.forEach((item1) => {
+          const shape = new THREE.Shape();
+          item1[0].forEach((item2, index) => {
+            const [x, y] = aProjection(item2);
+            if (index === 0) {
+              shape.moveTo(x, -y);
+            } else {
+              shape.lineTo(x, -y);
+            }
+          });
+          shapes.push(shape);
+        });
+
+        chinaRef.current.geometry = new THREE.ExtrudeGeometry(shapes, {
+          depth: 0.05,
+          bevelEnabled: false,
+        });
+
+        chinaRef.current.geometry.rotateX(-Math.PI * 0.5);
+        adjustUVs(chinaRef.current.geometry);
+        addEdge(chinaRef.current);
+      }
+    );
+  }, []);
 
   return (
     <>
@@ -158,6 +151,14 @@ function SbpkChina() {
         {/* <meshBasicMaterial color={"red"} /> */}
         <Helper type={THREE.BoxHelper}></Helper>
         <blockMaterial />
+        {edge.length > 0 && (
+          <Line
+            points={edge}
+            color="#66D4E5"
+            segments={true}
+            lineWidth={5}
+          />
+        )}
       </mesh>
       {/* <mesh scale={[5, 5, 0.1]} rotation-x={Math.PI*0.5}>
         <boxGeometry></boxGeometry>
