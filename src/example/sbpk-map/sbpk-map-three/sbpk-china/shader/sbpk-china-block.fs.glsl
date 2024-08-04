@@ -27,7 +27,7 @@ void main(){
     
     float strength2=distance(vUv,vec2(.5,.5))+0.1;
     
-    float strength=strength1+strength2;
+    float strength=strength2;
     
     strength*=isTop;
     
@@ -36,9 +36,9 @@ void main(){
     strength=clamp(0.,strength,1.);
 
     color=mix(innerColor,outColor,strength);
-    if(strength>0.9999){
-        color=borderColor;
-    }
+    // if(strength>0.9999){
+    //     color=borderColor;
+    // }
     // color=color*0.8;
     
     // gl_FragColor.rgba=vec4(.5+.3*sin(vUv.yxx+time)+color,1.);

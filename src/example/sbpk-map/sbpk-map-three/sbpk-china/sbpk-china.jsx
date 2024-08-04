@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-04 10:40:52
+ * @LastEditTime: 2024-08-04 11:52:36
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -10,6 +10,9 @@ import * as THREE from "three";
 import * as d3 from "d3";
 import { useRef } from "react";
 import { Center, Helper, shaderMaterial } from "@react-three/drei";
+import { Line2 } from "three/examples/jsm/lines/Line2";
+// import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry';
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
 import { extend } from "@react-three/fiber";
 import sbpkChinaBlockVs from "./shader/sbpk-china-block.vs.glsl";
 import sbpkChinaBlockFs from "./shader/sbpk-china-block.fs.glsl";
@@ -54,6 +57,34 @@ function SbpkChina() {
     }
     geometry.setAttribute("aBaseUv", new THREE.BufferAttribute(baseUv, 2));
   };
+  const addEdge = (
+    mapBlockMesh,
+    depth = 0.05,
+    color = 0x66d4e5,
+    linewidth = 3
+  ) => {
+    //上表面几何体
+    const pointsPositions = mapBlockMesh.geometry.attributes.position.array;
+    const count = mapBlockMesh.geometry.attributes.position.count;
+    const ponitsGeometry = new THREE.BufferGeometry();
+    const lp = [];
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+      lp.push(
+        new THREE.Vector3(pointsPositions[i3], depth, pointsPositions[i3 + 2])
+      );
+    }
+    ponitsGeometry.setFromPoints(lp);
+    // 基于地图块的上表面几何体，生成边缘几何体
+    const edges = new THREE.EdgesGeometry(ponitsGeometry);
+    const edgesMaterial = new THREE.LineBasicMaterial({
+      color: color,
+      linewidth: linewidth,
+    });
+    // edges.scale(2.0);
+    const edgesLines = new THREE.LineSegments(edges, edgesMaterial);
+    mapBlockMesh.add(edgesLines);
+  };
 
   const fileLoader = new THREE.FileLoader();
   fileLoader.load(
@@ -90,38 +121,34 @@ function SbpkChina() {
       });
 
       chinaRef.current.geometry.rotateX(-Math.PI * 0.5);
-
       adjustUVs(chinaRef.current.geometry);
-      console.log("chinaRef.current", chinaRef.current);
+      addEdge(chinaRef.current);
+      console.log("chinaRef.current.geometry", chinaRef.current.geometry);
 
-      const pointsPositions = chinaRef.current.geometry.attributes.position.array;
-      const count = chinaRef.current.geometry.attributes.position.count;
-      const ponitsGeometry = new THREE.BufferGeometry();
-      const lp = [];
-      for (let i = 0; i < count; i++) {
-        const i3 = i * 3;
-        // lp[i3] = pointsPositions[i3];
-        // lp[i3 + 1] = 5.0;
-        // lp[i3 + 2] = pointsPositions[i3 + 2];
-        lp.push(new THREE.Vector3(
-          pointsPositions[i3],
-          0.05,
-          pointsPositions[i3 + 2]
-        ))
-      }
-      ponitsGeometry.setFromPoints(lp);
-      const pointsMaterial = new THREE.PointsMaterial({
-        color: '#66D4E5',
-        size:0.05,
-      });
-      const points = new THREE.Points( ponitsGeometry, pointsMaterial );
-      chinaRef.current.add(points);
-    // const line = new THREE.Mesh( geometry, material );
-
-      //todo
-      //手动计算uv,现在的uv的值都是两百多，肯定不行！！！！！！
-
-      // chinaRef.
+      // const pointsPositions = chinaRef.current.geometry.attributes.position.array;
+      // const count = chinaRef.current.geometry.attributes.position.count;
+      // const ponitsGeometry = new THREE.BufferGeometry();
+      // const lp = [];
+      // for (let i = 0; i < count; i++) {
+      //   const i3 = i * 3;
+      //   // lp[i3] = pointsPositions[i3];
+      //   // lp[i3 + 1] = 5.0;
+      //   // lp[i3 + 2] = pointsPositions[i3 + 2];
+      //   lp.push(new THREE.Vector3(
+      //     pointsPositions[i3],
+      //     0.05,
+      //     pointsPositions[i3 + 2]
+      //   ))
+      // }
+      // ponitsGeometry.setFromPoints(lp);
+      // // 2. 生成边缘几何体
+      // const edges = new THREE.EdgesGeometry(ponitsGeometry);
+      // const edgesMaterial = new THREE.LineBasicMaterial({
+      //   color:0x66D4E5,
+      //   linewidth: 3,
+      // });
+      // const edgesLines = new THREE.LineSegments(edges, edgesMaterial);
+      // chinaRef.current.add(edgesLines);
     }
   );
 
