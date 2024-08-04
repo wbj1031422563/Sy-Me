@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-04 15:53:35
+ * @LastEditTime: 2024-08-04 19:10:35
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -16,6 +16,7 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
 import { extend } from "@react-three/fiber";
 import sbpkChinaBlockVs from "./shader/sbpk-china-block.vs.glsl";
 import sbpkChinaBlockFs from "./shader/sbpk-china-block.fs.glsl";
+import SbpkChinaMapBlock from "../sbpk-china-map-block/sbpk-china-map-block";
 
 const BlockMaterial = shaderMaterial(
   {
@@ -33,7 +34,7 @@ extend({ BlockMaterial });
 
 function SbpkChina() {
   const chinaRef = useRef(null);
-  const provinces=useRef([]);
+  const [provinces,setProvinces]=useState([]);
   const [edge, setEdge] = useState([]);
 
   const adjustUVs = (geometry) => {
@@ -125,6 +126,7 @@ function SbpkChina() {
             key:c.properties.adcode,
             name:c.properties.name,
             border:[],
+            center:null,
             info:c.properties
           }
           province.center=aProjection(c.properties.center);
@@ -162,43 +164,16 @@ function SbpkChina() {
 
           provinceList.push(province);
         });
-        const shapes=provinceList.map(item=>item.border);
-        console.log("provinceList", provinceList);
-
-        chinaRef.current.geometry = new THREE.ExtrudeGeometry(shapes.flat(), {
-          depth: 0.05,
-          bevelEnabled: false,
-        });
-
-        chinaRef.current.geometry.rotateX(-Math.PI * 0.5);
-        adjustUVs(chinaRef.current.geometry);
-        addEdge(chinaRef.current);
-        console.log("chinaRef.current", chinaRef.current);
+        setProvinces(provinceList);
       }
     );
   }, []);
 
   return (
     <>
-      <group scale={[1, 1, 1]} position={[-15, 0, 0]}>
-        <mesh ref={chinaRef}>
-          {/* <meshBasicMaterial color={"red"} /> */}
-          {/* <Helper type={THREE.BoxHelper}></Helper> */}
-          <blockMaterial />
-          {edge.length > 0 && (
-            <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
-          )}
-        </mesh>
-      </group>
-
-      {/* <mesh scale={[5, 5, 0.1]} rotation-x={Math.PI*0.5}>
-        <boxGeometry></boxGeometry>
-        <blockMaterial />
-      </mesh> */}
-      {/* <mesh scale={[5, 5, 0.01]} rotation-x={Math.PI*0.5} position-y={-0.1}>
-        <boxGeometry></boxGeometry>
-        <meshBasicMaterial  color={[123/255,195/255,(246/255)*5.5]} toneMapped={false} />
-      </mesh> */}
+      {
+        provinces.map(item=> <SbpkChinaMapBlock key={item.key} map={item}/>)
+      }
     </>
   );
 }

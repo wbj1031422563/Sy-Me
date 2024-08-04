@@ -25,7 +25,7 @@ void main(){
     // float strength =strength1*1.0 ;
     // strength=st
     
-    float strength2=distance(vUv,vec2(.5,.5))+0.1;
+    float strength2=distance(vUv,vec2(.5,.5))+0.05;
     
     float strength=strength2;
     

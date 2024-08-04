@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-04 16:02:22
+ * @LastEditTime: 2024-08-04 19:25:55
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-map-block\sbpk-china-map-block.jsx
  * @Description:
  */
@@ -14,8 +14,11 @@ import { Line2 } from "three/examples/jsm/lines/Line2";
 // import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry';
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
 import { extend } from "@react-three/fiber";
-import sbpkChinaBlockVs from "./shader/sbpk-china-block.vs.glsl";
-import sbpkChinaBlockFs from "./shader/sbpk-china-block.fs.glsl";
+import sbpkChinaBlockVs from "../sbpk-china/shader/sbpk-china-block.vs.glsl";
+import sbpkChinaBlockFs from "../sbpk-china/shader/sbpk-china-block.fs.glsl";
+import SbpkModelDfmz from "../sbpk-model/sbpk-model-dfmz";
+import SbpkModelTt from "../sbpk-model/sbpk-model-tt";
+import SbpkModelGz from "../sbpk-model/sbpk-model-gz";
 
 const BlockMaterial = shaderMaterial(
   {
@@ -37,11 +40,16 @@ function SbpkChinaMapBlock({
     name: "北京市",
     border: [],
     info: {},
+    center: null,
   },
 }) {
   const chinaRef = useRef(null);
   const [edge, setEdge] = useState([]);
 
+  /**
+   *
+   * @param {几何体} geometry
+   */
   const adjustUVs = (geometry) => {
     geometry.computeBoundingBox();
     const bbox = geometry.boundingBox;
@@ -65,10 +73,12 @@ function SbpkChinaMapBlock({
     }
     geometry.setAttribute("aBaseUv", new THREE.BufferAttribute(baseUv, 2));
   };
-  const addEdge = (
-    mapBlockMesh,
-    depth = 0.05,
-  ) => {
+  /**
+   *
+   * @param {网格对象} mapBlockMesh
+   * @param {拉伸高度} depth
+   */
+  const addEdge = (mapBlockMesh, depth = 0.1) => {
     // 获取 mapBlockMesh 的顶点位置
     const positions = mapBlockMesh.geometry.attributes.position.array;
     const vertexCount = mapBlockMesh.geometry.attributes.position.count;
@@ -110,24 +120,40 @@ function SbpkChinaMapBlock({
 
   useEffect(() => {
     chinaRef.current.geometry = new THREE.ExtrudeGeometry(map.border.flat(), {
-      depth: 0.05,
+      depth: 0.1,
       bevelEnabled: false,
     });
     chinaRef.current.geometry.rotateX(-Math.PI * 0.5);
     adjustUVs(chinaRef.current.geometry);
     addEdge(chinaRef.current);
-  }, []);
+  }, [map]);
 
   return (
     <>
-        <mesh ref={chinaRef} scale={[1, 1, 1]} position={[-15, 0, 0]}>
-          {/* <meshBasicMaterial color={"red"} /> */}
-          {/* <Helper type={THREE.BoxHelper}></Helper> */}
-          <blockMaterial />
-          {edge.length > 0 && (
-            <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
-          )}
-        </mesh>
+      <mesh
+        ref={chinaRef}
+        scale={[1, 1, 1]}
+        position={[-15, 0, 0]}
+        onClick={() => {
+          alert(`${map.name}中心在${map.center}`);
+        }}
+      >
+        {/* <meshBasicMaterial color={"red"} /> */}
+        {/* <Helper type={THREE.BoxHelper}></Helper> */}
+        <blockMaterial />
+        {edge.length > 0 && (
+          <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
+        )}
+        {map.name === "上海市" && (
+          <SbpkModelDfmz position={[map.center[0], 0.1, map.center[1]]} />
+        )}
+        {map.name === "北京市" && (
+          <SbpkModelTt position={[map.center[0], 0.1, map.center[1]]} />
+        )}
+        {map.name === "广东省" && (
+          <SbpkModelGz position={[map.center[0], 0.1, map.center[1]]} />
+        )}
+      </mesh>
       {/* <mesh scale={[5, 5, 0.1]} rotation-x={Math.PI*0.5}>
         <boxGeometry></boxGeometry>
         <blockMaterial />
