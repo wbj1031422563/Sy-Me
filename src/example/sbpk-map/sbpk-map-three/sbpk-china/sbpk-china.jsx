@@ -33,78 +33,7 @@ const BlockMaterial = shaderMaterial(
 extend({ BlockMaterial });
 
 function SbpkChina() {
-  const chinaRef = useRef(null);
   const [provinces,setProvinces]=useState([]);
-  const [edge, setEdge] = useState([]);
-
-  const adjustUVs = (geometry) => {
-    geometry.computeBoundingBox();
-    const bbox = geometry.boundingBox;
-    const size = bbox.getSize(new THREE.Vector3());
-    const min = bbox.min;
-    const max = bbox.max;
-    const basePosition = new THREE.Vector2(
-      Math.min(min.x, max.x),
-      Math.min(min.z, max.z)
-    );
-
-    const positions = geometry.attributes.position.array;
-    const count = geometry.attributes.position.count;
-    const baseUv = new Float32Array(count * 2);
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      const i2 = i * 2;
-
-      baseUv[i2] = (positions[i3] - basePosition.x) / size.x;
-      baseUv[i2 + 1] = (positions[i3 + 2] - basePosition.y) / size.z;
-    }
-    geometry.setAttribute("aBaseUv", new THREE.BufferAttribute(baseUv, 2));
-  };
-  const addEdge = (
-    mapBlockMesh,
-    depth = 0.05,
-    color = 0x66d4e5,
-    linewidth = 3
-  ) => {
-    // 获取 mapBlockMesh 的顶点位置
-    const positions = mapBlockMesh.geometry.attributes.position.array;
-    const vertexCount = mapBlockMesh.geometry.attributes.position.count;
-
-    // 创建用于存储线段端点的数组
-    const linePoints = [];
-    for (let i = 0; i < vertexCount; i++) {
-      const index = i * 3;
-      linePoints.push(
-        new THREE.Vector3(positions[index], depth, positions[index + 2])
-      );
-    }
-
-    // 创建一个 BufferGeometry 对象来生成边缘
-    const bufferGeometry = new THREE.BufferGeometry();
-    bufferGeometry.setFromPoints(linePoints);
-
-    // 生成边缘几何体
-    const edgesGeometry = new THREE.EdgesGeometry(bufferGeometry);
-
-    // 获取边缘几何体的顶点位置属性
-    const edgePositionAttribute = edgesGeometry.getAttribute("position");
-    const edgeVertices = [];
-    const edgeVertexCount = edgePositionAttribute.count;
-
-    // 从顶点位置属性中提取边缘顶点
-    for (let i = 0; i < edgeVertexCount; i++) {
-      const index = i * 3;
-      edgeVertices.push([
-        edgePositionAttribute.array[index],
-        edgePositionAttribute.array[index + 1],
-        edgePositionAttribute.array[index + 2],
-      ]);
-    }
-
-    // 更新边缘数据状态
-    setEdge(edgeVertices);
-  };
-
   useEffect(() => {
     const fileLoader = new THREE.FileLoader();
     fileLoader.load(
@@ -119,27 +48,28 @@ function SbpkChina() {
         // // let china = geo.features.map(item=>item.geometry.coordinates)
         // china = china.slice(0, 8);
         const provinceList = [];
-        const ps = geo.features.slice(0, 32);
+        const geoList = geo.features.slice(22, 23);
 
-        ps.forEach((c) => {
+        geoList.forEach((geoItme) => {
           const province={
-            key:c.properties.adcode,
-            name:c.properties.name,
+            key:geoItme.properties.adcode,
+            name:geoItme.properties.name,
             border:[],
             center:null,
-            info:c.properties
+            info:geoItme.properties
           }
-          province.center=aProjection(c.properties.center);
-          let border = c.geometry.coordinates;
+          province.center=aProjection(geoItme.properties.center);
+          let border = geoItme.geometry.coordinates;
           // let info=c.properties;
           // console.log('china',c);
 
           /**
-           * 中国地图GeoJson转化为平面
+           * GeoJson转化为shape
            */
           border.forEach((item1) => {
             const shape = new THREE.Shape();
             if (item1[0].length === 2) {
+              // 内蒙古的边界数据的特殊处理
               item1.forEach((item2, index) => {
                 const [x, y] = aProjection(item2);
                 if (index === 0) {
@@ -178,3 +108,4 @@ function SbpkChina() {
   );
 }
 export default SbpkChina;
+
