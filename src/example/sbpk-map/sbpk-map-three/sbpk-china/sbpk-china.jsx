@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-05 21:54:05
+ * @LastEditTime: 2024-08-07 00:16:28
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -126,7 +126,7 @@ function SbpkChina() {
         // // let china = geo.features.map(item=>item.geometry.coordinates)
         // china = china.slice(0, 8);
         const provinceList = [];
-        const ps = geo.features.slice(0, 32);
+        const geoList = geo.features.slice(22, 23);
 
         ps.forEach((c) => {
           const province = {
@@ -142,11 +142,12 @@ function SbpkChina() {
           // console.log('china',c);
 
           /**
-           * 中国地图GeoJson转化为平面
+           * GeoJson转化为shape
            */
           border.forEach((item1) => {
             const shape = new THREE.Shape();
             if (item1[0].length === 2) {
+              // 内蒙古的边界数据的特殊处理
               item1.forEach((item2, index) => {
                 const [x, y] = aProjection(item2);
                 if (index === 0) {
@@ -213,3 +214,4 @@ function SbpkChina() {
   );
 }
 export default SbpkChina;
+

@@ -62,11 +62,15 @@ function SbpkChinaMapBlock({
    * @param {几何体} geometry
    */
   const adjustUVs = (geometry) => {
+    //计算包围和
     geometry.computeBoundingBox();
     const bbox = geometry.boundingBox;
+    //得到包围盒size
     const size = bbox.getSize(new THREE.Vector3());
     const min = bbox.min;
     const max = bbox.max;
+
+    // 得到包围基点，注意这里是二维平面上的
     const basePosition = new THREE.Vector2(
       Math.min(min.x, max.x),
       Math.min(min.z, max.z)
@@ -79,6 +83,7 @@ function SbpkChinaMapBlock({
       const i3 = i * 3;
       const i2 = i * 2;
 
+      //地图块位于x-z平面上
       baseUv[i2] = (positions[i3] - basePosition.x) / size.x;
       baseUv[i2 + 1] = (positions[i3 + 2] - basePosition.y) / size.z;
     }
@@ -137,6 +142,7 @@ function SbpkChinaMapBlock({
     chinaRef.current.geometry.rotateX(-Math.PI * 0.5);
     adjustUVs(chinaRef.current.geometry);
     addEdge(chinaRef.current);
+    console.log('chinaRef.current.geometry',chinaRef.current.geometry)
   }, [map]);
 
   useEffect(()=>{
@@ -166,7 +172,7 @@ function SbpkChinaMapBlock({
         }}
       >
         {/* <meshBasicMaterial color={"red"} /> */}
-        {/* <Helper type={THREE.BoxHelper}></Helper> */}
+        <Helper type={THREE.BoxHelper}></Helper>
         <blockMaterial />
         {edge.length > 0 && (
           <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
