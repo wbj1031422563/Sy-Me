@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 22:46:37
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-30 00:08:41
+ * @LastEditTime: 2024-08-05 22:09:47
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-efftects\efftects.jsx
  * @Description: 
  */
@@ -10,50 +10,23 @@
  * 后处理
  */
 
-import { EffectComposer, Vignette,Glitch ,Noise,Bloom,DepthOfField, SSR} from "@react-three/postprocessing";
+import { EffectComposer,Bloom} from "@react-three/postprocessing";
+import { useControls } from "leva";
+import { RenderPass } from "postprocessing";
 
 function SbpkEfftects() {
   // const props = useControls({
-  //   temporalResolve: true,
-  //   STRETCH_MISSED_RAYS: true,
-  //   USE_MRT: true,
-  //   USE_NORMALMAP: true,
-  //   USE_ROUGHNESSMAP: true,
-  //   ENABLE_JITTERING: true,
-  //   ENABLE_BLUR: true,
-  //   temporalResolveMix: { value: 0.9, min: 0, max: 1 },
-  //   temporalResolveCorrectionMix: { value: 0.25, min: 0, max: 1 },
-  //   maxSamples: { value: 0, min: 0, max: 1 },
-  //   resolutionScale: { value: 1, min: 0, max: 1 },
-  //   blurMix: { value: 0.5, min: 0, max: 1 },
-  //   blurKernelSize: { value: 8, min: 0, max: 8 },
-  //   blurSharpness: { value: 0.5, min: 0, max: 1 },
-  //   rayStep: { value: 0.3, min: 0, max: 1 },
-  //   intensity: { value: 1, min: 0, max: 5 },
-  //   maxRoughness: { value: 0.1, min: 0, max: 1 },
-  //   jitter: { value: 0.7, min: 0, max: 5 },
-  //   jitterSpread: { value: 0.45, min: 0, max: 1 },
-  //   jitterRough: { value: 0.1, min: 0, max: 1 },
-  //   roughnessFadeOut: { value: 1, min: 0, max: 1 },
-  //   rayFadeOut: { value: 0, min: 0, max: 1 },
-  //   MAX_STEPS: { value: 20, min: 0, max: 20 },
-  //   NUM_BINARY_SEARCH_STEPS: { value: 5, min: 0, max: 10 },
-  //   maxDepthDifference: { value: 3, min: 0, max: 10 },
-  //   maxDepth: { value: 1, min: 0, max: 1 },
-  //   thickness: { value: 10, min: 0, max: 10 },
-  //   ior: { value: 1.45, min: 0, max: 2 }
+  //   mipmapBlur: true,
+  //   intensity: 0.9,
+  //   radius: 0.9,
+  //   levels:8,
+  //   luminanceSmoothing:0.025
   // })
   return (
     <>
       <EffectComposer multisampling={8}>
-        {/* <Vignette offset={0.3} darkness={0.9} blendFunction={BlendFunction.NORMAL} /> */}
-        {/* <Glitch/> */}
-        {/* <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT}/> */}
-        {/* <Bloom mipmapBlur radius={0.9}/> */}
-        <Bloom mipmapBlur luminanceThreshold={1} />
-        {/* <DepthOfField focusDistance={0.025} focalLength={0.025} bokehScale={6} /> */}
-        {/* <SSR {...props}/> */}
-        {/* <CrmEfftect frequency={10} amplitude={0.1} /> */}
+        {/* <RenderPass/> */}
+        <Bloom luminanceThreshold={1.0} mipmapBlur={true} intensity={1.8} radius={0.9} levels={11.0} luminanceSmoothing={0.03}/>
       </EffectComposer>
     </>
   );

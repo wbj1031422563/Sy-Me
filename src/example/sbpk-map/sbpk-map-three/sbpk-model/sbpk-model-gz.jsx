@@ -16,32 +16,27 @@ function Model(props) {
   //   const model = useLoader(GLTFLoader, "/model/东方明珠.glb")
   const { nodes } = useGLTF("/model/广州.glb");
   // console.log("加载东方之门");
+
   return (
     <>
       <group {...props} scale={[0.01, 0.01, 0.01]}>
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.Object_2.geometry}
-          material={nodes.Object_2.material}
-        >
-          <meshBasicMaterial />
+        <mesh castShadow receiveShadow geometry={nodes.Object_2.geometry}>
+          <meshBasicMaterial
+            color={[0.188, 0.992, 0.992].map((item) => item * 1.3)}
+            toneMapped={false}
+          ></meshBasicMaterial>
         </mesh>
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.Object_3.geometry}
-          material={nodes.Object_3.material}
-        >
-          <meshBasicMaterial />
+        <mesh castShadow receiveShadow geometry={nodes.Object_3.geometry}>
+          <meshBasicMaterial
+            color={[0.188, 0.992, 0.992].map((item) => item * 1.3)}
+            toneMapped={false}
+          ></meshBasicMaterial>
         </mesh>
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.Object_4.geometry}
-          material={nodes.Object_4.material}
-        >
-          <meshBasicMaterial />
+        <mesh castShadow receiveShadow geometry={nodes.Object_4.geometry}>
+          <meshBasicMaterial
+            color={[0.188, 0.992, 0.992].map((item) => item * 1.3)}
+            toneMapped={false}
+          ></meshBasicMaterial>
         </mesh>
       </group>
     </>

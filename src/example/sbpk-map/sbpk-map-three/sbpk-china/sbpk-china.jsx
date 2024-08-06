@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-04 19:10:35
+ * @LastEditTime: 2024-08-05 21:54:05
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -17,6 +17,7 @@ import { extend } from "@react-three/fiber";
 import sbpkChinaBlockVs from "./shader/sbpk-china-block.vs.glsl";
 import sbpkChinaBlockFs from "./shader/sbpk-china-block.fs.glsl";
 import SbpkChinaMapBlock from "../sbpk-china-map-block/sbpk-china-map-block";
+import GUI from "lil-gui";
 
 const BlockMaterial = shaderMaterial(
   {
@@ -34,8 +35,14 @@ extend({ BlockMaterial });
 
 function SbpkChina() {
   const chinaRef = useRef(null);
-  const [provinces,setProvinces]=useState([]);
+  const [provinces, setProvinces] = useState([]);
   const [edge, setEdge] = useState([]);
+
+  const [cubeState, setCubeState] = useState({
+    borderColor: "#93EBF8",
+    innerColor: "#149fc2",
+    outColor: "#073378",
+  });
 
   const adjustUVs = (geometry) => {
     geometry.computeBoundingBox();
@@ -122,14 +129,14 @@ function SbpkChina() {
         const ps = geo.features.slice(0, 32);
 
         ps.forEach((c) => {
-          const province={
-            key:c.properties.adcode,
-            name:c.properties.name,
-            border:[],
-            center:null,
-            info:c.properties
-          }
-          province.center=aProjection(c.properties.center);
+          const province = {
+            key: c.properties.adcode,
+            name: c.properties.name,
+            border: [],
+            center: null,
+            info: c.properties,
+          };
+          province.center = aProjection(c.properties.center);
           let border = c.geometry.coordinates;
           // let info=c.properties;
           // console.log('china',c);
@@ -169,11 +176,39 @@ function SbpkChina() {
     );
   }, []);
 
+  useEffect(()=>{
+    // let gui = new GUI({
+    //   title: "控制面板",
+    //   width: "320",
+    //   closeFolders: true,
+    // });
+    // gui.addColor(cubeState, "innerColor").onChange((v) => {
+    //   setCubeState({
+    //     ...cubeState,
+    //     innerColor: v,
+    //   });
+    // });
+    // gui.addColor(cubeState, "outColor").onChange((v) => {
+    //   setCubeState({
+    //     ...cubeState,
+    //     outColor: v,
+    //   });
+    // });
+    // gui.addColor(cubeState, "innerColor").onChange((v) => {
+    //   setCubeState({
+    //     ...cubeState,
+    //     innerColor: v,
+    //   });
+    // });
+  },[])
+
   return (
     <>
-      {
-        provinces.map(item=> <SbpkChinaMapBlock key={item.key} map={item}/>)
-      }
+      <group position={[-4.5, 0, 5.5]}>
+        {provinces.map((item) => (
+          <SbpkChinaMapBlock key={item.key} map={item} colorObj={cubeState} />
+        ))}
+      </group>
     </>
   );
 }

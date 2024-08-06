@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-04 19:25:55
+ * @LastEditTime: 2024-08-05 21:34:50
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-map-block\sbpk-china-map-block.jsx
  * @Description:
  */
@@ -19,6 +19,7 @@ import sbpkChinaBlockFs from "../sbpk-china/shader/sbpk-china-block.fs.glsl";
 import SbpkModelDfmz from "../sbpk-model/sbpk-model-dfmz";
 import SbpkModelTt from "../sbpk-model/sbpk-model-tt";
 import SbpkModelGz from "../sbpk-model/sbpk-model-gz";
+import GUI from "lil-gui";
 
 const BlockMaterial = shaderMaterial(
   {
@@ -42,9 +43,19 @@ function SbpkChinaMapBlock({
     info: {},
     center: null,
   },
+  colorObj={
+    borderColor: new THREE.Color("#93EBF8"),
+    innerColor: new THREE.Color("#154e90"),
+    outColor: new THREE.Color("#66D4E5"),
+  }
 }) {
   const chinaRef = useRef(null);
   const [edge, setEdge] = useState([]);
+  // const [cubeState, setCubeState] = useState({
+  //   borderColor:  "#93EBF8",
+  //   innerColor:  "#154e90",
+  //   outColor: "#66D4E5",
+  // });
 
   /**
    *
@@ -128,6 +139,22 @@ function SbpkChinaMapBlock({
     addEdge(chinaRef.current);
   }, [map]);
 
+  useEffect(()=>{
+    chinaRef.current.material.uniforms.innerColor.value=new THREE.Color(colorObj.innerColor);
+    chinaRef.current.material.uniforms.borderColor.value=new THREE.Color(colorObj.borderColor);
+    chinaRef.current.material.uniforms.outColor.value=new THREE.Color(colorObj.outColor);
+  },[colorObj])
+  // useEffect(()=>{
+  //   let gui = new GUI({
+  //     title: "控制面板",
+  //     width: "320",
+  //     closeFolders: true,
+  //   });
+  //   gui.addColor(cubeState, "innerColor").onChange((v) => {
+  //     chinaRef.current.material.uniforms.innerColor.value=new THREE.Color(v)
+  //   });
+  // },[])
+
   return (
     <>
       <mesh
@@ -135,7 +162,7 @@ function SbpkChinaMapBlock({
         scale={[1, 1, 1]}
         position={[-15, 0, 0]}
         onClick={() => {
-          alert(`${map.name}中心在${map.center}`);
+          // alert(`${map.name}中心在${map.center}`);
         }}
       >
         {/* <meshBasicMaterial color={"red"} /> */}

@@ -8,8 +8,12 @@
  */
 import { OrbitControls} from "@react-three/drei";
 import { Perf } from 'r3f-perf'
-
+import { useFrame } from "@react-three/fiber";
+import TWEEN from "@tweenjs/tween.js";
 function SbpkBaseEnv() {
+  useFrame(()=>{
+    TWEEN.update();
+  })
   return (
     <> 
       {/* <Perf position="top-left"/> */}

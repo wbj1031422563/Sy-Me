@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-29 21:08:47
+ * @LastEditTime: 2024-08-06 21:57:05
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -169,7 +169,7 @@ function SbpkEarth({handelChangeScene}) {
     if ( sbpkMapRef.current) {
       sbpkMapRef.current.rotation.y += delta * 0.25;
     }
-    TWEEN.update();
+    // TWEEN.update();
   });
   const fileLoader = new THREE.FileLoader();
   fileLoader.load(
