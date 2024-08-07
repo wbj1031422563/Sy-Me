@@ -10,12 +10,14 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useGLTF, useTexture, shaderMaterial } from "@react-three/drei";
 import { useThree, useFrame, extend } from "@react-three/fiber";
+import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import LightColumnVs from "./shader/light-column.vs.glsl";
 import LightColumnFs from "./shader/light-column.fs.glsl";
 import LightCircleVs from "./shader/light-circle.vs.glsl";
 import LightCircleFs from "./shader/light-circle.fs.glsl";
 import LightPointsVs from "./shader/light-points.vs.glsl";
 import LightPointsFs from "./shader/light-points.fs.glsl";
+import LightLinerFs from "./shader/light-liner.fs.glsl"; 
 import TWEEN from "@tweenjs/tween.js";
 import * as THREE from "three";
 class LightColumnMaterial extends THREE.ShaderMaterial {
@@ -67,9 +69,34 @@ class LightPonitsMaterial extends THREE.ShaderMaterial {
     });
   }
 }
+class LightLinerMaterial extends CustomShaderMaterial {
+  constructor(trailRatio, trailLength) {
+    super({
+      /**
+       * 虚线材质
+       */
+      baseMaterial: THREE.LineDashedMaterial,
+      uniforms: {
+        // actionRatio: { value: trailRatio },
+        // lineLength: { value: trailLength },
+        // lineColor: { value: new THREE.Color(0x0b49ad) },
+      },
+      linewidth: 1,
+      scale: 1,
+      dashSize: 3,
+      gapSize: 5,
+      transparent: true,
+      onBeforeCompile: (shader) => {
+        shader.fragmentShader = LightLinerFs;
+      },
+    });
+    // console.log("material执行");
+  }
+}
 extend({ LightColumnMaterial });
 extend({ LightCircleMaterial });
 extend({ LightPonitsMaterial });
+extend({LightLinerMaterial})
 // LightCircleMaterial
 
 function Model(props) {
@@ -80,6 +107,7 @@ function Model(props) {
   const lightCircleRef2 = useRef(null);
   const lightCircleRef3 = useRef(null);
   const lightPoints = useRef(null);
+  const lightLine = useRef(null);
   const apertureTexture = useTexture("/texture/标注光圈.png");
   // const lightColumnTexture = useTexture("/texture/光柱.png");
   const initLightColumnGeometry = (radius, height, segment) => {
@@ -130,6 +158,21 @@ function Model(props) {
     geometry.setFromPoints(points);
     return geometry;
   };
+  // const initLightLinnerGeometry = (radius, segment, height) => {
+  //   const curve = new THREE.EllipseCurve(
+  //     0,
+  //     0, // ax, aY
+  //     radius,
+  //     radius, // xRadius, yRadius
+  //     0,
+  //     2 * Math.PI, // aStartAngle, aEndAngle
+  //     false, // aClockwise
+  //     0 // aRotation
+  //   );
+  //   const points = curve
+  //     .getPoints(segment)
+  //     .map((item) => new THREE.Vector3(item.x, height, item.y));
+  // };
   // const initLightCircleAmi = () => {
   //   let tweenImpact = new TWEEN.Tween({ value: 0 })
   //     .to({ value: 1 }, 1500)
@@ -160,6 +203,9 @@ function Model(props) {
     tweenImpact.start();
 
     lightPoints.current.geometry = initRoundPointsGeomerty(1.8, 40, 0.5);
+
+    lightLine.current.geometry=initRoundPointsGeomerty(2.0, 40, 0.5);
+    lightLine.current.computeLineDistances();
     return () => {
       tweenImpact.stop();
       lightColumnRef.current.material.dispose();
@@ -229,6 +275,11 @@ function Model(props) {
           ]}
         ></lightPonitsMaterial>
       </points>
+        {/* 按照固定轨迹运动的粒子 */}
+      <line ref={lightLine}>
+        <lightLinerMaterial></lightLinerMaterial>
+        {/* <lineDashedMaterial color={'red'} ></lineDashedMaterial> */}
+      </line>
     </>
   );
 }
