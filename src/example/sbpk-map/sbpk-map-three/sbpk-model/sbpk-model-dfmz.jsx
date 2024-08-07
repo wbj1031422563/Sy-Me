@@ -2,13 +2,13 @@
  * @Author: FMC
  * @Date: 2024-08-04 18:47:04
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-07 00:14:45
+ * @LastEditTime: 2024-08-07 23:26:53
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-dfmz.jsx
  * @Description:
  */
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useGLTF, useTexture, shaderMaterial } from "@react-three/drei";
+import { useGLTF, useTexture, shaderMaterial, Line } from "@react-three/drei";
 import { useThree, useFrame, extend } from "@react-three/fiber";
 import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import LightColumnVs from "./shader/light-column.vs.glsl";
@@ -17,7 +17,7 @@ import LightCircleVs from "./shader/light-circle.vs.glsl";
 import LightCircleFs from "./shader/light-circle.fs.glsl";
 import LightPointsVs from "./shader/light-points.vs.glsl";
 import LightPointsFs from "./shader/light-points.fs.glsl";
-import LightLinerFs from "./shader/light-liner.fs.glsl"; 
+import LightLinerFs from "./shader/light-liner.fs.glsl";
 import TWEEN from "@tweenjs/tween.js";
 import * as THREE from "three";
 class LightColumnMaterial extends THREE.ShaderMaterial {
@@ -61,9 +61,9 @@ class LightPonitsMaterial extends THREE.ShaderMaterial {
         // 屏幕分辨率
         uResolution: new THREE.Uniform(resolution),
       },
-      transparent:true,
+      transparent: true,
       // blending:THREE.AdditiveBlending,
-      depthTest:false,
+      depthTest: false,
       vertexShader: LightPointsVs,
       fragmentShader: LightPointsFs,
     });
@@ -96,7 +96,7 @@ class LightLinerMaterial extends CustomShaderMaterial {
 extend({ LightColumnMaterial });
 extend({ LightCircleMaterial });
 extend({ LightPonitsMaterial });
-extend({LightLinerMaterial})
+extend({ LightLinerMaterial });
 // LightCircleMaterial
 
 function Model(props) {
@@ -107,8 +107,11 @@ function Model(props) {
   const lightCircleRef2 = useRef(null);
   const lightCircleRef3 = useRef(null);
   const lightPoints = useRef(null);
-  const lightLine = useRef(null);
+  // const lightLine = useRef(null);
   const apertureTexture = useTexture("/texture/标注光圈.png");
+  const [linePoints, setLinePoints] = useState([]);
+  const [lightLine, setlightLine] = useState(null);
+  const [lightLineUnforms, setLightLineUnforms] = useState({ uTime: 0 });
   // const lightColumnTexture = useTexture("/texture/光柱.png");
   const initLightColumnGeometry = (radius, height, segment) => {
     const bottomPos = [];
@@ -158,6 +161,25 @@ function Model(props) {
     geometry.setFromPoints(points);
     return geometry;
   };
+  const initRoundPointsGeomerty2 = (radius, segment, height) => {
+    const curve = new THREE.EllipseCurve(
+      0,
+      0, // ax, aY
+      radius,
+      radius, // xRadius, yRadius
+      0,
+      2 * Math.PI, // aStartAngle, aEndAngle
+      false, // aClockwise
+      0 // aRotation
+    );
+    const points = curve
+      .getPoints(segment)
+      .map((item) => [item.x, height, item.y]);
+    return points;
+    // const geometry = new THREE.BufferGeometry();
+    // geometry.setFromPoints(points);
+    // return geometry;
+  };
   // const initLightLinnerGeometry = (radius, segment, height) => {
   //   const curve = new THREE.EllipseCurve(
   //     0,
@@ -204,22 +226,72 @@ function Model(props) {
 
     lightPoints.current.geometry = initRoundPointsGeomerty(1.8, 40, 0.5);
 
-    lightLine.current.geometry=initRoundPointsGeomerty(2.0, 40, 0.5);
-    lightLine.current.computeLineDistances();
+    // lightLine.current.points = initRoundPointsGeomerty2(2.0, 40, 0.5);
+
     return () => {
       tweenImpact.stop();
       lightColumnRef.current.material.dispose();
       lightColumnRef.current.geometry.dispose();
     };
   }, []);
-  // console.log('加载东方之门');
-  // useEffect(()=>{
-  //   console.log('EffectComposer',EffectComposer)
-  // },[])
+
+  // useEffect(() => {
+  //   setLinePoints(initRoundPointsGeomerty2(2.0, 40, 0.5));
+  //   if (lightLine.current) {
+  //     lightLine.current.computeLineDistances();
+  //   }
+  // }, []);
+  useEffect(() => {
+    setLinePoints(initRoundPointsGeomerty2(2.0, 40, 0.5));
+    if (lightLine) {
+      setLinePoints(initRoundPointsGeomerty2(2.0, 40, 0.5));
+      lightLine.computeLineDistances();
+      // debugger
+      const material = lightLine.material;
+      material.onBeforeCompile = (shader) => {
+        shader.uniforms.uTime = {value:0};
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "uniform float linewidth;",
+          /*glsl */
+          `
+          uniform float linewidth;
+          uniform float uTime;
+          `
+        );
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "vec4 diffuseColor = vec4( diffuse, alpha );",
+          /*glsl */
+          `
+          float uStrfmc=uTime;
+          uStrfmc=sin(uStrfmc*0.5)*0.5+0.5;
+          uStrfmc=smoothstep(0.0, 1.0, uStrfmc);
+          vec4 diffuseColor = vec4( vec3(vUv.x,vUv.y,0.0), alpha );
+          `
+        );
+        shader.fragmentShader=shader.fragmentShader.replace(
+          `						if ( vUv.y < - 1.0 || vUv.y > 1.0 ) discard; // discard endcaps
+
+						if ( mod( vLineDistance + dashOffset, dashSize + gapSize ) > dashSize ) discard; // todo - FIX`,
+          /*glsl */
+          `
+						if ( vUv.y < - 1.0 || vUv.y > 1.0 ) discard; // discard endcaps
+
+						// if ( mod( vLineDistance + dashOffset, dashSize + gapSize ) > dashSize ) discard; // todo - FIX
+          `
+        )
+      };
+    }
+  }, [lightLine]);
+
   useFrame((state, delta) => {
     // const a=new THREE.Mesh()
     // a.rotation
-    lightPoints.current.rotation.y += delta * 0.2;
+    const { clock } = state;
+    // lightPoints.current.rotation.y += delta * 0.2;
+    if (lightLine&&lightLine.material.uniforms.uTime) {
+      // console.log('lightLine.material.uniforms',lightLine.material.uniforms)
+      lightLine.material.uniforms.uTime.value = clock.getElapsedTime();
+    }
   });
   return (
     <>
@@ -275,11 +347,25 @@ function Model(props) {
           ]}
         ></lightPonitsMaterial>
       </points>
-        {/* 按照固定轨迹运动的粒子 */}
-      <line ref={lightLine}>
-        <lightLinerMaterial></lightLinerMaterial>
-        {/* <lineDashedMaterial color={'red'} ></lineDashedMaterial> */}
-      </line>
+      {/* 按照固定轨迹运动的粒子 */}
+      {linePoints.length > 0 && (
+        <Line
+          ref={setlightLine}
+          points={linePoints}
+          transparent={true}
+          opacity={0.2}
+          lineWidth={3}
+          dashSize={3}
+          dashScale={1}
+          dashed={true}
+          // color={'red'}
+          // material={new THREE.MeshBasicMaterial({color:'blue'})}
+        >
+          {/* <meshBasicMaterial color={'blue'}></meshBasicMaterial> */}
+          {/* <lightLinerMaterial></lightLinerMaterial> */}
+          {/* <lineDashedMaterial color={'red'} ></lineDashedMaterial> */}
+        </Line>
+      )}
     </>
   );
 }
