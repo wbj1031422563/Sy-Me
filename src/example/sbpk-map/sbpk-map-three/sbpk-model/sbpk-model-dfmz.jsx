@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-04 18:47:04
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-07 23:26:53
+ * @LastEditTime: 2024-08-08 01:11:43
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-dfmz.jsx
  * @Description:
  */
@@ -175,7 +175,7 @@ function Model(props) {
     const points = curve
       .getPoints(segment)
       .map((item) => [item.x, height, item.y]);
-    return points;
+    return {points,len:curve.getLength()};
     // const geometry = new THREE.BufferGeometry();
     // geometry.setFromPoints(points);
     // return geometry;
@@ -242,30 +242,22 @@ function Model(props) {
   //   }
   // }, []);
   useEffect(() => {
-    setLinePoints(initRoundPointsGeomerty2(2.0, 40, 0.5));
+    const {points,len}=initRoundPointsGeomerty2(2.0, 40, 0.5);
+    setLinePoints(points);
     if (lightLine) {
-      setLinePoints(initRoundPointsGeomerty2(2.0, 40, 0.5));
       lightLine.computeLineDistances();
       // debugger
       const material = lightLine.material;
       material.onBeforeCompile = (shader) => {
         shader.uniforms.uTime = {value:0};
+        shader.uniforms.uTotelLen={value:len};
         shader.fragmentShader = shader.fragmentShader.replace(
           "uniform float linewidth;",
           /*glsl */
           `
           uniform float linewidth;
           uniform float uTime;
-          `
-        );
-        shader.fragmentShader = shader.fragmentShader.replace(
-          "vec4 diffuseColor = vec4( diffuse, alpha );",
-          /*glsl */
-          `
-          float uStrfmc=uTime;
-          uStrfmc=sin(uStrfmc*0.5)*0.5+0.5;
-          uStrfmc=smoothstep(0.0, 1.0, uStrfmc);
-          vec4 diffuseColor = vec4( vec3(vUv.x,vUv.y,0.0), alpha );
+          uniform float uTotelLen;
           `
         );
         shader.fragmentShader=shader.fragmentShader.replace(
@@ -275,10 +267,37 @@ function Model(props) {
           /*glsl */
           `
 						if ( vUv.y < - 1.0 || vUv.y > 1.0 ) discard; // discard endcaps
-
-						// if ( mod( vLineDistance + dashOffset, dashSize + gapSize ) > dashSize ) discard; // todo - FIX
+            float vL0=uTotelLen/12.0;
+            float vL1=mod(uTime,2.0*PI)*(uTotelLen/(2.0*PI));
+            float vL2=vL1+vL0;
+            float vOffset=step(uTotelLen,vL2)*(vL2-uTotelLen);
+            // if(vL2>uTotelLen)
+  
+             // 计算是否在下边界以上
+            float inLowerBound = step(vL1, vLineDistance);
+            
+            // 计算是否在上边界以下
+            float inUpperBound = step(vLineDistance, vL2);
+  
+  
+            // 计算是否在上边界以下
+            float inUpperBoundOffset = step(vLineDistance, vOffset);
+            
+            // 结合两个条件
+            float inRange = inLowerBound * inUpperBound+inUpperBoundOffset;
+						if ( mod( vLineDistance + dashOffset, dashSize + gapSize )*(1.0-inRange) > dashSize ) discard; // todo - FIX
           `
         )
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "vec4 diffuseColor = vec4( diffuse, alpha );",
+          /*glsl */
+          `
+          vec3 color=mix(diffuse,vec3(0.0,1.0,1.0),clamp(0.0,1.0,inRange));
+          float alphfmc = clamp((alpha+inRange), 0.0, 1.0);
+
+          vec4 diffuseColor = vec4( color, alphfmc );
+          `
+        );
       };
     }
   }, [lightLine]);
@@ -287,7 +306,7 @@ function Model(props) {
     // const a=new THREE.Mesh()
     // a.rotation
     const { clock } = state;
-    // lightPoints.current.rotation.y += delta * 0.2;
+    lightPoints.current.rotation.y += delta * 0.2;
     if (lightLine&&lightLine.material.uniforms.uTime) {
       // console.log('lightLine.material.uniforms',lightLine.material.uniforms)
       lightLine.material.uniforms.uTime.value = clock.getElapsedTime();
@@ -299,7 +318,8 @@ function Model(props) {
         <mesh geometry={nodes.Sphere011_Material002_0.geometry}>
           <meshBasicMaterial
             // color={[0.188, 0.992, 0.992].map((item) => item * 1.333)}
-            color={[0.188, 0.992, 0.992].map((item) => item * 1.0)}
+            // color={[0.188, 0.992, 0.992].map((item) => item * 1.0)}
+            color={[1.0,1.0,1.0]}
             // transparent={true}
             // opacity={0.2}
             toneMapped={false}
