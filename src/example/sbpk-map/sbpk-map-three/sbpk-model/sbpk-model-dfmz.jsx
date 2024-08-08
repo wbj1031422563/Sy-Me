@@ -251,6 +251,26 @@ function Model(props) {
       material.onBeforeCompile = (shader) => {
         shader.uniforms.uTime = {value:0};
         shader.uniforms.uTotelLen={value:len};
+        console.log('shader',shader)
+        // shader.vertexShader = shader.vertexShader.replace(
+        //   "uniform float linewidth;",
+        //   /*glsl */
+        //   `
+        //   uniform float linewidth;
+        //   uniform float uTime;
+        //   uniform float uTotelLen;
+        //   `
+        // );
+        // shader.vertexShader = shader.vertexShader.replace(
+        //   "offset *= linewidth;",
+        //   /*glsl */
+        //   `
+        //   offset *= linewidth;
+        //   `
+        // );
+
+
+
         shader.fragmentShader = shader.fragmentShader.replace(
           "uniform float linewidth;",
           /*glsl */
@@ -292,10 +312,17 @@ function Model(props) {
           "vec4 diffuseColor = vec4( diffuse, alpha );",
           /*glsl */
           `
-          vec3 color=mix(diffuse,vec3(0.0,1.0,1.0),clamp(0.0,1.0,inRange));
+          float zhanbi=(vLineDistance-vL1)/vL0;
+          zhanbi=(1.0-inUpperBoundOffset)*zhanbi+inUpperBoundOffset*((uTotelLen-vL1+vLineDistance)/vL0);
+          vec3 lightColor=mix(vec3(1.0,0.0,0.0),vec3(0.0,1.0,0.0),zhanbi);
+          vec3 color=mix(diffuse,lightColor,clamp(0.0,1.0,inRange));
           float alphfmc = clamp((alpha+inRange), 0.0, 1.0);
 
-          vec4 diffuseColor = vec4( color, alphfmc );
+          // if(vLineDistance<0.01){
+          //   color=vec3(0.0,1.0,0.0);
+          // }
+
+          vec4 diffuseColor = vec4( vec3(vUv.x,vUv.y,1.0), 1.0);
           `
         );
       };
@@ -374,7 +401,7 @@ function Model(props) {
           points={linePoints}
           transparent={true}
           opacity={0.2}
-          lineWidth={3}
+          lineWidth={5}
           dashSize={3}
           dashScale={1}
           dashed={true}
