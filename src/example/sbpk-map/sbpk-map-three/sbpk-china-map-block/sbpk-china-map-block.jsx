@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-12 22:12:04
+ * @LastEditTime: 2024-08-12 23:21:43
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-map-block\sbpk-china-map-block.jsx
  * @Description:
  */
@@ -142,7 +142,7 @@ function SbpkChinaMapBlock({
     chinaRef.current.geometry.rotateX(-Math.PI * 0.5);
     adjustUVs(chinaRef.current.geometry);
     addEdge(chinaRef.current);
-    console.log('chinaRef.current.geometry',chinaRef.current.geometry)
+    // console.log('chinaRef.current.geometry',chinaRef.current.geometry)
   }, [map]);
 
   useEffect(()=>{
