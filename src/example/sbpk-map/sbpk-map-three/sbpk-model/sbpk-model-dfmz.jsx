@@ -1,8 +1,16 @@
 /*
  * @Author: FMC
+ * @Date: 2024-08-12 19:58:41
+ * @LastEditors: FMC
+ * @LastEditTime: 2024-08-12 23:14:00
+ * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-dfmz.jsx
+ * @Description: 
+ */
+/*
+ * @Author: FMC
  * @Date: 2024-08-04 18:47:04
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-08 01:11:43
+ * @LastEditTime: 2024-08-12 23:02:25
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-dfmz.jsx
  * @Description:
  */
@@ -63,7 +71,7 @@ class LightPonitsMaterial extends THREE.ShaderMaterial {
       },
       transparent: true,
       // blending:THREE.AdditiveBlending,
-      depthTest: false,
+      depthWrite: false,
       vertexShader: LightPointsVs,
       fragmentShader: LightPointsFs,
     });
@@ -175,7 +183,7 @@ function Model(props) {
     const points = curve
       .getPoints(segment)
       .map((item) => [item.x, height, item.y]);
-    return {points,len:curve.getLength()};
+    return { points, len: curve.getLength() };
     // const geometry = new THREE.BufferGeometry();
     // geometry.setFromPoints(points);
     // return geometry;
@@ -242,16 +250,16 @@ function Model(props) {
   //   }
   // }, []);
   useEffect(() => {
-    const {points,len}=initRoundPointsGeomerty2(2.0, 40, 0.5);
+    const { points, len } = initRoundPointsGeomerty2(2.0, 40, 0.6);
     setLinePoints(points);
     if (lightLine) {
       lightLine.computeLineDistances();
       // debugger
       const material = lightLine.material;
       material.onBeforeCompile = (shader) => {
-        shader.uniforms.uTime = {value:0};
-        shader.uniforms.uTotelLen={value:len};
-        console.log('shader',shader)
+        shader.uniforms.uTime = { value: 0 };
+        shader.uniforms.uTotelLen = { value: len };
+        // console.log("shader", shader);
         // shader.vertexShader = shader.vertexShader.replace(
         //   "uniform float linewidth;",
         //   /*glsl */
@@ -269,8 +277,6 @@ function Model(props) {
         //   `
         // );
 
-
-
         shader.fragmentShader = shader.fragmentShader.replace(
           "uniform float linewidth;",
           /*glsl */
@@ -280,7 +286,7 @@ function Model(props) {
           uniform float uTotelLen;
           `
         );
-        shader.fragmentShader=shader.fragmentShader.replace(
+        shader.fragmentShader = shader.fragmentShader.replace(
           `						if ( vUv.y < - 1.0 || vUv.y > 1.0 ) discard; // discard endcaps
 
 						if ( mod( vLineDistance + dashOffset, dashSize + gapSize ) > dashSize ) discard; // todo - FIX`,
@@ -305,24 +311,34 @@ function Model(props) {
             
             // 结合两个条件
             float inRange = inLowerBound * inUpperBound+inUpperBoundOffset;
-						if ( mod( vLineDistance + dashOffset, dashSize + gapSize )*(1.0-inRange) > dashSize ) discard; // todo - FIX
+            float distanceInDashPattern = mod( vLineDistance + dashOffset, dashSize + gapSize );
+						if ( distanceInDashPattern*(1.0-inRange) > dashSize ) discard; // todo - FIX
           `
-        )
+        );
         shader.fragmentShader = shader.fragmentShader.replace(
           "vec4 diffuseColor = vec4( diffuse, alpha );",
           /*glsl */
           `
           float zhanbi=(vLineDistance-vL1)/vL0;
           zhanbi=(1.0-inUpperBoundOffset)*zhanbi+inUpperBoundOffset*((uTotelLen-vL1+vLineDistance)/vL0);
-          vec3 lightColor=mix(vec3(1.0,0.0,0.0),vec3(0.0,1.0,0.0),zhanbi);
-          vec3 color=mix(diffuse,lightColor,clamp(0.0,1.0,inRange));
-          float alphfmc = clamp((alpha+inRange), 0.0, 1.0);
+          // vec3 lightColor=mix(vec3(1.0,0.0,0.0),vec3(0.0,1.0,0.0),zhanbi);
+          // lightColor=diffuse;
 
-          // if(vLineDistance<0.01){
-          //   color=vec3(0.0,1.0,0.0);
-          // }
 
-          vec4 diffuseColor = vec4( vec3(vUv.x,vUv.y,1.0), 1.0);
+          //轨道颜色
+          vec3 trackColor=vec3(1.0,1.0,1.0);
+          vec3 color=mix(trackColor,diffuse,clamp(0.0,1.0,inRange));
+
+          float vWidth=zhanbi;
+          vWidth=clamp(zhanbi,0.0, 1.0);
+          vWidth=pow(vWidth,3.0);
+          vWidth=1.0-vWidth;
+
+
+          float alphfmc = smoothstep( 0.15, 1.0,(alpha+inRange-vWidth*inRange));
+
+
+          vec4 diffuseColor = vec4( color, alphfmc);
           `
         );
       };
@@ -334,85 +350,88 @@ function Model(props) {
     // a.rotation
     const { clock } = state;
     lightPoints.current.rotation.y += delta * 0.2;
-    if (lightLine&&lightLine.material.uniforms.uTime) {
+    if (lightLine && lightLine.material.uniforms.uTime) {
       // console.log('lightLine.material.uniforms',lightLine.material.uniforms)
       lightLine.material.uniforms.uTime.value = clock.getElapsedTime();
     }
   });
   return (
     <>
-      <group {...props} scale={[0.1, 0.1, 0.1]}>
-        <mesh geometry={nodes.Sphere011_Material002_0.geometry}>
+      <group {...props}>
+        <mesh
+          scale={[0.02, 0.02, 0.02]}
+          geometry={nodes.Sphere011_Material002_0.geometry}
+        >
           <meshBasicMaterial
-            // color={[0.188, 0.992, 0.992].map((item) => item * 1.333)}
-            // color={[0.188, 0.992, 0.992].map((item) => item * 1.0)}
-            color={[1.0,1.0,1.0]}
-            // transparent={true}
-            // opacity={0.2}
+            color={[0.188, 0.992, 0.992].map((item) => item * 1.333)}
             toneMapped={false}
           ></meshBasicMaterial>
         </mesh>
+
+        <group scale={[0.2, 0.2, 0.2]} position-y={0.01}>
+          {/* 底部光圈 */}
+          <mesh
+            rotation-x={-Math.PI * 0.5}
+            position-y={-0.1}
+            scale={[4.0, 4.0, 4.0]}
+          >
+            <planeGeometry></planeGeometry>
+            <meshBasicMaterial
+              transparent={true}
+              map={apertureTexture}
+              color={"#00ffff"}
+            ></meshBasicMaterial>
+          </mesh>
+          {/* 光柱  半径为1*/}
+          <mesh ref={lightColumnRef}>
+            <lightColumnMaterial></lightColumnMaterial>
+          </mesh>
+          {/* 向上运动的光圈 */}
+          <mesh ref={lightCircleRef1} rotation-x={-Math.PI * 0.5}>
+            <ringGeometry args={[1.05, 1.1]}></ringGeometry>
+            <lightCircleMaterial args={[0.2]}></lightCircleMaterial>
+          </mesh>
+          <mesh ref={lightCircleRef3} rotation-x={-Math.PI * 0.5}>
+            <ringGeometry args={[1.05, 1.1]}></ringGeometry>
+            <lightCircleMaterial args={[0.4]}></lightCircleMaterial>
+          </mesh>
+          <mesh ref={lightCircleRef2} rotation-x={-Math.PI * 0.5}>
+            <ringGeometry args={[1.05, 1.1]}></ringGeometry>
+            <lightCircleMaterial args={[0]}></lightCircleMaterial>
+          </mesh>
+          <points ref={lightPoints}>
+            <lightPonitsMaterial
+              args={[
+                0.2*0.5,
+                new THREE.Vector2(
+                  window.innerWidth * Math.min(window.devicePixelRatio, 2),
+                  window.innerHeight * Math.min(window.devicePixelRatio, 2)
+                ),
+              ]}
+            ></lightPonitsMaterial>
+          </points>
+          {/* 按照固定轨迹运动的粒子 */}
+          {linePoints.length > 0 && (
+            <Line
+              ref={setlightLine}
+              points={linePoints}
+              transparent={true}
+              color={0x00ffff}
+              opacity={0.3}
+              lineWidth={4}
+              dashSize={3}
+              dashScale={1}
+              dashed={true}
+              // color={'red'}
+              // material={new THREE.MeshBasicMaterial({color:'blue'})}
+            >
+              {/* <meshBasicMaterial color={'blue'}></meshBasicMaterial> */}
+              {/* <lightLinerMaterial></lightLinerMaterial> */}
+              {/* <lineDashedMaterial color={'red'} ></lineDashedMaterial> */}
+            </Line>
+          )}
+        </group>
       </group>
-      {/* 底部光圈 */}
-      <mesh
-        rotation-x={-Math.PI * 0.5}
-        position-y={-0.1}
-        scale={[4.0, 4.0, 4.0]}
-      >
-        <planeGeometry></planeGeometry>
-        <meshBasicMaterial
-          transparent={true}
-          map={apertureTexture}
-          color={"#00ffff"}
-        ></meshBasicMaterial>
-      </mesh>
-      {/* 光柱  半径为1*/}
-      <mesh ref={lightColumnRef}>
-        <lightColumnMaterial></lightColumnMaterial>
-      </mesh>
-      {/* 向上运动的光圈 */}
-      <mesh ref={lightCircleRef1} rotation-x={-Math.PI * 0.5}>
-        <ringGeometry args={[1.05, 1.1]}></ringGeometry>
-        <lightCircleMaterial args={[0.2]}></lightCircleMaterial>
-      </mesh>
-      <mesh ref={lightCircleRef3} rotation-x={-Math.PI * 0.5}>
-        <ringGeometry args={[1.05, 1.1]}></ringGeometry>
-        <lightCircleMaterial args={[0.4]}></lightCircleMaterial>
-      </mesh>
-      <mesh ref={lightCircleRef2} rotation-x={-Math.PI * 0.5}>
-        <ringGeometry args={[1.05, 1.1]}></ringGeometry>
-        <lightCircleMaterial args={[0]}></lightCircleMaterial>
-      </mesh>
-      <points ref={lightPoints}>
-        <lightPonitsMaterial
-          args={[
-            0.2,
-            new THREE.Vector2(
-              window.innerWidth * Math.min(window.devicePixelRatio, 2),
-              window.innerHeight * Math.min(window.devicePixelRatio, 2)
-            ),
-          ]}
-        ></lightPonitsMaterial>
-      </points>
-      {/* 按照固定轨迹运动的粒子 */}
-      {linePoints.length > 0 && (
-        <Line
-          ref={setlightLine}
-          points={linePoints}
-          transparent={true}
-          opacity={0.2}
-          lineWidth={5}
-          dashSize={3}
-          dashScale={1}
-          dashed={true}
-          // color={'red'}
-          // material={new THREE.MeshBasicMaterial({color:'blue'})}
-        >
-          {/* <meshBasicMaterial color={'blue'}></meshBasicMaterial> */}
-          {/* <lightLinerMaterial></lightLinerMaterial> */}
-          {/* <lineDashedMaterial color={'red'} ></lineDashedMaterial> */}
-        </Line>
-      )}
     </>
   );
 }

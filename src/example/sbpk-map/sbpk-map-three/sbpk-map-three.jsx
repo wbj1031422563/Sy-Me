@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:16:27
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-06 22:00:26
+ * @LastEditTime: 2024-08-12 22:01:39
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-map-three.jsx
  * @Description:
  *
@@ -24,7 +24,7 @@ function SbpkMapThree() {
   //   camera.lookAt(4, 0, 0);
   //   camera.updateProjectionMatrix();
   // };
-  const [scene, setScene] = useState('');
+  const [scene, setScene] = useState(SCENE_TYPE.CHINA);
   // useFrame(()=>{
   //   TWEEN.update();
   // })
@@ -59,7 +59,7 @@ function SbpkMapThree() {
             />
           )}
           {scene == SCENE_TYPE.CHINA && <SbpkChina />}
-          <SbpkModelDfmz/>
+          {/* <SbpkModelDfmz/> */}
         </Suspense>
         <axesHelper />
       </Canvas>

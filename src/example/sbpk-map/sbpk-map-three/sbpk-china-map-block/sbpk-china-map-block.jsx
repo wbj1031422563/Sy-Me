@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-05 21:34:50
+ * @LastEditTime: 2024-08-12 22:12:04
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-map-block\sbpk-china-map-block.jsx
  * @Description:
  */
@@ -172,13 +172,13 @@ function SbpkChinaMapBlock({
         }}
       >
         {/* <meshBasicMaterial color={"red"} /> */}
-        <Helper type={THREE.BoxHelper}></Helper>
+        {/* <Helper type={THREE.BoxHelper}></Helper> */}
         <blockMaterial />
         {edge.length > 0 && (
           <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
         )}
         {map.name === "上海市" && (
-          <SbpkModelDfmz position={[map.center[0], 0.1, map.center[1]]} />
+          <SbpkModelDfmz position={[map.center[0], 0.12, map.center[1]]} />
         )}
         {map.name === "北京市" && (
           <SbpkModelTt position={[map.center[0], 0.1, map.center[1]]} />

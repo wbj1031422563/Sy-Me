@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-07 00:16:28
+ * @LastEditTime: 2024-08-12 22:03:07
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -126,9 +126,9 @@ function SbpkChina() {
         // // let china = geo.features.map(item=>item.geometry.coordinates)
         // china = china.slice(0, 8);
         const provinceList = [];
-        const geoList = geo.features.slice(22, 23);
+        const geoList = geo.features.slice(0, 33);
 
-        ps.forEach((c) => {
+        geoList.forEach((c) => {
           const province = {
             key: c.properties.adcode,
             name: c.properties.name,
