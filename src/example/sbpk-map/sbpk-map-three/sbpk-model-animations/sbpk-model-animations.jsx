@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-12 19:58:41
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-12 23:17:34
+ * @LastEditTime: 2024-08-13 21:10:42
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model-animations\sbpk-model-animations.jsx
  * @Description:
  */
@@ -300,7 +300,7 @@ function Model(props) {
   });
   return (
     // scale={[0.2, 0.2, 0.2]} position-y={0.01}
-    <group {...props} >
+    <group {...props}>
       {/* 底部光圈 */}
       <mesh
         rotation-x={-Math.PI * 0.5}
@@ -344,24 +344,25 @@ function Model(props) {
       </points>
       {/* 按照固定轨迹运动的粒子 */}
       {linePoints.length > 0 && (
-        <Line
-          // ref的快捷写法
-          ref={setlightLine}
-          points={linePoints}
-          transparent={true}
-          color={0x00ffff}
-          opacity={0.3}
-          lineWidth={4}
-          dashSize={3}
-          dashScale={1}
-          dashed={true}
-          // color={'red'}
-          // material={new THREE.MeshBasicMaterial({color:'blue'})}
-        >
-          {/* <meshBasicMaterial color={'blue'}></meshBasicMaterial> */}
-          {/* <lightLinerMaterial></lightLinerMaterial> */}
-          {/* <lineDashedMaterial color={'red'} ></lineDashedMaterial> */}
-        </Line>
+
+          <Line
+            // ref的快捷写法
+            ref={setlightLine}
+            points={linePoints}
+            transparent={true}
+            color={0x00ffff}
+            opacity={0.3}
+            lineWidth={4}
+            dashSize={3}
+            dashScale={1}
+            dashed={true}
+            // color={'red'}
+            // material={new THREE.MeshBasicMaterial({color:'blue'})}
+          >
+            {/* <meshBasicMaterial color={'blue'}></meshBasicMaterial> */}
+            {/* <lightLinerMaterial></lightLinerMaterial> */}
+            {/* <lineDashedMaterial color={'red'} ></lineDashedMaterial> */}
+          </Line>
       )}
     </group>
   );

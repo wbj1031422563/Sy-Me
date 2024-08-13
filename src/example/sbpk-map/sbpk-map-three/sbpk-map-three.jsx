@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:16:27
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-12 22:01:39
+ * @LastEditTime: 2024-08-13 21:13:49
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-map-three.jsx
  * @Description:
  *
@@ -34,10 +34,10 @@ function SbpkMapThree() {
       <Canvas
         flat
         dpr={[1, 2]}
-        gl={{ 
-          // 采用线性颜色空间，避免后处理的色差问题（颜色偏浅）
-          outputEncoding: THREE.LinearSRGBColorSpace 
-        }}
+        // gl={{ 
+        //   // 采用线性颜色空间，避免后处理的色差问题（颜色偏浅）
+        //   outputEncoding: THREE.LinearSRGBColorSpace 
+        // }}
         // onCreated={created}
         camera={{
           fov: 45,
@@ -50,7 +50,7 @@ function SbpkMapThree() {
           <color args={["#031D34"]} attach={"background"} />
           {/* <color args={["#cccccc"]} attach={"background"} /> */}
           <SbpkBaseEnv />
-          <SbpkEfftects/>
+          {/* <SbpkEfftects/> */}
           {scene == SCENE_TYPE.EARTH && (
             <SbpkEarth
               handelChangeScene={(type) => {

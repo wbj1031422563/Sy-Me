@@ -2,9 +2,9 @@
  * @Author: FMC
  * @Date: 2024-08-12 19:58:41
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-12 23:19:51
+ * @LastEditTime: 2024-08-13 23:23:07
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-dfmz.jsx
- * @Description: 
+ * @Description:
  */
 /*
  * @Author: FMC
@@ -15,26 +15,45 @@
  * @Description:
  */
 
-import { Suspense} from "react";
-import { useGLTF} from "@react-three/drei";
+import { Suspense } from "react";
+import { useGLTF } from "@react-three/drei";
 import SbpkModelAnimations from "../sbpk-model-animations/sbpk-model-animations";
+import SbpkMark from "../sbpk-mark/sbpk-mark";
 // LightCircleMaterial
 
 function Model(props) {
-  const { nodes } = useGLTF("/model/东方明珠.glb");
+  const { nodes } = useGLTF("/model/东方明珠3.glb");
   return (
     <>
       <group {...props}>
-        <mesh
-          scale={[0.02, 0.02, 0.02]}
-          geometry={nodes.Sphere011_Material002_0.geometry}
-        >
-          <meshBasicMaterial
-            color={[0.188, 0.992, 0.992].map((item) => item * 1.333)}
-            toneMapped={false}
-          ></meshBasicMaterial>
-        </mesh>
-        <SbpkModelAnimations scale={[0.2, 0.2, 0.2]} position-y={0.01}/>
+        <group scale={[0.02, 0.02, 0.02]}>
+          <mesh
+
+            geometry={nodes.球体.geometry}
+            material={nodes.球体.material}
+          >
+            <meshBasicMaterial
+              color={"#2589c2"}
+              transparent={true}
+              opacity={0.8}
+              // wireframe={true}
+            ></meshBasicMaterial>
+          </mesh>
+          <mesh
+            geometry={nodes.柱体.geometry}
+            material={nodes.柱体.material}
+          >
+            <meshBasicMaterial
+              color={"#094f7d"}
+              transparent={true}
+              opacity={0.9}
+              // wireframe={true}
+            ></meshBasicMaterial>
+          </mesh>
+        </group>
+        <SbpkMark scale={[0.1,0.1,0.1]} position-y={0.9} text={"上海"}>
+        </SbpkMark>
+        <SbpkModelAnimations scale={[0.2, 0.2, 0.2]} position-y={0.01} />
       </group>
     </>
   );

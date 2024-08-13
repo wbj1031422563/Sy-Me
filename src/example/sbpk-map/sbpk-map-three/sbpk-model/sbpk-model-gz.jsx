@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-04 18:47:04
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-12 23:24:39
+ * @LastEditTime: 2024-08-14 00:34:19
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-gz.jsx
  * @Description:
  */
@@ -13,6 +13,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { Suspense, useEffect } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import SbpkMark from "../sbpk-mark/sbpk-mark";
 function Model(props) {
   //   const model = useLoader(GLTFLoader, "/model/东方明珠.glb")
   const { nodes } = useGLTF("/model/广州.glb");
@@ -22,26 +23,31 @@ function Model(props) {
     <>
       <group {...props}>
         <group scale={[0.01, 0.01, 0.01]}>
-          <mesh   geometry={nodes.Object_2.geometry}>
+          <mesh geometry={nodes.Object_2.geometry}>
             <meshBasicMaterial
-              color={[0.188, 0.992, 0.992].map((item) => item * 1.3)}
-              toneMapped={false}
+              color={"#2589c2"}
+              transparent={true}
+              opacity={1.0}
             ></meshBasicMaterial>
           </mesh>
-          <mesh  geometry={nodes.Object_3.geometry}>
+          <mesh geometry={nodes.Object_3.geometry}>
             <meshBasicMaterial
-              color={[0.188, 0.992, 0.992].map((item) => item * 1.3)}
-              toneMapped={false}
+              color={"#094f7d"}
+              transparent={true}
+              opacity={0.8}
             ></meshBasicMaterial>
           </mesh>
-          <mesh  geometry={nodes.Object_4.geometry}>
+          <mesh geometry={nodes.Object_4.geometry}>
             <meshBasicMaterial
-              color={[0.188, 0.992, 0.992].map((item) => item * 1.3)}
-              toneMapped={false}
+              color={"#2589c2"}
+              transparent={true}
+              opacity={0.5}
             ></meshBasicMaterial>
           </mesh>
         </group>
-        <SbpkModelAnimations  scale={[0.2, 0.2, 0.2]} position-y={0.03}/>
+        <SbpkMark scale={[0.1,0.1,0.1]} position-y={0.9} text={"广州"}>
+        </SbpkMark>
+        <SbpkModelAnimations scale={[0.2, 0.2, 0.2]} position-y={0.03} />
       </group>
     </>
   );
