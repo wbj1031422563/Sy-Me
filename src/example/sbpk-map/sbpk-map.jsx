@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 19:50:43
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-25 21:57:22
+ * @LastEditTime: 2024-08-14 22:10:18
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map.jsx
  * @Description:
  */
@@ -13,7 +13,7 @@ function SbpkMap() {
   return (
     <>
       <div className="sbpk-map">
-        {/* <SbpkEchart /> */}
+        <SbpkEchart />
         <SbpkMapThree />
       </div>
     </>

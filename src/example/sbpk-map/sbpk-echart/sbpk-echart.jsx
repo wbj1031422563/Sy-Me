@@ -28,22 +28,79 @@ function SbpkEchart() {
   return (
     <div className="sbpk-echarts">
       <div className="sbpk-echarts-header">
-        <p className="time sbpk-echarts-header-side">{timeFormat(time)}</p>
-        <h2>舆情热点实时监控系统</h2>
-        <div className="search sbpk-echarts-header-side">
-          <input className="sbpk-input" type="text" />
-          <button className="sbpk-button m-l-5">
-            <span>搜索</span>
-          </button>
-        </div>
+        <h2 className="title">大屏数据展示</h2>
+        <p className="time">{timeFormat(time)}</p>
       </div>
       <div className="sbpk-echarts-body">
         <div className="sbpk-echarts-left">
-            <SbpkLeftOne/>
+          <div className="sbpk-echarts-row">
+            <div className="echart-header">
+              <img
+                className="icon"
+                src={"/img/echarts/功能定义.png"}
+                width={25}
+              />
+              <p>数据标题1</p>
+            </div>
+            <div className="echart-container"></div>
+          </div>
+          <div className="sbpk-echarts-row">
+            <div className="sbpk-echarts-col">
+              <div className="echart-header">
+                <img
+                  className="icon"
+                  src={"/img/echarts/规则引擎.png"}
+                  width={25}
+                />
+                <p>数据标题2</p>
+              </div>
+            </div>
+            <div className="sbpk-echarts-col">
+              <div className="echart-header">
+                <img
+                  className="icon"
+                  src={"/img/echarts/节点管理.png"}
+                  width={25}
+                />
+                <p>数据标题3</p>
+              </div>
+            </div>
+          </div>
+          <div className="sbpk-echarts-row">
+            <div className="sbpk-echarts-col">
+              <div className="echart-header">
+                <img
+                  className="icon"
+                  src={"/img/echarts/设备管理.png"}
+                  width={25}
+                />
+                <p>数据标题4</p>
+              </div>
+            </div>
+            <div className="sbpk-echarts-col">
+              <div className="echart-header">
+                <img
+                  className="icon"
+                  src={"/img/echarts/神经.png"}
+                  width={25}
+                />
+                <p>数据标题5</p>
+              </div>
+            </div>
+          </div>
+          <div className="sbpk-echarts-row">
+            <div className="echart-header">
+              <img
+                className="icon"
+                src={"/img/echarts/图表-折线图.png"}
+                width={25}
+              />
+              <p>数据标题6</p>
+            </div>
+            <div className="echart-container"></div>
+          </div>
         </div>
-        <div className="sbpk-echarts-right">
-            <SbpkRightOne/>
-           </div>
+        <div className="sbpk-echarts-right">{/* <SbpkRightOne /> */}</div>
       </div>
     </div>
   );
