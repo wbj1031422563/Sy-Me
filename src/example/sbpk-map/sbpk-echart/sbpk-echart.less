@@ -82,6 +82,67 @@
     }
   }
   .echart-container{
+    flex: 1;
+  }
+  // 吞吐量
+  .ttl{
+    display: flex;
+    justify-content: space-between;
+    &-item{
+      width: 132px;
+      // height: 60px;
+      // background-color: red;
 
+    }
+    &-left,&-right{
+      height: 100%;
+      width: 48%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    &-num{
+      font-size: 25px;
+    }
+    &-unit{
+      font-size: 16px;
+    }
+    &-line{
+      width: 1px;
+      height: 100%;
+      background-color: #fff;
+      transform:scaleY(0.5);
+      margin-right: 20px;
+    }
+    &-bottom{
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  // 区域分布
+  .qxfb{
+    
+  }
+  .font-size-14{
+    font-size: 14px;
+  }
+  .display-flex{
+    display: flex;
+  }
+  .display-flex-column{
+    display: flex;
+    flex-direction: column;
+  }
+
+  .align-items-center{
+    align-items: center;
+  }
+  .margin-bottom-10{
+    margin-bottom: 10px;
+    margin-right: 5px;
+  }
+  .margin-right-5{
+    margin-right: 5px;
   }
 }
