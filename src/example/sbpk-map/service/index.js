@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-23 19:46:31
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-15 21:06:51
+ * @LastEditTime: 2024-08-18 09:22:53
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\service\index.js
  * @Description: 
  */
@@ -25,6 +25,12 @@ export const getDataQyfb=()=>{
 }
 export const getDataYszb=()=>{
     return axios.get('/sbpk/getDataYszb').then(res=>{
+        return res.data;
+    })
+}
+
+export const getDataFgfb=()=>{
+    return axios.get('/sbpk/getDataFgfb').then(res=>{
         return res.data;
     })
 }
