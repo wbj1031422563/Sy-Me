@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:16:27
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-18 16:49:12
+ * @LastEditTime: 2024-08-19 22:06:38
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-map-three.jsx
  * @Description:
  *
@@ -62,7 +62,7 @@ function SbpkMapThree() {
           {scene == SCENE_TYPE.CHINA && <SbpkChina />}
           {/* <SbpkModelDfmz/> */}
         </Suspense>
-        <axesHelper />
+        {/* <axesHelper /> */}
       </Canvas>
       <Loader />
     </div>

@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-06-23 09:58:48
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-18 16:59:10
+ * @LastEditTime: 2024-08-18 18:02:15
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-base-env\sbpk-base-env.jsx
  * @Description:基础环境
  */
@@ -29,7 +29,7 @@ function SbpkBaseEnv() {
   return (
     <>
       {/* <Perf position="top-left"/> */}
-      <OrbitControls
+      {/* <OrbitControls
         ref={controls}
         makeDefault={true}
         maxZoom={5.0}
@@ -40,6 +40,10 @@ function SbpkBaseEnv() {
         maxAzimuthAngle={Math.PI * 0.5}
         minPolarAngle={-Math.PI * 0.5}
         maxPolarAngle={Math.PI * 0.5}
+      /> */}
+            <OrbitControls
+        ref={controls}
+        makeDefault={true}
       />
     </>
   );

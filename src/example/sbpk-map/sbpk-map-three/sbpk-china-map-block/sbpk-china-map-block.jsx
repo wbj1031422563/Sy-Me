@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-12 23:21:43
+ * @LastEditTime: 2024-08-18 17:11:19
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-map-block\sbpk-china-map-block.jsx
  * @Description:
  */
@@ -177,7 +177,7 @@ function SbpkChinaMapBlock({
         {edge.length > 0 && (
           <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
         )}
-        {map.name === "上海市" && (
+        {/* {map.name === "上海市" && (
           <SbpkModelDfmz position={[map.center[0], 0.12, map.center[1]]} />
         )}
         {map.name === "北京市" && (
@@ -185,7 +185,7 @@ function SbpkChinaMapBlock({
         )}
         {map.name === "广东省" && (
           <SbpkModelGz position={[map.center[0], 0.1, map.center[1]]} />
-        )}
+        )} */}
       </mesh>
       {/* <mesh scale={[5, 5, 0.1]} rotation-x={Math.PI*0.5}>
         <boxGeometry></boxGeometry>

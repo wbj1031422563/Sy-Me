@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-12 22:03:07
+ * @LastEditTime: 2024-08-19 23:47:41
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -18,6 +18,7 @@ import sbpkChinaBlockVs from "./shader/sbpk-china-block.vs.glsl";
 import sbpkChinaBlockFs from "./shader/sbpk-china-block.fs.glsl";
 import SbpkChinaMapBlock from "../sbpk-china-map-block/sbpk-china-map-block";
 import GUI from "lil-gui";
+import SbpkChinaTraffic from "../sbpk-china-traffic/sbpk-china-traffic";
 
 const BlockMaterial = shaderMaterial(
   {
@@ -118,7 +119,7 @@ function SbpkChina() {
       "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",
       (geoJson) => {
         const geo = JSON.parse(geoJson);
-        console.log("geo", geo);
+        // console.log("geo", geo);
         // 104.065735, 30.659462
         const aProjection = d3.geoMercator().scale(10).translate([0, 0]);
 
@@ -209,6 +210,7 @@ function SbpkChina() {
         {provinces.map((item) => (
           <SbpkChinaMapBlock key={item.key} map={item} colorObj={cubeState} />
         ))}
+        <SbpkChinaTraffic/>
       </group>
     </>
   );
