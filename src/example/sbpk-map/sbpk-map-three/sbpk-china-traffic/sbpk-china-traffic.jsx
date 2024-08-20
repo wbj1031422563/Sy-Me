@@ -1,3 +1,11 @@
+/*
+ * @Author: FMC
+ * @Date: 2024-08-18 17:17:29
+ * @LastEditors: FMC
+ * @LastEditTime: 2024-08-20 20:24:27
+ * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-traffic\sbpk-china-traffic.jsx
+ * @Description:
+ */
 /**
  *
  * @returns 交通线路
@@ -7,7 +15,10 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import * as d3 from "d3";
 import { Line } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { extend, useFrame } from "@react-three/fiber";
+import RoadGeometry from "./RoadGeometry";
+
+extend({ RoadGeometry });
 
 function SbpkChinaTraffic() {
   const lines = useRef([]);
@@ -50,7 +61,7 @@ function SbpkChinaTraffic() {
           line.data.color = color;
           const curve = new THREE.CatmullRomCurve3(line.points);
           line.curve = curve;
-          line.geometry = new THREE.TubeGeometry(curve, 80, 0.006);
+          line.geometry = new RoadGeometry(curve, 80, 0.01);
           list.push(line);
         }
       });
@@ -60,11 +71,11 @@ function SbpkChinaTraffic() {
       setLinesData(list);
     });
   }, []);
-  useFrame(()=>{
-    if(texture){
-      texture.offset.x-=0.01;
+  useFrame(() => {
+    if (texture) {
+      texture.offset.x -= 0.01;
     }
-  })
+  });
   //   useEffect(()=>{
   //     console.log('lines',lines.length)
   //   },[lines])
