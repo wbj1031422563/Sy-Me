@@ -1,5 +1,5 @@
 import * as THREE from "three";
-
+// THREE。THREE.TubeGeometry
 class RoadGeometry extends THREE.BufferGeometry {
   constructor(
     path = new THREE.QuadraticBezierCurve3(
@@ -23,11 +23,18 @@ class RoadGeometry extends THREE.BufferGeometry {
       radialSegments: radialSegments,
       closed: closed,
     };
+    const roadWidth = 0.01;
 
     const frames = path.computeFrenetFrames(tubularSegments, closed);
 
     // expose internals
 
+    /**
+     * 
+    切线向量（Tangent）：路径的方向，即路径在每一点的瞬时方向。
+    法线向量（Normal）：垂直于切线向量的向量，用于确定几何体的正面方向。
+    副法线向量（Binormal）：垂直于切线和法线的向量，形成完整的局部坐标系。
+     */
     this.tangents = frames.tangents;
     this.normals = frames.normals;
     this.binormals = frames.binormals;
@@ -53,7 +60,10 @@ class RoadGeometry extends THREE.BufferGeometry {
     // build geometry
 
     this.setIndex(indices);
-    this.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+    this.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(vertices, 3)
+    );
     this.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
     this.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
 
@@ -93,55 +103,65 @@ class RoadGeometry extends THREE.BufferGeometry {
 
       // generate normals and vertices for the current segment
 
-      for (let j = 0; j <= radialSegments; j++) {
-        const v = (j / radialSegments) * Math.PI * 2;
+      // for (let j = 0; j <= radialSegments; j++) {
+      //   const v = (j / radialSegments) * Math.PI * 2;
 
-        const sin = Math.sin(v);
-        const cos = -Math.cos(v);
+      //   const sin = Math.sin(v);
+      //   const cos = -Math.cos(v);
 
-        // normal
+      //   // normal
 
-        normal.x = cos * N.x + sin * B.x;
-        normal.y = cos * N.y + sin * B.y;
-        normal.z = cos * N.z + sin * B.z;
-        normal.normalize();
+      //   normal.x = cos * N.x + sin * B.x;
+      //   normal.y = cos * N.y + sin * B.y;
+      //   normal.z = cos * N.z + sin * B.z;
+      //   normal.normalize();
 
-        normals.push(normal.x, normal.y, normal.z);
+      //   normals.push(normal.x, normal.y, normal.z);
 
-        // vertex
+      //   // vertex
 
-        vertex.x = P.x + radius * normal.x;
-        vertex.y = P.y + radius * normal.y;
-        vertex.z = P.z + radius * normal.z;
+      //   vertex.x = P.x + radius * normal.x;
+      //   vertex.y = P.y + radius * normal.y;
+      //   vertex.z = P.z + radius * normal.z;
 
-        vertices.push(vertex.x, vertex.y, vertex.z);
-      }
+      //   vertices.push(vertex.x, vertex.y, vertex.z);
+      // }
+      // const v1=
+      vertex.x = P.x + (roadWidth / 2) * B.x;
+      vertex.y = P.y;
+      vertex.z = P.z + (roadWidth / 2) * B.z;
+      vertices.push(vertex.x, vertex.y, vertex.z);
+
+      vertex.x = P.x - (roadWidth / 2) * B.x;
+      vertex.y = P.y;
+      vertex.z = P.z - (roadWidth / 2) * B.z;
+      vertices.push(vertex.x, vertex.y, vertex.z);
     }
 
     function generateIndices() {
-      for (let j = 1; j <= tubularSegments; j++) {
-        for (let i = 1; i <= radialSegments; i++) {
-          const a = (radialSegments + 1) * (j - 1) + (i - 1);
-          const b = (radialSegments + 1) * j + (i - 1);
-          const c = (radialSegments + 1) * j + i;
-          const d = (radialSegments + 1) * (j - 1) + i;
-
-          // faces
-
-          indices.push(a, b, d);
-          indices.push(b, c, d);
-        }
+      for (let j = 0; j < tubularSegments; j++) {
+        const a = 2 * j;     // 当前段左边顶点
+        const b = 2 * j + 1; // 当前段右边顶点
+        const c = 2 * j + 2; // 下一段左边顶点
+        const d = 2 * j + 3; // 下一段右边顶点
+    
+        // faces
+        indices.push(a, b, d); // 三角形 (a, b, d)
+        indices.push(a, d, c); // 三角形 (a, d, c)
       }
     }
+    
 
     function generateUVs() {
       for (let i = 0; i <= tubularSegments; i++) {
-        for (let j = 0; j <= radialSegments; j++) {
-          uv.x = i / tubularSegments;
-          uv.y = j / radialSegments;
+        // uv.x = i / tubularSegments;
+        // uv.y = 0;
+        uvs.push(i / tubularSegments, 0);
+        uvs.push(i / tubularSegments, 1);
 
-          uvs.push(uv.x, uv.y);
-        }
+        // uv.x = i / tubularSegments;
+        // uv.y = 1;
+        // uvs.push(uv.x, uv.y);
       }
     }
   }
@@ -154,16 +174,16 @@ class RoadGeometry extends THREE.BufferGeometry {
     return data;
   }
 
-//   static fromJSON(data) {
-//     // This only works for built-in curves (e.g. CatmullRomCurve3).
-//     // User defined curves or instances of CurvePath will not be deserialized.
-//     return new RoadGeometry(
-//       new Curves[data.path.type]().fromJSON(data.path),
-//       data.tubularSegments,
-//       data.radius,
-//       data.radialSegments,
-//       data.closed
-//     );
-//   }
+  //   static fromJSON(data) {
+  //     // This only works for built-in curves (e.g. CatmullRomCurve3).
+  //     // User defined curves or instances of CurvePath will not be deserialized.
+  //     return new RoadGeometry(
+  //       new Curves[data.path.type]().fromJSON(data.path),
+  //       data.tubularSegments,
+  //       data.radius,
+  //       data.radialSegments,
+  //       data.closed
+  //     );
+  //   }
 }
-export default RoadGeometry
+export default RoadGeometry;

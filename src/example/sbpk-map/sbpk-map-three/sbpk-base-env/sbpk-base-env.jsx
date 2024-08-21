@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-06-23 09:58:48
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-18 18:02:15
+ * @LastEditTime: 2024-08-21 21:36:50
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-base-env\sbpk-base-env.jsx
  * @Description:基础环境
  */
@@ -28,7 +28,7 @@ function SbpkBaseEnv() {
   }, []);
   return (
     <>
-      {/* <Perf position="top-left"/> */}
+      <Perf position="top-left"/>
       {/* <OrbitControls
         ref={controls}
         makeDefault={true}

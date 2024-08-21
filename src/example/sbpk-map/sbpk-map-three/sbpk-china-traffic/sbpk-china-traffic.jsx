@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-18 17:17:29
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-20 20:24:27
+ * @LastEditTime: 2024-08-21 21:49:30
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-traffic\sbpk-china-traffic.jsx
  * @Description:
  */
@@ -10,27 +10,31 @@
  *
  * @returns 交通线路
  */
-
+import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import * as d3 from "d3";
 import { Line } from "@react-three/drei";
 import { extend, useFrame } from "@react-three/fiber";
 import RoadGeometry from "./RoadGeometry";
+import RoadMaterial from "./RoadMaterial";
 
 extend({ RoadGeometry });
+extend({RoadMaterial})
 
 function SbpkChinaTraffic() {
   const lines = useRef([]);
   const [linesData, setLinesData] = useState([]);
-  const texture = new THREE.TextureLoader().load("/img/流光.png");
+  const texture = new THREE.TextureLoader().load("/img/图层 3.png");
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(1, 1);
   texture.needsUpdate = true;
-  const material = new THREE.MeshBasicMaterial({
-    map: texture,
-    side: THREE.BackSide,
-    transparent: true,
+  const material = new RoadMaterial({
+    // color:'red',
+    // side:THREE.DoubleSide,
+    // map: texture,
+    // side: THREE.BackSide,
+    // transparent: true,
   });
   useEffect(() => {
     const fileLoader = new THREE.FileLoader();
@@ -38,8 +42,7 @@ function SbpkChinaTraffic() {
       const geoList = JSON.parse(geoJson)["features"];
       const aProjection = d3.geoMercator().scale(10).translate([0, 0]);
       const list = [];
-      geoList.forEach((geo) => {
-        // console.log("geo", geo);
+      geoList.forEach((geo, index) => {
         const line = {
           data: geo.properties,
           points: [],
@@ -61,20 +64,19 @@ function SbpkChinaTraffic() {
           line.data.color = color;
           const curve = new THREE.CatmullRomCurve3(line.points);
           line.curve = curve;
-          line.geometry = new RoadGeometry(curve, 80, 0.01);
+          // line.geometry = new RoadGeometry(curve, 80, 0.01, 2);
           list.push(line);
         }
       });
-
-      // const
-      // console.log('list',list);
+      // mergeBufferGeometries(list.map(item=>item.geometry));
       setLinesData(list);
     });
   }, []);
-  useFrame(() => {
-    if (texture) {
-      texture.offset.x -= 0.01;
-    }
+  useFrame((state, delta) => {
+    const { clock } = state;
+    // if (material) {
+    //   material.uniforms.uTime.value = clock.getElapsedTime();
+    // }
   });
   //   useEffect(()=>{
   //     console.log('lines',lines.length)
@@ -86,12 +88,16 @@ function SbpkChinaTraffic() {
           linesData.map((item, index) => {
             return (
               <mesh
+              ref={(el)=>lines.current[index]=el}
                 key={item.data.NAME + index}
                 geometry={item.geometry}
-                material={material}
-              ></mesh>
+                // material={material}
+              >
+                  <roadMaterial></roadMaterial>
+              </mesh>
             );
           })}
+          
       </group>
     </>
   );
