@@ -19,6 +19,7 @@ import sbpkChinaBlockFs from "./shader/sbpk-china-block.fs.glsl";
 import SbpkChinaMapBlock from "../sbpk-china-map-block/sbpk-china-map-block";
 import GUI from "lil-gui";
 import SbpkChinaTraffic from "../sbpk-china-traffic/sbpk-china-traffic";
+import SbpkChinaTrafficTest from "../sbpk-china-traffic-test/sbpk-china-traffic-test";
 
 const BlockMaterial = shaderMaterial(
   {
@@ -206,12 +207,13 @@ function SbpkChina() {
 
   return (
     <>
-      <group position={[-4.5, 0, 5.5]}>
+      {/* <group position={[-4.5, 0, 5.5]}>
         {provinces.map((item) => (
           <SbpkChinaMapBlock key={item.key} map={item} colorObj={cubeState} />
         ))}
         <SbpkChinaTraffic/>
-      </group>
+      </group> */}
+      <SbpkChinaTrafficTest/>
     </>
   );
 }
