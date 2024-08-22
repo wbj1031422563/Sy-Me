@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-18 17:17:29
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-21 21:49:30
+ * @LastEditTime: 2024-08-22 21:03:14
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-traffic\sbpk-china-traffic.jsx
  * @Description:
  */
@@ -38,7 +38,10 @@ function SbpkChinaTraffic() {
   });
   useEffect(() => {
     const fileLoader = new THREE.FileLoader();
-    fileLoader.load("/chinaTrain2.json", (geoJson) => {
+    fileLoader.load("/chinaTrain.json", (geoJson) => {
+      const line1=[];
+      const line2=[];
+      const infoLen = [];
       const geoList = JSON.parse(geoJson)["features"];
       const aProjection = d3.geoMercator().scale(10).translate([0, 0]);
       const list = [];
@@ -59,16 +62,29 @@ function SbpkChinaTraffic() {
             //   line.points.push(new THREE.Vector3(x, 0,y));
             return new THREE.Vector3(x, 0.11, y);
           });
+          if(geo.properties.NAME.includes("京广")){
+            line1.push(...line.points)
+          }
+          // if(geo.properties.NAME.includes("成昆")){
+          //   line1.push(...line.points)
+          // }
           const color = new THREE.Color();
           color.setHSL(0.8, Math.min(0.9, Math.random()), Math.random());
           line.data.color = color;
           const curve = new THREE.CatmullRomCurve3(line.points);
           line.curve = curve;
-          // line.geometry = new RoadGeometry(curve, 80, 0.01, 2);
-          list.push(line);
+          const len = curve.getLength();
+          if (len > 0.1) {
+            infoLen.push(curve.getLength());
+            line.geometry = new RoadGeometry(curve, 80, 0.01, 2);
+            list.push(line);
+          }
         }
       });
       // mergeBufferGeometries(list.map(item=>item.geometry));
+      console.log("max len", Math.max(...infoLen));
+      console.log("min len", Math.min(...infoLen));
+      console.log("len", infoLen.length);
       setLinesData(list);
     });
   }, []);
@@ -88,16 +104,15 @@ function SbpkChinaTraffic() {
           linesData.map((item, index) => {
             return (
               <mesh
-              ref={(el)=>lines.current[index]=el}
+                ref={(el) => (lines.current[index] = el)}
                 key={item.data.NAME + index}
                 geometry={item.geometry}
                 // material={material}
               >
-                  <roadMaterial></roadMaterial>
+                <roadMaterial></roadMaterial>
               </mesh>
             );
           })}
-          
       </group>
     </>
   );

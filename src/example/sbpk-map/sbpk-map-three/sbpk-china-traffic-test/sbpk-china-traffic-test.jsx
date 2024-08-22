@@ -1,35 +1,85 @@
-import { extend } from "@react-three/fiber";
+/*
+ * @Author: FMC
+ * @Date: 2024-08-18 17:17:29
+ * @LastEditors: FMC
+ * @LastEditTime: 2024-08-22 22:43:46
+ * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-traffic-test\sbpk-china-traffic-test.jsx
+ * @Description:
+ */
+/**
+ *
+ * @returns 交通线路
+ */
+import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import RoadTestGeometry from "./RoadGeometry";
-extend({RoadTestGeometry})
+import * as d3 from "d3";
+import { Line } from "@react-three/drei";
+import { extend, useFrame } from "@react-three/fiber";
+import RoadTestGeometry from './RoadGeometry';
+import RoadGeometry from '../sbpk-china-traffic/RoadGeometry';
+import RoadMaterial from '../sbpk-china-traffic/RoadMaterial';
+extend({RoadMaterial})
+
 function SbpkChinaTrafficTest() {
-    const initMapGeometry = () => {
-        // const line1 = [[2, 0, 2], [3, 0, 10]].map(item=>new THREE.Vector3(...item))
-        // const line2 = [[7, 0, 2], [8, 0, 10]].map(item=>new THREE.Vector3(...item))
-        // const line3 = [[-2, 0, 4], [10, 0, 4]].map(item=>new THREE.Vector3(...item))
-        // const line4 = [[-2, 0, 6], [10, 0, 6]].map(item=>new THREE.Vector3(...item))
-        const curve1= new THREE.CatmullRomCurve3([
-            new THREE.Vector3(2, 0, 2),
-            new THREE.Vector3(3, 0, 10)
-        ])
-        const curve2= new THREE.CatmullRomCurve3([
-            new THREE.Vector3(7, 0, 2),
-            new THREE.Vector3(8, 0, 10)
-        ])
-        const curve3= new THREE.CatmullRomCurve3([
-            new THREE.Vector3(2, 0, 4),
-            new THREE.Vector3(10, 0, 4)
-        ])
-        const curve4= new THREE.CatmullRomCurve3([
-            new THREE.Vector3(-2, 0, 6),
-            new THREE.Vector3(10, 0, 6)
-        ])
-    }
-    return <>
-            <mesh>
-                <roadTestGeometry></roadTestGeometry>
-                <meshBasicMaterial color={'red'}></meshBasicMaterial>
-            </mesh>
+  const reft=useRef(null);
+  useEffect(() => {
+    const fileLoader = new THREE.FileLoader();
+    fileLoader.load("/chinaTrain.json", (geoJson) => {
+      const line1=[];
+      const line2=[];
+      const geoList = JSON.parse(geoJson)["features"];
+      const aProjection = d3.geoMercator().scale(10).translate([0, 0]);
+      geoList.forEach((geo, index) => {
+        const line = {
+          data: geo.properties,
+          points: [],
+          geo: geo,
+        };
+        if (
+          geo.geometry &&
+          geo.geometry.coordinates &&
+          !geo.properties.NAME.includes("地铁")
+        ) {
+          line.points = geo.geometry.coordinates.map((point) => {
+            // debugger
+            const [x, y] = aProjection(point);
+            //   line.points.push(new THREE.Vector3(x, 0,y));
+            return new THREE.Vector3(x, 0.11, y);
+          });
+          if(geo.properties.NAME.includes("京广")){
+            line1.push(line.points)
+          }
+          if(geo.properties.NAME.includes("成昆")){
+            line2.push(line.points)
+          }
+        }
+      });
+
+      console.log('京广',line1)
+      //京广
+      const jg1=new THREE.CatmullRomCurve3(line1[2]);
+      const jg2=new THREE.CatmullRomCurve3(line1[7]);
+      // 成昆
+      const ck1=new THREE.CatmullRomCurve3(line2[1]);
+      const ck2=new THREE.CatmullRomCurve3(line2[2]);
+
+      reft.current.geometry = new RoadTestGeometry([ck1,jg1,jg2,ck2], 80, 0.01, 2);
+      reft.current.material = new RoadMaterial();
+      debugger
+    });
+  }, []);
+  return (
+    <>
+      <group position={[-15.01, 0, -0.05]}>
+          <mesh ref={reft}>
+            {/* <boxBufferGeometry></boxBufferGeometry> */}
+            {/* <meshBasicMaterial color={'red'}></meshBasicMaterial> */}
+            {/* <roadMaterial></roadMaterial> */}
+          </mesh>
+          <line></line>
+      </group>
     </>
+  );
 }
-export default SbpkChinaTrafficTest
+export default SbpkChinaTrafficTest;

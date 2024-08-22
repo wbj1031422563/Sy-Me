@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-21 21:43:35
+ * @LastEditTime: 2024-08-22 21:11:29
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -179,7 +179,7 @@ function SbpkChina() {
     );
   }, []);
 
-  useEffect(()=>{
+  useEffect(() => {
     // let gui = new GUI({
     //   title: "控制面板",
     //   width: "320",
@@ -203,19 +203,19 @@ function SbpkChina() {
     //     innerColor: v,
     //   });
     // });
-  },[])
+  }, []);
 
   return (
     <>
-      {/* <group position={[-4.5, 0, 5.5]}>
+      <group position={[-4.5, 0, 5.5]}>
         {provinces.map((item) => (
           <SbpkChinaMapBlock key={item.key} map={item} colorObj={cubeState} />
         ))}
-        <SbpkChinaTraffic/>
-      </group> */}
-      <SbpkChinaTrafficTest/>
+        {/* <SbpkChinaTraffic /> */}
+        <SbpkChinaTrafficTest/>
+      </group>
+      {/* <SbpkChinaTrafficTest/> */}
     </>
   );
 }
 export default SbpkChina;
-
