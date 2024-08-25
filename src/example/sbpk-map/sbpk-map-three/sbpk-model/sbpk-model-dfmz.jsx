@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-12 19:58:41
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-25 11:27:15
+ * @LastEditTime: 2024-08-25 15:37:17
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-dfmz.jsx
  * @Description:
  */
@@ -44,12 +44,12 @@ function Model(props) {
             ></meshBasicMaterial>
           </mesh>
         </group>
-        <SbpkMark
+        {/* <SbpkMark
           scale={[0.1, 0.1, 0.1]}
           position-y={0.7}
           type={"2"}
           text={"上海"}
-        ></SbpkMark>
+        ></SbpkMark> */}
         <SbpkModelAnimations scale={[0.1, 0.1, 0.1]} position-y={0.01} />
       </group>
     </>

@@ -45,8 +45,8 @@ function Model(props) {
             ></meshBasicMaterial>
           </mesh>
         </group>
-        <SbpkMark scale={[0.1,0.1,0.1]} type={"2"} position-y={0.5} text={"广州"}>
-        </SbpkMark>
+        {/* <SbpkMark scale={[0.1,0.1,0.1]} type={"2"} position-y={0.5} text={"广州"}>
+        </SbpkMark> */}
         <SbpkModelAnimations scale={[0.1, 0.1, 0.1]} position-y={0.03} />
       </group>
     </>

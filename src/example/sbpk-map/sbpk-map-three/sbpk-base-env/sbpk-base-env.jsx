@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-06-23 09:58:48
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-25 11:01:15
+ * @LastEditTime: 2024-08-25 17:27:25
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-base-env\sbpk-base-env.jsx
  * @Description:基础环境
  */
@@ -12,11 +12,13 @@ import { useFrame } from "@react-three/fiber";
 import TWEEN from "@tweenjs/tween.js";
 import * as THREE from "three";
 import { useEffect, useRef } from "react";
+const clock=new THREE.Clock();
 function SbpkBaseEnv() {
   const controls = useRef(null);
   useFrame((state) => {
     const { camera } = state;
     TWEEN.update();
+    // console.log('stsjhakj',clock.getDelta())
     // console.log("camera", camera);
     // const { target, matrix } = camera;
     // console.log("target", controls.current.target);
@@ -26,10 +28,11 @@ function SbpkBaseEnv() {
     controls.current.target.set(0.84, 0.31, -0.65);
     controls.current.update();
   }, []);
+
   return (
     <>
-      <Perf position="top-left"/>
-      {/* <OrbitControls
+      {/* <Perf position="top-left"/> */}
+      <OrbitControls
         ref={controls}
         makeDefault={true}
         maxZoom={5.0}
@@ -40,11 +43,11 @@ function SbpkBaseEnv() {
         maxAzimuthAngle={Math.PI * 0.5}
         minPolarAngle={-Math.PI * 0.5}
         maxPolarAngle={Math.PI * 0.5}
-      /> */}
-            <OrbitControls
+      />
+            {/* <OrbitControls
         ref={controls}
         makeDefault={true}
-      />
+      /> */}
     </>
   );
 }

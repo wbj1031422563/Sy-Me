@@ -12,7 +12,6 @@ function SbpkRightOne() {
       const res = await getData2();
       if (!initialized) {
         // 仅在未初始化时进行初始化，注意不可以将异步请求加入到这个里面，否则不会生效。
-        console.log("初始化");
         setList(res);
       }
     };

@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-12 19:58:41
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-25 11:08:20
+ * @LastEditTime: 2024-08-25 15:29:06
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model-animations\sbpk-model-animations.jsx
  * @Description:
  */
@@ -27,6 +27,7 @@ import LightPointsVs from "./shader/light-points.vs.glsl";
 import LightPointsFs from "./shader/light-points.fs.glsl";
 import LightLinerFs from "./shader/light-liner.fs.glsl";
 import TWEEN from "@tweenjs/tween.js";
+import SbpkClock from '../common/sbpk-clock.js';
 import * as THREE from "three";
 class LightColumnMaterial extends THREE.ShaderMaterial {
   constructor() {
@@ -289,12 +290,9 @@ function Model(props) {
   }, [lightLine]);
 
   useFrame((state, delta) => {
-    // const a=new THREE.Mesh()
-    // a.rotation
     const { clock } = state;
-    lightPoints.current.rotation.y += delta *3;
+    lightPoints.current.rotation.y += delta;
     if (lightLine && lightLine.material.uniforms.uTime) {
-      // console.log('lightLine.material.uniforms',lightLine.material.uniforms)
       lightLine.material.uniforms.uTime.value = clock.getElapsedTime();
     }
   });

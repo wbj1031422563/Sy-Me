@@ -82,9 +82,9 @@ function SbpkChinaTraffic() {
         }
       });
       // mergeBufferGeometries(list.map(item=>item.geometry));
-      console.log("max len", Math.max(...infoLen));
-      console.log("min len", Math.min(...infoLen));
-      console.log("len", infoLen.length);
+      // console.log("max len", Math.max(...infoLen));
+      // console.log("min len", Math.min(...infoLen));
+      // console.log("len", infoLen.length);
       setLinesData(list);
     });
   }, []);

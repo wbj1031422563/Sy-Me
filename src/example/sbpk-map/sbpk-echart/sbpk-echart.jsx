@@ -176,7 +176,7 @@ function SbpkEchart() {
   return (
     <div className="sbpk-echarts">
       <div className="sbpk-echarts-header">
-        <h2 className="title">大屏数据展示</h2>
+        <h2 className="title">全国交通运输数据驾驶舱</h2>
         <p className="time">{timeFormat(time)}</p>
       </div>
       <div className="sbpk-echarts-body">

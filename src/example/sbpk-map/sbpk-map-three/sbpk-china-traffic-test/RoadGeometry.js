@@ -1,7 +1,7 @@
 import * as THREE from "three";
 // THREE。THREE.TubeGeometry
 class RoadTestGeometry extends THREE.BufferGeometry {
-  constructor(pathList, tubularSegments = 80) {
+  constructor(pathList, tubularSegments = 50) {
     super();
 
     this.type = "RoadGeometry";

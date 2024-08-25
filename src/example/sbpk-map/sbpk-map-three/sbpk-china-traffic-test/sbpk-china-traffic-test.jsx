@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-18 17:17:29
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-25 11:01:50
+ * @LastEditTime: 2024-08-25 17:14:01
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-traffic-test\sbpk-china-traffic-test.jsx
  * @Description:
  */
@@ -53,11 +53,14 @@ function SbpkChinaTrafficTest() {
           // if (geo.properties.NAME.includes("成昆")) {
           //   line2.push(line.points);
           // }
-          line1.push(new THREE.CatmullRomCurve3(line.points))
+          const curve = new THREE.CatmullRomCurve3(line.points);
+          if (curve.getLength() > 0.1) {
+            line1.push(curve);
+          }
         }
       });
 
-      console.log("京广", line1);
+      // console.log("京广", line1);
       // //京广
       // const jg1 = new THREE.CatmullRomCurve3(line1[2]);
       // const jg2 = new THREE.CatmullRomCurve3(line1[7]);
@@ -65,30 +68,26 @@ function SbpkChinaTrafficTest() {
       // const ck1 = new THREE.CatmullRomCurve3(line2[1]);
       // const ck2 = new THREE.CatmullRomCurve3(line2[2]);
 
-      reft.current.geometry = new RoadTestGeometry(
-        line1,
-        80,
-        0.01,
-        2
-      );
+      reft.current.geometry = new RoadTestGeometry(line1, 40, 0.01, 2);
       reft.current.material = new RoadMaterial();
       // debugger
     });
   }, []);
   useFrame((state, delta) => {
     const { clock } = state;
-    if (reft.current&&reft.current.material) {
+    if (
+      reft.current &&
+      reft.current.material &&
+      reft.current.material.uniforms&&
+      reft.current.material.uniforms.uTime
+    ) {
       reft.current.material.uniforms.uTime.value = clock.getElapsedTime();
     }
   });
   return (
     <>
       <group position={[-15.01, 0, -0.05]}>
-        <mesh ref={reft}>
-          {/* <boxBufferGeometry></boxBufferGeometry> */}
-          {/* <meshBasicMaterial color={'red'}></meshBasicMaterial> */}
-          {/* <roadMaterial></roadMaterial> */}
-        </mesh>
+        <mesh ref={reft}></mesh>
         <line></line>
       </group>
     </>
