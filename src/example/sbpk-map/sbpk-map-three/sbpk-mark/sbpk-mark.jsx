@@ -7,11 +7,11 @@ import "./sbpk-mark.less";
  * @Author: FMC
  * @Date: 2024-08-13 22:56:41
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-14 00:31:41
+ * @LastEditTime: 2024-08-25 11:44:21
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-mark\sbpk-mark.jsx
  * @Description:
  */
-function SbpkMark({ text, children, ...props }) {
+function SbpkMark({ text, type = "1", children, ...props }) {
   const ref = useRef();
   const ref2 = useRef();
   const [isOccluded, setIsOccluded] = useState();
@@ -25,20 +25,17 @@ function SbpkMark({ text, children, ...props }) {
       const range = cameraPos.distanceTo(refPos) <= 8;
       if (range !== isInRange) setInRange(range);
 
-      ref.current.lookAt(state.camera.position);
+      
+      ref.current.lookAt(new THREE.Vector3(cameraPos.x,0,cameraPos.z));
     }
   });
   useEffect(() => {
-    // if(ref2.current){
-    //     console.log("ref2.current",ref2.current)
-    //     console.log("ref.current",ref)
-    // }
     if (ref.current) {
       console.log("ref.current", ref.current);
     }
   }, []);
   return (
-    <Float speed={2} floatIntensity={0.5} >
+    // <Float speed={1} floatIntensity={0.5}>
       <group ref={ref}>
         <Html
           ref={ref2}
@@ -53,18 +50,25 @@ function SbpkMark({ text, children, ...props }) {
           {...props}
         >
           {/* {children} */}
-          <div className="sbpk-mark">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <div className="content">
-              <p>{text}</p>
+          {type == "1" && (
+            <div className="sbpk-mark">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <div className="content">
+                <p>{text}</p>
+              </div>
             </div>
-          </div>
+          )}
+          {type == "2" && (
+            <div className="sbpk-mark-2">
+              {text}
+            </div>
+          )}
         </Html>
       </group>
-    </Float>
+    // </Float>
   );
 }
 export default SbpkMark;

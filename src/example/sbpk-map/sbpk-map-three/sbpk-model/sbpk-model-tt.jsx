@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-04 18:47:04
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-14 00:34:46
+ * @LastEditTime: 2024-08-25 11:41:28
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-tt.jsx
  * @Description:
  */
@@ -29,7 +29,7 @@ function Model(props) {
             color={[0.188, 0.992, 0.992].map((item) => item * 1.1)}
           />
         </mesh> */}
-        <group scale={[0.01, 0.01, 0.01].map((item) => item * 0.8)}>
+        <group scale={[0.007, 0.007, 0.007].map((item) => item * 0.8)}>
           <mesh geometry={nodes.Object_2.geometry}>
             <meshBasicMaterial
               color={"#2589c2"}
@@ -45,9 +45,9 @@ function Model(props) {
             ></meshBasicMaterial>
           </mesh>
         </group>
-        <SbpkMark scale={[0.1,0.1,0.1]} position-y={0.9} text={"北京"}>
+        <SbpkMark scale={[0.1,0.1,0.1]} type={"2"} position-y={0.4} text={"北京"}>
         </SbpkMark>
-        <SbpkModelAnimations scale={[0.2, 0.2, 0.2]} position-y={0.03} />
+        <SbpkModelAnimations scale={[0.1, 0.1, 0.1]} position-y={0.03} />
       </group>
     </>
   );

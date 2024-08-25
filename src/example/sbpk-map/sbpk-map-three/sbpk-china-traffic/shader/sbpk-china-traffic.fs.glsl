@@ -1,7 +1,9 @@
 
 varying vec2 vUv;
 uniform float uTime;
-
+uniform sampler2D uTexture;
+uniform float uSpeed;
+varying float vOffset;
 
 varying float r;
 
@@ -14,7 +16,7 @@ vec3 hsv2rgb(float h,float s,float v)
 
 float N21(vec2 p)
 {
-    p=fract(p*vec2(233.34,851.73 ));
+    p=fract(p*vec2(233.34,851.73));
     p+=dot(p,p+237.45);
     return fract(p.x*p.y);
 }
@@ -28,10 +30,11 @@ vec2 N22(vec2 p)
 void main(){
     // float strength=sin(uTime);
     // strength=strength*.5+.5;
-    if(r>1.0)
-    discard;
-
-
+    // if(r>1.0)
+    // discard;
+    
+    vec3 baseColor=vec3(0.098, 0.0, 1.0);
+    
     vec2 oUV=vUv;
     float len=.2;
     
@@ -45,14 +48,8 @@ void main(){
     float step1=smoothstep(start-blur,start+blur,oUV.y);
     float step2=smoothstep(end+blur,end-blur,oUV.y);
     float alhp=step1*step2;
-    // alhp=alhp*alhp;
-    
-    // float offset=fract(uTime+N21(vec2(uTime,r))*0.1)*(1.0-r);
-        float offset=fract(uTime)*(1.0-r);
-    float show=smoothstep(offset,r+offset,oUV.x);
-    if(show<0.01||show>0.99){
-            discard;
-    }
+
+    vColor=mix(baseColor,vColor,(1.-fract(vUv.x+vOffset+uTime*0.5)));
     
     csm_DiffuseColor=vec4(vColor,alhp);
     // csm_DiffuseColor=vec4(vec3(1.0,1.0,0.5),1.0);

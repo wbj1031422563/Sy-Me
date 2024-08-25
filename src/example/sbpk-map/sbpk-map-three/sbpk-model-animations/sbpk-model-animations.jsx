@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-12 19:58:41
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-13 21:10:42
+ * @LastEditTime: 2024-08-25 11:08:20
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model-animations\sbpk-model-animations.jsx
  * @Description:
  */
@@ -292,7 +292,7 @@ function Model(props) {
     // const a=new THREE.Mesh()
     // a.rotation
     const { clock } = state;
-    lightPoints.current.rotation.y += delta * 0.2;
+    lightPoints.current.rotation.y += delta *3;
     if (lightLine && lightLine.material.uniforms.uTime) {
       // console.log('lightLine.material.uniforms',lightLine.material.uniforms)
       lightLine.material.uniforms.uTime.value = clock.getElapsedTime();
@@ -333,8 +333,8 @@ function Model(props) {
       </mesh>
       <points ref={lightPoints}>
         <lightPonitsMaterial
-          args={[
-            0.2 * 0.5,
+          args={[ 
+            0.05 * 0.5,
             new THREE.Vector2(
               window.innerWidth * Math.min(window.devicePixelRatio, 2),
               window.innerHeight * Math.min(window.devicePixelRatio, 2)
@@ -352,7 +352,7 @@ function Model(props) {
             transparent={true}
             color={0x00ffff}
             opacity={0.3}
-            lineWidth={4}
+            lineWidth={2}
             dashSize={3}
             dashScale={1}
             dashed={true}

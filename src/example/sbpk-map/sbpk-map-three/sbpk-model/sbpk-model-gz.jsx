@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-04 18:47:04
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-14 00:34:19
+ * @LastEditTime: 2024-08-25 11:11:30
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-gz.jsx
  * @Description:
  */
@@ -22,7 +22,7 @@ function Model(props) {
   return (
     <>
       <group {...props}>
-        <group scale={[0.01, 0.01, 0.01]}>
+        <group scale={[0.008, 0.008, 0.008]}>
           <mesh geometry={nodes.Object_2.geometry}>
             <meshBasicMaterial
               color={"#2589c2"}
@@ -45,9 +45,9 @@ function Model(props) {
             ></meshBasicMaterial>
           </mesh>
         </group>
-        <SbpkMark scale={[0.1,0.1,0.1]} position-y={0.9} text={"广州"}>
+        <SbpkMark scale={[0.1,0.1,0.1]} type={"2"} position-y={0.5} text={"广州"}>
         </SbpkMark>
-        <SbpkModelAnimations scale={[0.2, 0.2, 0.2]} position-y={0.03} />
+        <SbpkModelAnimations scale={[0.1, 0.1, 0.1]} position-y={0.03} />
       </group>
     </>
   );

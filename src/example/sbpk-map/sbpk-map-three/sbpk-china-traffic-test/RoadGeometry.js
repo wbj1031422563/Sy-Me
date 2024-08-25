@@ -140,6 +140,8 @@ class RoadTestGeometry extends THREE.BufferGeometry {
         globalUvs[i2] = (vertices[i3] - basePosition.x) / size.x;
         globalUvs[i2 + 1] = (vertices[i3 + 2] - basePosition.y) / size.z;
       }
+
+      // this.setAttribute("uv", new THREE.Float32BufferAttribute(globalUvs, 2));
     }
     function generateUVs() {
       for (let i = 0; i <= tubularSegments; i++) {

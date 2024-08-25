@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-18 17:11:19
+ * @LastEditTime: 2024-08-25 12:28:52
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china-map-block\sbpk-china-map-block.jsx
  * @Description:
  */
@@ -20,6 +20,7 @@ import SbpkModelDfmz from "../sbpk-model/sbpk-model-dfmz";
 import SbpkModelTt from "../sbpk-model/sbpk-model-tt";
 import SbpkModelGz from "../sbpk-model/sbpk-model-gz";
 import GUI from "lil-gui";
+import SbpkMark from "../sbpk-mark/sbpk-mark";
 
 const BlockMaterial = shaderMaterial(
   {
@@ -43,11 +44,11 @@ function SbpkChinaMapBlock({
     info: {},
     center: null,
   },
-  colorObj={
+  colorObj = {
     borderColor: new THREE.Color("#93EBF8"),
     innerColor: new THREE.Color("#154e90"),
     outColor: new THREE.Color("#66D4E5"),
-  }
+  },
 }) {
   const chinaRef = useRef(null);
   const [edge, setEdge] = useState([]);
@@ -143,13 +144,20 @@ function SbpkChinaMapBlock({
     adjustUVs(chinaRef.current.geometry);
     addEdge(chinaRef.current);
     // console.log('chinaRef.current.geometry',chinaRef.current.geometry)
+    console.log("map", map);
   }, [map]);
 
-  useEffect(()=>{
-    chinaRef.current.material.uniforms.innerColor.value=new THREE.Color(colorObj.innerColor);
-    chinaRef.current.material.uniforms.borderColor.value=new THREE.Color(colorObj.borderColor);
-    chinaRef.current.material.uniforms.outColor.value=new THREE.Color(colorObj.outColor);
-  },[colorObj])
+  useEffect(() => {
+    chinaRef.current.material.uniforms.innerColor.value = new THREE.Color(
+      colorObj.innerColor
+    );
+    chinaRef.current.material.uniforms.borderColor.value = new THREE.Color(
+      colorObj.borderColor
+    );
+    chinaRef.current.material.uniforms.outColor.value = new THREE.Color(
+      colorObj.outColor
+    );
+  }, [colorObj]);
   // useEffect(()=>{
   //   let gui = new GUI({
   //     title: "控制面板",
@@ -160,6 +168,7 @@ function SbpkChinaMapBlock({
   //     chinaRef.current.material.uniforms.innerColor.value=new THREE.Color(v)
   //   });
   // },[])
+  const material = new THREE.MeshBasicMaterial({ color: "#2D5BFB" });
 
   return (
     <>
@@ -177,7 +186,7 @@ function SbpkChinaMapBlock({
         {edge.length > 0 && (
           <Line points={edge} color="#66D4E5" segments={true} lineWidth={2} />
         )}
-        {/* {map.name === "上海市" && (
+        {map.name === "上海市" && (
           <SbpkModelDfmz position={[map.center[0], 0.12, map.center[1]]} />
         )}
         {map.name === "北京市" && (
@@ -185,6 +194,107 @@ function SbpkChinaMapBlock({
         )}
         {map.name === "广东省" && (
           <SbpkModelGz position={[map.center[0], 0.1, map.center[1]]} />
+        )}
+        {/* {map.name === "四川省" && (
+          <mesh
+            material={material}
+            position={[map.center[0], 0.1, map.center[1] - 0.05]}
+          >
+            <coneGeometry args={[0.05, 0.15, 8]}></coneGeometry>
+            <SbpkMark
+              scale={[0.1, 0.1, 0.1]}
+
+              position-y={0.25}
+              type={"2"}
+              text={"成都市"}
+            />
+          </mesh>
+        )}
+        {map.name === "湖北省" && (
+          <mesh
+            material={material}
+            position={[map.center[0], 0.1, map.center[1] - 0.05]}
+          >
+            <coneGeometry args={[0.05, 0.15, 8]}></coneGeometry>
+            <SbpkMark
+              scale={[0.1, 0.1, 0.1]}
+              position-y={0.25}
+              type={"2"}
+              text={"武汉市"}
+            />
+          </mesh>
+        )}
+        {map.name === "河南省" && (
+          <mesh
+            material={material}
+            position={[map.center[0], 0.1, map.center[1] - 0.05]}
+          >
+            <coneGeometry args={[0.05, 0.15, 8]}></coneGeometry>
+            <SbpkMark
+              scale={[0.1, 0.1, 0.1]}
+
+              position-y={0.25}
+              type={"2"}
+              text={"郑州市"}
+            />
+          </mesh>
+        )}
+        {map.name === "湖南省" && (
+          <mesh
+            material={material}
+            position={[map.center[0], 0.1, map.center[1] - 0.05]}
+          >
+            <coneGeometry args={[0.05, 0.15, 8]}></coneGeometry>
+            <SbpkMark
+              scale={[0.1, 0.1, 0.1]}
+
+              position-y={0.25}
+              type={"2"}
+              text={"长沙市"}
+            />
+          </mesh>
+        )}
+        {map.name === "江苏省" && (
+          <mesh
+            material={material}
+            position={[map.center[0], 0.1, map.center[1] - 0.05]}
+          >
+            <coneGeometry args={[0.05, 0.15, 8]}></coneGeometry>
+            <SbpkMark
+              scale={[0.1, 0.1, 0.1]}
+
+              position-y={0.25}
+              type={"2"}
+              text={"南京市"}
+            />
+          </mesh>
+        )}
+        {map.name === "浙江省" && (
+          <mesh
+            material={material}
+            position={[map.center[0], 0.1, map.center[1] - 0.05]}
+          >
+            <coneGeometry args={[0.05, 0.15, 8]}></coneGeometry>
+            <SbpkMark
+              scale={[0.1, 0.1, 0.1]}
+
+              position-y={0.25}
+              type={"2"}
+              text={"杭州市"}
+            />
+          </mesh>
+        )} */}
+        {/* {map.name === "四川省" && (
+          <mesh >
+            <boxGeometry></boxGeometry>
+            <meshBasicMaterial></meshBasicMaterial>
+          <mesh/>
+          <SbpkMark
+            position={[map.center[0], 0.2, map.center[1]]}
+            scale={[5.0, 5.0, 5.0]}
+            type={"2"}
+            text={"成都市"}
+          />
         )} */}
       </mesh>
       {/* <mesh scale={[5, 5, 0.1]} rotation-x={Math.PI*0.5}>

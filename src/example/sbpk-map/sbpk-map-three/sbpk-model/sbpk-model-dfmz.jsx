@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-08-12 19:58:41
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-13 23:23:07
+ * @LastEditTime: 2024-08-25 11:27:15
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-dfmz.jsx
  * @Description:
  */
@@ -26,12 +26,8 @@ function Model(props) {
   return (
     <>
       <group {...props}>
-        <group scale={[0.02, 0.02, 0.02]}>
-          <mesh
-
-            geometry={nodes.球体.geometry}
-            material={nodes.球体.material}
-          >
+        <group scale={[0.015, 0.015, 0.015]}>
+          <mesh geometry={nodes.球体.geometry} material={nodes.球体.material}>
             <meshBasicMaterial
               color={"#2589c2"}
               transparent={true}
@@ -39,10 +35,7 @@ function Model(props) {
               // wireframe={true}
             ></meshBasicMaterial>
           </mesh>
-          <mesh
-            geometry={nodes.柱体.geometry}
-            material={nodes.柱体.material}
-          >
+          <mesh geometry={nodes.柱体.geometry} material={nodes.柱体.material}>
             <meshBasicMaterial
               color={"#094f7d"}
               transparent={true}
@@ -51,9 +44,13 @@ function Model(props) {
             ></meshBasicMaterial>
           </mesh>
         </group>
-        <SbpkMark scale={[0.1,0.1,0.1]} position-y={0.9} text={"上海"}>
-        </SbpkMark>
-        <SbpkModelAnimations scale={[0.2, 0.2, 0.2]} position-y={0.01} />
+        <SbpkMark
+          scale={[0.1, 0.1, 0.1]}
+          position-y={0.7}
+          type={"2"}
+          text={"上海"}
+        ></SbpkMark>
+        <SbpkModelAnimations scale={[0.1, 0.1, 0.1]} position-y={0.01} />
       </group>
     </>
   );
