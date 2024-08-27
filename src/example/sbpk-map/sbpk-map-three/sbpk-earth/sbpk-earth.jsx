@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:43:01
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-06 21:57:05
+ * @LastEditTime: 2024-08-27 22:40:51
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-earth\sbpk-earth.jsx
  * @Description:
  */
@@ -82,6 +82,7 @@ function SbpkEarth({handelChangeScene}) {
 
       setImpacts(() =>
         impacts.map((item, index) => {
+          let tweenImpact=null;
           // console.log('item.trailLength.value',item.trailLength.value)
           item.runTween = () => {
             /**
@@ -100,7 +101,7 @@ function SbpkEarth({handelChangeScene}) {
             /**
              * 冲击波动画
              */
-            let tweenImpact = new TWEEN.Tween({ value: 0 })
+            tweenImpact = new TWEEN.Tween({ value: 0 })
               .to({ value: 1 }, THREE.MathUtils.randInt(2500, 5000))
               .onUpdate((val) => {
                 // item.impactRatio=val;
@@ -151,17 +152,32 @@ function SbpkEarth({handelChangeScene}) {
                   });
 
                 //再次链接冲击波动画，实现循环
+                tweenTrail.stop();
                 newTweenTrail.chain(tweenImpact);
                 newTweenTrail.start();
               });
-
+            
+            
             tweenTrail.chain(tweenImpact);
+            // tweenTrail.repeat(Infinity);
             tweenTrail.start();
           };
           item.runTween();
           return item;
         })
       );
+    }
+
+    return ()=>{
+      // debugger
+      // earthRef.current.material.dispose();
+      // earthRef.current.geometry.dispose();
+      // linerRefs.current.forEach(item=>{
+      //   item.material.dispose();
+      //   item.geometry.dispose();
+      // });
+      geometrys.dispose();
+      TWEEN.getAll().forEach(tween => tween.stop());
     }
   }, []);
 

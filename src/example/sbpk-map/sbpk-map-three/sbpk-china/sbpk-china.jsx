@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-29 20:50:33
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-25 15:46:40
+ * @LastEditTime: 2024-08-27 20:31:50
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-china\sbpk-china.jsx
  * @Description:
  */
@@ -21,6 +21,7 @@ import GUI from "lil-gui";
 import SbpkChinaTraffic from "../sbpk-china-traffic/sbpk-china-traffic";
 import SbpkChinaTrafficTest from "../sbpk-china-traffic-test/sbpk-china-traffic-test";
 import SbpkMarkList from "../sbpk-mark-list/sbpk-mark-list";
+import SbpkChianFlyLine from "../sbpk-china-fly-line/sbpk-china-fly-line";
 
 const BlockMaterial = shaderMaterial(
   {
@@ -215,6 +216,7 @@ function SbpkChina() {
         {/* <SbpkChinaTraffic /> */}
         <SbpkChinaTrafficTest/>
         <SbpkMarkList list={provinces}/>
+        <SbpkChianFlyLine list={provinces}/>
       </group>
       {/* <SbpkChinaTrafficTest/> */}
     </>
