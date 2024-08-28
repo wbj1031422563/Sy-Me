@@ -1,11 +1,13 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef ,useContext} from "react";
 import * as THREE from "three";
+import { AreaContext } from "../../context/sbpk-area-context";
 import TWEEN from "@tweenjs/tween.js";
 import { useFrame } from "@react-three/fiber";
-function SbpkChianFlyLine({ list, type = "华东地区" }) {
+function SbpkChianFlyLine({ list }) {
+  const area=useContext(AreaContext);
   //   const [lines, setLines] = useState([]);
   const texture = new THREE.TextureLoader().load("/img/飞线贴图3.png");
-  texture.repeat.set(150,2);
+  texture.repeat.set(150, 2);
   texture.needsUpdate = true;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
@@ -26,14 +28,24 @@ function SbpkChianFlyLine({ list, type = "华东地区" }) {
     let res = [];
     let target = new THREE.Vector3();
     let province = null;
-    switch (type) {
+    switch (area) {
       case "华东地区":
         province = list.find((item) => item.name == "上海市");
         target.x = province.center[0];
         target.z = province.center[1];
         break;
-      default:
+      case "华北地区":
+        province = list.find((item) => item.name == "北京市");
+        target.x = province.center[0];
+        target.z = province.center[1];
         break;
+      case "华南地区":
+        province = list.find((item) => item.name == "广东省");
+        target.x = province.center[0];
+        target.z = province.center[1];
+        break;
+      default:
+        return [];
     }
     res = list.filter(
       (item) =>
@@ -55,29 +67,11 @@ function SbpkChianFlyLine({ list, type = "华东地区" }) {
     return res;
   };
   lines = init();
-  // useEffect(() => {
-  //   let tweenImpact = new TWEEN.Tween({ value: 0 })
-  //     .to({ value: 1 }, 1000 * 2)
-  //     .easing(TWEEN.Easing.Sinusoidal.InOut)
-  //     .repeat(Infinity)
-  //     .repeatDelay(500)
-  //     .onUpdate((val) => {
-  //       // console.log("val", val);
-  //       // linerRefs.current.forEach((item) => {
-  //       //   item.material.uniforms.actionRatio.value = val.value;
-  //       // });
-  //     })
-  //     .onComplete(() => {
-  //       // tweenImpact.start();
-  //     });
-  //   tweenImpact.start();
-  //   return () => {
-  //     tweenImpact.stop();
-  //   };
-  // }, []);
-  useFrame((state, delta)=>{
-    texture.offset.x-=delta*5;
-  })
+
+  useFrame((state, delta) => {
+    texture.offset.x -= delta * 5;
+  });
+  // useEffect(()=>{},[])
 
   return (
     <>
@@ -93,7 +87,10 @@ function SbpkChianFlyLine({ list, type = "华东地区" }) {
               {/* <lineBasicMaterial color={"red"}></lineBasicMaterial> */}
               {/* <trailLinerMaterial args={[0,item.len]} /> */}
               {/* <roadMaterial></roadMaterial> */}
-              <meshBasicMaterial map={texture} transparent={true}></meshBasicMaterial>
+              <meshBasicMaterial
+                map={texture}
+                transparent={true}
+              ></meshBasicMaterial>
             </mesh>
           );
         })}

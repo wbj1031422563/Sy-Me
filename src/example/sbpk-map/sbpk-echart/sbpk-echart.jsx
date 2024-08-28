@@ -1,17 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef,useContext } from "react";
 import { getDataQyfb, getDataFgfb } from "../service/index.js";
+import { AreaContext } from "../context/sbpk-area-context.js";
 import * as echarts from "echarts";
 import "./sbpk-echart.less";
 import SbpkLeftOne from "./sbpk-left-one/sbpk-left-one";
 import SbpkRightOne from "./sbpk-right-one/sbpk-right-one";
-function SbpkEchart() {
+function SbpkEchart({handleAreaChange}) {
+  const area=useContext(AreaContext);
   const chartRef = useRef(null);
   const chartQyfbRef = useRef(null);
   const chartYszbRef = useRef(null);
   const chartFgfbRef = useRef(null);
   const chartYstjRef = useRef(null);
   const chartBhqsRef = useRef(null);
-  const [selectedArea, setelectedArea] = useState("全国地区");
+  // const [area, handleAreaChange] = useState("全国地区");
   const [time, setTime] = useState(new Date());
   useEffect(() => {
     const timer = setInterval(() => {
@@ -184,16 +186,16 @@ function SbpkEchart() {
           <div className="area-list">
             <div
               className={
-                selectedArea == "全国地区"
+                area == "全国地区"
                   ? "area-list-item active"
                   : "area-list-item"
               }
-              onClick={()=>{setelectedArea('全国地区')}}
+              onClick={()=>{handleAreaChange('全国地区')}}
             >
               <img
                 className="icon"
                 src={"/img/echarts/标记备份 (1).png"}
-                style={{ opacity: selectedArea == "全国地区" ? 1 : 0 }}
+                style={{ opacity: area == "全国地区" ? 1 : 0 }}
                 width={25}
               />
               <span>全国地区</span>
@@ -201,16 +203,16 @@ function SbpkEchart() {
 
             <div
               className={
-                selectedArea == "华北地区"
+                area == "华北地区"
                   ? "area-list-item active"
                   : "area-list-item"
               }
-              onClick={()=>{setelectedArea('华北地区')}}
+              onClick={()=>{handleAreaChange('华北地区')}}
             >
               <img
                 className="icon"
                 src={"/img/echarts/标记备份 (1).png"}
-                style={{ opacity: selectedArea == "华北地区" ? 1 : 0 }}
+                style={{ opacity: area == "华北地区" ? 1 : 0 }}
                 width={25}
               />
               <span>华北地区</span>
@@ -218,32 +220,32 @@ function SbpkEchart() {
 
             <div
               className={
-                selectedArea == "华东地区"
+                area == "华东地区"
                   ? "area-list-item active"
                   : "area-list-item"
               }
-              onClick={()=>{setelectedArea('华东地区')}}
+              onClick={()=>{handleAreaChange('华东地区')}}
             >
               <img
                 className="icon"
                 src={"/img/echarts/标记备份 (1).png"}
-                style={{ opacity: selectedArea == "华东地区" ? 1 : 0 }}
+                style={{ opacity: area == "华东地区" ? 1 : 0 }}
                 width={25}
               />
               <span>华东地区</span>
             </div>
             <div
               className={
-                selectedArea == "华南地区"
+                area == "华南地区"
                   ? "area-list-item active"
                   : "area-list-item"
               }
-              onClick={()=>{setelectedArea('华南地区')}}
+              onClick={()=>{handleAreaChange('华南地区')}}
             >
               <img
                 className="icon"
                 src={"/img/echarts/标记备份 (1).png"}
-                style={{ opacity: selectedArea == "华南地区" ? 1 : 0 }}
+                style={{ opacity: area == "华南地区" ? 1 : 0 }}
                 width={25}
               />
               <span>华南地区</span>
