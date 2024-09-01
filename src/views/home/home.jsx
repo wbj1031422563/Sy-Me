@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-06-23 09:58:48
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-15 20:36:42
+ * @LastEditTime: 2024-08-29 20:49:32
  * @FilePath: \fmc-personal-blog\src\views\home\home.jsx
  * @Description:
  */
@@ -45,9 +45,19 @@ function Home() {
             <p className="project-item-time">2024-07-15</p>
           </div>
           <div className="project-list-item">
-            <img className="pre-img" src="/img/banner1.jpg" />
-            <p className="project-item-name">项目1</p>
-            <p className="project-item-time">2024-07-14</p>
+            <div
+              className="image-container"
+              onClick={() => {
+                goRouter("/maxwell-car");
+              }}
+            >
+              <img className="pre-img" src="/img/banner1.jpg" />
+              <div className="mask">
+                <span>麦克斯伟汽车</span>
+              </div>
+            </div>
+            <p className="project-item-name">麦克斯伟汽车</p>
+            <p className="project-item-time">2024-08-29</p>
           </div>
           <div className="project-list-item">
             <img className="pre-img" src="/img/banner1.jpg" />

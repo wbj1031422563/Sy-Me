@@ -1,16 +1,42 @@
-import { useEffect, useState, useRef ,useContext} from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import * as THREE from "three";
 import { AreaContext } from "../../context/sbpk-area-context";
 import TWEEN from "@tweenjs/tween.js";
-import { useFrame } from "@react-three/fiber";
+import { extend, useFrame } from "@react-three/fiber";
+
+import CustomShaderMaterial from "three-custom-shader-material/vanilla";
+import vs from "./shader/vs.glsl";
+import fs from "./shader/fs.glsl";
+import RoadGeometry from "../sbpk-china-traffic/RoadGeometry";
+
+class FlyLineMaterial extends CustomShaderMaterial {
+  constructor(texture,len) {
+    super({
+      baseMaterial: THREE.MeshBasicMaterial,
+      uniforms: {
+        uTime: { value: 0 },
+        uTexture: { value: texture },
+        uSpeed: { value: 10 },
+        uLen:{value:len}
+      },
+      transparent: true,
+      vertexShader: vs,
+      side:THREE.DoubleSide,
+      fragmentShader: fs,
+    });
+  }
+}
+
+extend({ FlyLineMaterial });
+
 function SbpkChianFlyLine({ list }) {
-  const area=useContext(AreaContext);
+  const area = useContext(AreaContext);
   //   const [lines, setLines] = useState([]);
   const texture = new THREE.TextureLoader().load("/img/飞线贴图3.png");
-  texture.repeat.set(150, 2);
-  texture.needsUpdate = true;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+  // texture.repeat.set(20, 20);
+  // texture.needsUpdate = true;
+  // texture.wrapS = THREE.RepeatWrapping;
+  // texture.wrapT = THREE.RepeatWrapping;
 
   // texture.wrapS=THREE.RepeatWrapping;
   // texture.wrapT=THREE.RepeatWrapping;
@@ -58,7 +84,7 @@ function SbpkChianFlyLine({ list }) {
         new THREE.Vector3(item.center[0], 0, item.center[1]),
         target
       );
-      const geo = new THREE.TubeGeometry(cure, 100, 0.005, 2, false);
+      const geo = new RoadGeometry(cure);
       item.geo = geo;
       item.len = len;
       return item;
@@ -69,7 +95,14 @@ function SbpkChianFlyLine({ list }) {
   lines = init();
 
   useFrame((state, delta) => {
-    texture.offset.x -= delta * 5;
+    const { clock } = state;
+    if (
+      linerRefs.current && linerRefs.current.length>0
+    ) {
+      linerRefs.current.forEach(item=>{
+        item.material.uniforms.uTime.value=clock.getElapsedTime();
+      })
+    }
   });
   // useEffect(()=>{},[])
 
@@ -87,10 +120,7 @@ function SbpkChianFlyLine({ list }) {
               {/* <lineBasicMaterial color={"red"}></lineBasicMaterial> */}
               {/* <trailLinerMaterial args={[0,item.len]} /> */}
               {/* <roadMaterial></roadMaterial> */}
-              <meshBasicMaterial
-                map={texture}
-                transparent={true}
-              ></meshBasicMaterial>
+              <flyLineMaterial args={[texture,item.len]}></flyLineMaterial>
             </mesh>
           );
         })}

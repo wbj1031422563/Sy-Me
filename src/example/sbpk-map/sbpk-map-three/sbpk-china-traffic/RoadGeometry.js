@@ -23,7 +23,7 @@ class RoadGeometry extends THREE.BufferGeometry {
       radialSegments: radialSegments,
       closed: closed,
     };
-    const roadWidth = 0.01;
+    const roadWidth = 0.02;
 
     const frames = path.computeFrenetFrames(tubularSegments, closed);
 
