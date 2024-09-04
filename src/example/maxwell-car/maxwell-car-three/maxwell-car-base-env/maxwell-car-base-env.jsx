@@ -2,16 +2,22 @@
  * @Author: FMC
  * @Date: 2024-06-23 09:58:48
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-04 21:26:38
+ * @LastEditTime: 2024-09-04 23:30:46
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-car-base-env\maxwell-car-base-env.jsx
  * @Description:基础环境
  */
-import { Environment, OrbitControls } from "@react-three/drei";
 import { Perf } from "r3f-perf";
 import { useFrame, useThree } from "@react-three/fiber";
 import TWEEN from "@tweenjs/tween.js";
 import * as THREE from "three";
-import { useRef ,useEffect} from "react";
+import { useRef, useEffect } from "react";
+import {
+  Environment,
+  Lightformer,
+  ContactShadows,
+  OrbitControls,
+  Stats,
+} from "@react-three/drei";
 function MaxWellCarBaeEnv() {
   const controls = useRef(null);
   const geo = new THREE.BoxGeometry();
@@ -57,6 +63,75 @@ function MaxWellCarBaeEnv() {
       <OrbitControls ref={controls} makeDefault={true} />
       {/* <OrbitControls enablePan={false} enableZoom={false} minPolarAngle={Math.PI / 2.2} maxPolarAngle={Math.PI / 2.2} /> */}
       {/* <Environment files="/envMap/venice_sunset_1k.hdr"></Environment> */}
+      <Environment resolution={512}>
+        {/* Ceiling */}
+        <Lightformer
+          intensity={2}
+          rotation-x={Math.PI / 2}
+          position={[0, 4, -9]}
+          scale={[10, 1, 1]}
+        />
+        <Lightformer
+          intensity={2}
+          rotation-x={Math.PI / 2}
+          position={[0, 4, -6]}
+          scale={[10, 1, 1]}
+        />
+        <Lightformer
+          intensity={2}
+          rotation-x={Math.PI / 2}
+          position={[0, 4, -3]}
+          scale={[10, 1, 1]}
+        />
+        <Lightformer
+          intensity={2}
+          rotation-x={Math.PI / 2}
+          position={[0, 4, 0]}
+          scale={[10, 4.5, 4.5]}
+        />
+        <Lightformer
+          intensity={2}
+          rotation-x={Math.PI / 2}
+          position={[0, 4, 3]}
+          scale={[10, 1, 1]}
+        />
+        <Lightformer
+          intensity={2}
+          rotation-x={Math.PI / 2}
+          position={[0, 4, 6]}
+          scale={[10, 1, 1]}
+        />
+        <Lightformer
+          intensity={2}
+          rotation-x={Math.PI / 2}
+          position={[0, 4, 9]}
+          scale={[10, 1, 1]}
+        />
+        {/* Sides */}
+        <Lightformer
+          intensity={2}
+          color="#4a884f"
+          rotation-y={Math.PI / 2}
+          position={[-50, 2, 0]}
+          scale={[100, 2, 1]}
+        />
+        <Lightformer
+          intensity={2}
+          color="#4a884f"
+          rotation-y={-Math.PI / 2}
+          position={[50, 2, 0]}
+          scale={[100, 2, 1]}
+        />
+        {/* Key */}
+        <Lightformer
+          form="ring"
+          color="#4a884f"
+          intensity={10}
+          scale={2}
+          position={[10, 5, 10]}
+          onUpdate={(self) => self.lookAt(0, 0, 0)}
+        />
+      </Environment>
     </>
   );
 }

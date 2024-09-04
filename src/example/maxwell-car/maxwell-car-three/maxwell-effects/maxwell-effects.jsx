@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-09-02 20:44:17
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-04 21:43:43
+ * @LastEditTime: 2024-09-04 23:32:15
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-effects\maxwell-effects.jsx
  * @Description: 
  */
@@ -48,8 +48,8 @@ import { LUTCubeLoader } from 'postprocessing'
   return (
     enabled && (
       <EffectComposer disableNormalPass>
-        <Bloom luminanceThreshold={0.7} mipmapBlur luminanceSmoothing={0} intensity={1.75} />
-        <LUT lut={texture} />
+        <Bloom luminanceThreshold={0.7} mipmapBlur luminanceSmoothing={0} intensity={1.75} radius={0.85}/>
+        {/* <LUT lut={texture} /> */}
       </EffectComposer>
     )
   )

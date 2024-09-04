@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-09-01 11:50:08
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-04 21:55:30
+ * @LastEditTime: 2024-09-04 23:15:21
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-hoda\maxwell-hoda.jsx
  * @Description:
  */
@@ -65,13 +65,12 @@ function Model() {
       // console.log('materials',materials);
       applyProps(materials.CarPaintWhite, { color: "#999999" });
       applyProps(materials.Rims, { metalness: 0.9, roughness: 0.1,color:'#909090'});
-      const HeadLampGlassesColor = new THREE.Color(
-        materials.HeadLampGlasses.color
-      );
+
       applyProps(materials.HeadLampGlasses, {
-        emissiveIntensity: 3,
+        emissiveIntensity: 1.5,
         toneMapped: false,
-        emissive: HeadLampGlassesColor.getHexString(),
+        color:'#FFA500',
+        emissive: '#FFA500',
       });
       applyProps(materials.MainHeadLightGlass, {
         emissiveIntensity: 4,
@@ -80,23 +79,18 @@ function Model() {
         emissive: "#fff",
       });
 
-      const RearLampInteriorGlassesColor = new THREE.Color(
-        materials.RearLampInteriorGlasses.color
-      );
       applyProps(materials.RearLampInteriorGlasses, {
-        emissiveIntensity: 8,
+        emissiveIntensity: 5,
         toneMapped: false,
-        emissive: RearLampInteriorGlassesColor.getHexString(),
+        emissive: 'red',
+        color:'red',
       });
 
-
-      const BackRedReflectorsColor = new THREE.Color(
-        materials.BackRedReflectors.color
-      );
       applyProps(materials.BackRedReflectors, {
-        emissiveIntensity: 800,
+        emissiveIntensity: 0.8,
         toneMapped: false,
-        emissive: BackRedReflectorsColor.getHexString(),
+        color:'red',
+        emissive: 'red',
       });
 
       const {CristalTintado}=materials
