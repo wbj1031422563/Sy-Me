@@ -1,4 +1,4 @@
-import { Helper } from "@react-three/drei";
+import { Helper, useTexture } from "@react-three/drei";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { MeshReflectorMaterial } from "@react-three/drei";
@@ -12,6 +12,8 @@ import { MeshReflectorMaterial } from "@react-three/drei";
  */
 function MaxWellGround() {
   const ref = useRef(null);
+  const scuffed_cement_disp_1k=useTexture('/texture/scuffed_cement_1k/scuffed_cement_disp_1k.png')
+  const scuffed_cement_diff_1k=useTexture('/texture/scuffed_cement_1k/scuffed_cement_diff_1k.jpg')
   // useEffect(()=>{
   //   const grid=ref.current;
   //   grid.material.opacity = 0.2;
@@ -37,6 +39,8 @@ function MaxWellGround() {
         maxDepthThreshold={1.4}
         color="#111111"
         metalness={0.5}
+        displacementMap={scuffed_cement_disp_1k}
+        map={scuffed_cement_diff_1k}
       />
     </mesh>
   );
