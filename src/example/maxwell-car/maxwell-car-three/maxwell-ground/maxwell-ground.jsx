@@ -21,6 +21,9 @@ function MaxWellGround() {
   return (
     // <gridHelper ref={ref} args={[20, 40, 0xffffff, 0xffffff]}></gridHelper>
     // <Helper  ref={ref} type={THREE.GridHelper} args={[20, 40, 0xffffff, 0xffffff]}></Helper>
+
+
+    //tood  映入地面粗糙度纹理
     <mesh rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[50, 50]} />
       <MeshReflectorMaterial
