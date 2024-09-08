@@ -2,18 +2,14 @@
  * @Author: FMC
  * @Date: 2024-08-04 18:47:04
  * @LastEditors: FMC
- * @LastEditTime: 2024-08-25 16:16:20
+ * @LastEditTime: 2024-09-08 10:39:51
  * @FilePath: \fmc-personal-blog\src\example\sbpk-map\sbpk-map-three\sbpk-model\sbpk-model-tt.jsx
  * @Description:
  */
 
-import { useLoader } from "@react-three/fiber";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { Suspense, useEffect } from "react";
 import { useGLTF } from "@react-three/drei";
+import { Suspense } from "react";
 import SbpkModelAnimations from "../sbpk-model-animations/sbpk-model-animations";
-import * as THREE from "three";
-import SbpkMark from "../sbpk-mark/sbpk-mark";
 function Model(props) {
   //   const model = useLoader(GLTFLoader, "/model/东方明珠.glb")
   const { nodes } = useGLTF("/model/天坛分割.glb");

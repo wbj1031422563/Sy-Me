@@ -24,6 +24,7 @@
     "leva": "^0.9.35",
     "lil-gui": "^0.19.2",
     "mockjs": "^1.1.0",
+    "perlin.js": "^1.0.0",
     "postprocessing": "6.29",
     "r3f-perf": "^7.2.1",
     "react": "^18.3.1",

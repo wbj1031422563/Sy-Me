@@ -2,18 +2,16 @@
  * @Author: FMC
  * @Date: 2024-09-04 22:04:29
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-04 23:29:05
+ * @LastEditTime: 2024-09-08 11:35:25
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-text\maxwell-text.jsx
  * @Description:
  */
 import {
-  Text3D,
-  Center,
-  useTexture,
-  Helper,
   Billboard,
+  Center,
+  Text3D
 } from "@react-three/drei";
-import { LayerMaterial, Depth } from "lamina";
+import { Depth, LayerMaterial } from "lamina";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -116,7 +114,7 @@ function MaxwellText(prpos) {
           color={'#4a884f'}
           toneMapped={false}
           emissive={'#4a884f'}
-          emissiveIntensity={2.65}
+          emissiveIntensity={2.6}
         ></meshPhysicalMaterial>
       </Text3D>
       {/* <Helper type={THREE.BoxHelper}></Helper> */}

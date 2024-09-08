@@ -2,28 +2,21 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:16:27
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-04 22:10:56
+ * @LastEditTime: 2024-09-08 14:07:22
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-car-three.jsx
  * @Description:
  *
  */
-import { Canvas, useFrame } from "@react-three/fiber";
-import "./maxwell-car-three.less";
-import { Suspense, useRef } from "react";
-import { Loader } from "@react-three/drei";
+import { ContactShadows, Loader, Stats } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import { Leva } from "leva";
+import { Suspense } from "react";
 import * as THREE from "three";
 import MaxWellCarBaeEnv from "./maxwell-car-base-env/maxwell-car-base-env";
+import "./maxwell-car-three.less";
+import MaxwellEffects from "./maxwell-effects/maxwell-effects";
 import MaxWellGround from "./maxwell-ground/maxwell-ground";
 import MaxwellHoda from "./maxwell-hoda/maxwell-hoda";
-import { Leva } from "leva";
-import {
-  Environment,
-  Lightformer,
-  ContactShadows,
-  OrbitControls,
-  Stats,
-} from "@react-three/drei";
-import MaxwellEffects from "./maxwell-effects/maxwell-effects";
 import MaxwellText from "./maxwell-text/maxwell-text";
 function MaxWellCarThree() {
   return (
@@ -55,6 +48,7 @@ function MaxWellCarThree() {
         <Suspense fallback={null}>
           <fog args={[0x00000, 15, 20]} attach={"fog"}></fog>
           <MaxwellHoda></MaxwellHoda>
+          {/* <MaxWellTest/> */}
         </Suspense>
       </Canvas>
       <Stats />
