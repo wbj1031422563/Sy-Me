@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-09-01 11:50:08
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-09 00:14:45
+ * @LastEditTime: 2024-09-09 01:15:46
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-hoda\maxwell-hoda.jsx
  * @Description:
  */
@@ -55,7 +55,7 @@ function Model() {
     RearLampInteriorGlasses: false,
     ChromedReflectors: false,
     EmissiveLogo: false,
-    ChromeLogos: false,
+    // ChromeLogos: false,
     RetroGlass: false,
     RearWhipper: false,
     Rims: false,
@@ -72,7 +72,7 @@ function Model() {
     BackRedReflectors: false,
     CenterRetro: false,
     "EmissiveLogo.001": false,
-    "EmissiveLogo.003": false,
+    // "EmissiveLogo.003": false,
   });
   const frontWheelRef = useRef(null);
   /**
@@ -88,6 +88,9 @@ function Model() {
     }
   );
   const setShader = (material) => {
+    if (!material) return;
+    const { name } = material;
+    if (name == "ChromeLogos" || name == "EmissiveLogo.003") return;
     material.transparent = true;
     material.onBeforeCompile = (shader) => {
       shader.uniforms.uProgress = { value: 0 };
@@ -138,12 +141,15 @@ function Model() {
         `
       );
       material.userData.shader = shader;
-      setCompileObj({
-        ...compileObj,
+      material.userData.materialName = name;
+      // setCompileObj({
+      //   ...compileObj,
+      //   [material.name]: true,
+      // });
+      setCompileObj((prevCompileObj) => ({
+        ...prevCompileObj,
         [material.name]: true,
-      });
-      // debugger
-      // console.log("shader", shader===material);
+      }));
     };
   };
   const getGroupBox3 = (group) => {
@@ -164,7 +170,7 @@ function Model() {
         // scene.add(helper);
       }
     });
-    box3.expandByScalar(scaleNum);
+    // box3.expandByScalar(scaleNum);
     setCarBox3(box3);
     // const helper = new THREE.Box3Helper(box3, 0xffff00);
     // scene.add(helper);
@@ -241,33 +247,46 @@ function Model() {
         color: "red",
         emissive: "red",
       });
-      setShader(materials["CarPaintWhite"]);
+      // setShader(materials["CarPaintWhite"]);
+      Object.entries(materials).forEach(([key, value]) => {
+        // console.log("k", value);
+        setShader(value);
+      });
       const { CristalTintado } = materials;
       nodes.CristalLateral_Cristal_0.material = CristalTintado;
     }
   }, [hoda]);
   useEffect(() => {
     let tween = null;
-    if (compileObj.CarPaintWhite && carBox3) {
-      let targetMaterail = null;
+    let allHaseComplieObj = Object.entries(compileObj).every(
+      ([key, value]) => value
+    );
+    if (allHaseComplieObj && carBox3) {
+      let targetMaterailList = [];
       hoda.traverse((child) => {
-        if (
-          child.isMesh &&
-          child.material &&
-          child.material.name == "CarPaintWhite"
-        ) {
-          const shader = child.material.userData.shader;
-          targetMaterail = shader;
+        if (child.isMesh && child.material) {
+          targetMaterailList.push(child.material.userData);
         }
       });
+      targetMaterailList = targetMaterailList.filter(
+        (item, index, self) =>
+          index === self.findIndex((t) => t.materialName === item.materialName)
+      );
+      // debugger
+
       const size = new THREE.Vector3();
       carBox3.getSize(size);
-      targetMaterail.uniforms.uXlen.value = size.x * 0.01;
-      targetMaterail.uniforms.uOffsetX.value = carBox3.min.x * 0.01;
+      targetMaterailList.forEach(({ shader }) => {
+        shader.uniforms.uXlen.value = size.x * scaleNum;
+        shader.uniforms.uOffsetX.value = carBox3.min.x * scaleNum;
+      });
+
       tween = new TWEEN.Tween({ value: 0 })
-        .to({ value: 1 }, 20 * 1000)
+        .to({ value: 1 }, 2 * 1000)
         .onUpdate(({ value }) => {
-          targetMaterail.uniforms.uProgress.value = value;
+          targetMaterailList.forEach(({ shader }) => {
+            shader.uniforms.uProgress.value = value;
+          });
         });
       tween.start();
     }
@@ -276,7 +295,7 @@ function Model() {
         tween.stop();
       }
     };
-  }, [compileObj.CarPaintWhite, carBox3]);
+  }, [compileObj, carBox3]);
 
   useFrame((state, delta) => {
     if (hoda) {
