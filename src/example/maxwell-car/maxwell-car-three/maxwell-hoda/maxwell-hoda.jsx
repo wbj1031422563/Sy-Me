@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-09-01 11:50:08
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-09 23:40:42
+ * @LastEditTime: 2024-09-10 00:48:37
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-hoda\maxwell-hoda.jsx
  * @Description:
  */
@@ -17,7 +17,7 @@ import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler";
 function Model() {
   const scaleNum = 0.01;
   const seconds = 4;
-  const maxParticlesCount = 500;
+  const maxParticlesCount = 36900;
   const particlesRef = useRef();
   const [particlesPos, setParticlesPos] = useState([]);
   const [hoda, setHoda] = useState(null);
@@ -225,23 +225,24 @@ function Model() {
         // float alph=1.-step(uProgress,strength);
         
         // 延迟动画进度 0.1 秒并进行归一化处理
-        float delayedProgress=uProgress*(1.0+fmcNoise*3.0);
-        // delayedProgress=clamp(delayedProgress,0.,1.);// 确保范围在 [0, 1]
+        // float delayedProgress=uProgress*(1.0+fmcNoise*3.0);
+        float delayedProgress=(uProgress-.1)/.9;
+        delayedProgress=clamp(delayedProgress,0.,1.);// 确保范围在 [0, 1]
     
-        float alphStrength=1.-step(delayedProgress-fmcNoise,fmcStrength);
+        float alphStrength=1.-step(delayedProgress,fmcStrength-0.1);
         if(alphStrength<0.01) discard;
 
-        vec3 selfColor=vec3(0.5,0.4,0.6);
-        float fmcEdge=0.02;
-        float fmcA=delayedProgress-fmcNoise*3.0;
-        float fmcB=delayedProgress;
-        float colorStrength= smoothstep(fmcA-fmcEdge,fmcA, fmcStrength) * (1.0 - smoothstep(fmcB, fmcB+fmcEdge, fmcStrength));
+        // vec3 selfColor=vec3(0.5,0.4,0.6);
+        // float fmcEdge=0.02;
+        // float fmcA=delayedProgress-fmcNoise*3.0;
+        // float fmcB=delayedProgress;
+        // float colorStrength= smoothstep(fmcA-fmcEdge,fmcA, fmcStrength) * (1.0 - smoothstep(fmcB, fmcB+fmcEdge, fmcStrength));
         
-        selfColor=mix(diffuse,selfColor,colorStrength);
+        // selfColor=mix(diffuse,selfColor,colorStrength);
 
 
 
-        vec4 diffuseColor = vec4( selfColor, opacity );
+        vec4 diffuseColor = vec4( diffuse, opacity );
         `
       );
       material.userData.shader = shader;
@@ -287,9 +288,16 @@ function Model() {
     hoda.traverse((child) => {
       if (
         child.isMesh &&
-        child.name === "Chasis_PuertasDelanteras_CarPaintWhite_0"
+        [
+          "CarPaintWhite",
+          "CarPaintBlack",
+          "Rims",
+          "CristalTintado",
+          "Cristal",
+          "Pneumatic"
+        ].includes(child.material.name)
       ) {
-        for (let i = 0; i < 500; i++) {
+        for (let i = 0; i < 50; i++) {
           const sampler = new MeshSurfaceSampler(child).build();
           child.updateMatrixWorld(true);
           sampler.sample(tempPos);
@@ -300,7 +308,7 @@ function Model() {
           list.push(tempObject.position.clone());
           // tempObject.rotation.y=-Math.PI*0.5;
           // list.push(tempPos.clone());
-          // tempObject.position.z = 9999;
+          tempObject.position.z = 9999;
           // tempObject.scale.setScalar(Math.random() * 0.5 + 0.5);
           tempObject.updateMatrix();
           particlesRef.current.setMatrixAt(count, tempObject.matrix);
@@ -316,8 +324,9 @@ function Model() {
         particlesRef.current.setMatrixAt(i, tempObject.matrix);
       }
     }
+    // debugger
     particlesRef.current.instanceMatrix.needsUpdate = true;
-    // setParticlesPos(list);
+    setParticlesPos(list);
   };
   useEffect(() => {
     if (scene && hoda) {
@@ -348,7 +357,7 @@ function Model() {
       });
       frontWheelRef.current = frontWheel;
       getGroupBox3(hoda);
-      // initParticlesPos();
+      initParticlesPos();
     }
   }, [scene, hoda]);
   useEffect(() => {
@@ -445,48 +454,48 @@ function Model() {
   /**
    * 粒子
    */
-  // useEffect(() => {
-  //   let tween = null;
-  //   if (particlesPos.length < 1 || !carBox3) return;
+  useEffect(() => {
+    let tween = null;
+    if (particlesPos.length < 1 || !carBox3) return;
 
-  //   const size = new THREE.Vector3();
-  //   carBox3.getSize(size);
-  //   // debugger
-  //   // debugger
-  //   const pos = new THREE.Vector3();
-  //   let mat4 = new THREE.Matrix4();
-  //   tween = new TWEEN.Tween({ value: 0 })
-  //     .to({ value: 1 }, seconds * 1000)
-  //     .onUpdate(({ value }) => {
-  //       for (let index = 0; index < particlesPos.length; index++) {
-  //         // particlesRef.current.getMatrixAt(index, mat4);
-  //         // pos.setFromMatrixPosition(mat4);
-  //         const xRadio = Math.abs(pos.x - carBox3.min.x*scaleNum) / size.x*scaleNum;
-  //         console.log('xRadio',xRadio)
-  //         if (xRadio > value && xRadio < value + 0.2) {
-  //           // debugger
-  //           console.log('xRadio',xRadio)
-  //           mat4.setPosition(particlesPos[index]);
-  //         } else {
-  //           mat4.setPosition(
-  //             new THREE.Vector3(
-  //               particlesPos[index].x,
-  //               particlesPos[index].y,
-  //               9999
-  //             )
-  //           );
-  //         }
-  //         particlesRef.current.setMatrixAt(index, mat4);
-  //       }
-  //       particlesRef.current.instanceMatrix.needsUpdate = true;
-  //     });
-  //     tween.start();
-  //   return () => {
-  //     if (tween) {
-  //       tween.stop();
-  //     }
-  //   };
-  // }, [particlesPos, carBox3]);
+    const size = new THREE.Vector3();
+    carBox3.getSize(size);
+    // debugger
+    // debugger
+    const pos = new THREE.Vector3();
+    let mat4 = new THREE.Matrix4();
+    tween = new TWEEN.Tween({ value: 0 })
+      .to({ value: 1 }, seconds * 1000)
+      .onUpdate(({ value }) => {
+        for (let index = 0; index < particlesPos.length; index++) {
+          particlesRef.current.getMatrixAt(index, mat4);
+          pos.setFromMatrixPosition(mat4);
+          const xRadio =
+            (pos.x - carBox3.min.x * scaleNum) / (size.x * scaleNum);
+          if (xRadio > value && xRadio < value + 0.05) {
+            // debugger
+            // console.log('xRadio',xRadio)
+            mat4.setPosition(particlesPos[index]);
+          } else {
+            mat4.setPosition(
+              new THREE.Vector3(
+                particlesPos[index].x,
+                particlesPos[index].y,
+                9999
+              )
+            );
+          }
+          particlesRef.current.setMatrixAt(index, mat4);
+        }
+        particlesRef.current.instanceMatrix.needsUpdate = true;
+      });
+    tween.start();
+    return () => {
+      if (tween) {
+        tween.stop();
+      }
+    };
+  }, [particlesPos, carBox3]);
 
   useFrame((state, delta) => {
     if (hoda) {
@@ -508,10 +517,13 @@ function Model() {
         object={scene ? scene : null}
         scale={[scaleNum, scaleNum, scaleNum]}
       />
-      {/* <instancedMesh ref={particlesRef} args={[undefined, undefined, maxParticlesCount]}>
+      <instancedMesh
+        ref={particlesRef}
+        args={[undefined, undefined, maxParticlesCount]}
+      >
         <sphereGeometry args={[0.01, 6, 6]}></sphereGeometry>
         <meshStandardMaterial color={"blue"}></meshStandardMaterial>
-      </instancedMesh> */}
+      </instancedMesh>
     </group>
   );
 }
