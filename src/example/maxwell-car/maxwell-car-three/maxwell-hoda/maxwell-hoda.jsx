@@ -2,22 +2,30 @@
  * @Author: FMC
  * @Date: 2024-09-01 11:50:08
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-10 00:48:37
+ * @LastEditTime: 2024-09-10 23:46:08
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-hoda\maxwell-hoda.jsx
  * @Description:
  */
 
-import { applyProps, useFrame, useLoader } from "@react-three/fiber";
+import { applyProps, extend, useFrame, useLoader, useThree } from "@react-three/fiber";
 import TWEEN from "@tweenjs/tween.js";
 import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler";
+import { smoothstep } from "three/src/math/MathUtils";
+import LoadingMaterial from "../material/loadingMaterial/loadingMaterial";
+import surfaceWeight from "./surfaceWeight.json";
+extend({LoadingMaterial})
 function Model() {
+  const state = useThree();
   const scaleNum = 0.01;
   const seconds = 4;
-  const maxParticlesCount = 36900;
+  const maxParticlesCount = 14000;
+  const particlesWidth = 0.2;
+  const  particleSize=0.05;
+  const sufarceNum=0.7;
   const particlesRef = useRef();
   const [particlesPos, setParticlesPos] = useState([]);
   const [hoda, setHoda] = useState(null);
@@ -229,7 +237,7 @@ function Model() {
         float delayedProgress=(uProgress-.1)/.9;
         delayedProgress=clamp(delayedProgress,0.,1.);// 确保范围在 [0, 1]
     
-        float alphStrength=1.-step(delayedProgress,fmcStrength-0.1);
+        float alphStrength=1.-step(delayedProgress,fmcStrength-${particlesWidth*0.5});
         if(alphStrength<0.01) discard;
 
         // vec3 selfColor=vec3(0.5,0.4,0.6);
@@ -285,6 +293,7 @@ function Model() {
     const tempObject = new THREE.Object3D();
     const list = [];
     let count = 0;
+    console.log("surfaceWeight", surfaceWeight);
     hoda.traverse((child) => {
       if (
         child.isMesh &&
@@ -294,10 +303,11 @@ function Model() {
           "Rims",
           "CristalTintado",
           "Cristal",
-          "Pneumatic"
-        ].includes(child.material.name)
+          "Pneumatic",
+        ].includes(child.material.name) &&
+        surfaceWeight[child.name]
       ) {
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < surfaceWeight[child.name] * sufarceNum; i++) {
           const sampler = new MeshSurfaceSampler(child).build();
           child.updateMatrixWorld(true);
           sampler.sample(tempPos);
@@ -309,7 +319,7 @@ function Model() {
           // tempObject.rotation.y=-Math.PI*0.5;
           // list.push(tempPos.clone());
           tempObject.position.z = 9999;
-          // tempObject.scale.setScalar(Math.random() * 0.5 + 0.5);
+          tempObject.scale.setScalar(Math.random() * 0.5 + 0.5);
           tempObject.updateMatrix();
           particlesRef.current.setMatrixAt(count, tempObject.matrix);
           count++;
@@ -317,6 +327,7 @@ function Model() {
         console.log("mesh", child.name);
       }
     });
+    // debugger;
     if (list.length < maxParticlesCount) {
       for (let i = list.length; i < maxParticlesCount; i++) {
         tempObject.position.set(0, 0, 9999);
@@ -324,7 +335,6 @@ function Model() {
         particlesRef.current.setMatrixAt(i, tempObject.matrix);
       }
     }
-    // debugger
     particlesRef.current.instanceMatrix.needsUpdate = true;
     setParticlesPos(list);
   };
@@ -462,8 +472,10 @@ function Model() {
     carBox3.getSize(size);
     // debugger
     // debugger
-    const pos = new THREE.Vector3();
+    const pos2 = new THREE.Vector3();
     let mat4 = new THREE.Matrix4();
+    const { camera } = state;
+    const pos = new THREE.Vector3();
     tween = new TWEEN.Tween({ value: 0 })
       .to({ value: 1 }, seconds * 1000)
       .onUpdate(({ value }) => {
@@ -472,10 +484,31 @@ function Model() {
           pos.setFromMatrixPosition(mat4);
           const xRadio =
             (pos.x - carBox3.min.x * scaleNum) / (size.x * scaleNum);
-          if (xRadio > value && xRadio < value + 0.05) {
-            // debugger
-            // console.log('xRadio',xRadio)
-            mat4.setPosition(particlesPos[index]);
+          // if (xRadio > value - 0.1 && xRadio < value - 0.1 + 0.1) {
+          //   pos2.copy(camera.position);
+          //   pos2.lerp(particlesPos[index], 0.5);
+          //   mat4.setPosition(pos2);
+          // }
+          // else if (xRadio > value - 0.05 && xRadio < value - 0.05 + 0.1) {
+          //   pos2.copy(camera.position);
+          //   pos2.lerp(particlesPos[index], 0.75);
+          //   mat4.setPosition(pos2);
+          // }
+          if (xRadio > value && xRadio < value + particlesWidth) {
+            let showRadio = (xRadio - value) / particlesWidth;
+            showRadio = smoothstep(showRadio, 0, 0.5);
+            // mat4.makeScale(showRadio, showRadio, showRadio);
+
+            pos2.copy(particlesPos[index]);
+            // if(showRadio<0.5){
+            //   pos2.setScalar(1.5)
+            // }else if(showRadio<1){
+            //   pos2.setScalar(1.25)
+            // }
+            // pos2.setScalar(1.2);
+            // pos2.lerp(particlesPos[index],showRadio);
+            // pos2.setScalar(1.5)
+            mat4.setPosition(pos2);
           } else {
             mat4.setPosition(
               new THREE.Vector3(
@@ -521,8 +554,13 @@ function Model() {
         ref={particlesRef}
         args={[undefined, undefined, maxParticlesCount]}
       >
-        <sphereGeometry args={[0.01, 6, 6]}></sphereGeometry>
-        <meshStandardMaterial color={"blue"}></meshStandardMaterial>
+        <planeGeometry args={[particleSize, particleSize]}></planeGeometry>
+        <loadingMaterial/>
+        {/* <Edges
+          linewidth={1}
+          scale={1.1}
+          color="red"
+        ></Edges> */}
       </instancedMesh>
     </group>
   );
