@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-06-23 09:58:48
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-24 21:01:38
+ * @LastEditTime: 2024-09-27 22:13:22
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-car-base-env\maxwell-car-base-env.jsx
  * @Description:基础环境
  */
@@ -59,9 +59,9 @@ function MaxWellCarBaeEnv() {
       <OrbitControls ref={controls} makeDefault={true} />
       {/* <OrbitControls enablePan={false} enableZoom={false} minPolarAngle={Math.PI / 2.2} maxPolarAngle={Math.PI / 2.2} /> */}
       {/* <Environment files="/envMap/venice_sunset_1k.hdr"></Environment> */}
-      {sceneType === "动态道路" && (
-        <Environment files="/envMap/夜晚.hdr" environmentIntensity={0.1}></Environment>
-      )}
+      {/* {sceneType === "动态道路" && (
+        <Environment files="/envMap/夜晚.hdr" environmentIntensity={0.01}></Environment>
+      )} */}
       {sceneType === "静态展厅" && (
         <Environment resolution={512}>
           {/* Ceiling */}

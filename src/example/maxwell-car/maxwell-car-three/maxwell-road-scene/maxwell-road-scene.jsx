@@ -2,19 +2,20 @@
  * @Author: FMC
  * @Date: 2024-09-24 20:41:25
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-24 23:01:39
+ * @LastEditTime: 2024-09-28 19:39:15
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-road-scene\maxwell-road-scene.jsx
  * @Description:
  */
 
-import { Clone } from "@react-three/drei";
+import { Clone, useTexture } from "@react-three/drei";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { Suspense, useEffect, useState } from "react";
 import * as THREE from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import MaxwellHoda from "../maxwell-hoda/maxwell-hoda";
 function Model(props) {
-  const speed = 10;
+  const speed = 20;
   const [street, setStreet] = useState(null);
   const [cloneStreet1, setCloneStreet1] = useState(null);
   const [cloneStreet2, setCloneStreet2] = useState(null);
@@ -26,13 +27,14 @@ function Model(props) {
    */
   const { scene, nodes, materials } = useLoader(
     GLTFLoader,
-    "model/街景.glb",
+    "model/街景材质.glb",
     (loader) => {
       const dracoLoader = new DRACOLoader();
       dracoLoader.setDecoderPath("draco/");
       loader.setDRACOLoader(dracoLoader);
     }
   );
+  const bakedImg = useTexture("model/baking.png");
   const getGroupBox3 = (group) => {
     let box3 = new THREE.Box3();
     group.traverse((child) => {
@@ -43,49 +45,69 @@ function Model(props) {
         box3.union(childBoundingBox);
       }
     });
-    console.log("size", box3.max.z - box3.min.z - 0.8);
-    setSize(box3.max.z - box3.min.z-1);
+    // console.log("size", box3.max.z - box3.min.z -5);
+    setSize(box3.max.z - box3.min.z -1);
     // setCarBox3(box3);
   };
   useEffect(() => {
     if (street) {
       getGroupBox3(street);
+      // bakedImg.flipY=false;
+      // bakedImg.
+      const bakedBuildMaterail = new THREE.MeshBasicMaterial({
+        map: bakedImg,
+      });
+      // street.traverse((child) => {
+      //   if(child.name=='建筑aa'){
+      //     child.traverse(item=>{
+      //       if(item.isMesh){
+      //         item.material=bakedBuildMaterail;
+      //       }
+      //     })
+      //   }
+      // })
+      // debugger;
     }
   }, [street]);
   useFrame((state, delta) => {
-    const a = size*0.9;
+    const a = -size * 0.9;
     const outView = -1 * (100 + size * 0.5);
     if (cloneStreet1 && street) {
       // if(street.position.z<size*0.9){
       //   street.position.z += speed * delta;
       // }
-      cloneStreet1.position.z += speed * delta;
-      street.position.z += speed * delta;
-      if(street.position.z>a){
-        street.position.z= cloneStreet1.position.z-size;
+
+
+      cloneStreet1.position.z -= speed * delta;
+      street.position.z -= speed * delta;
+      if (street.position.z < a) {
+        street.position.z = cloneStreet1.position.z + size;
       }
-      if(cloneStreet1.position.z>a){
-        cloneStreet1.position.z=street.position.z-size;
+      if (cloneStreet1.position.z < a) {
+        cloneStreet1.position.z = street.position.z + size;
       }
     }
   });
 
   return (
-    <group {...props}>
-      <mesh position-y={0.51}>
+    <group {...props} >
+      {/* <mesh position-y={0.51}>
         <boxGeometry></boxGeometry>
         <meshStandardMaterial color={"red"}></meshStandardMaterial>
-      </mesh>
-      <mesh scale={[50, 50, 50]} position-z={-60}>
-        <planeGeometry></planeGeometry>
-        <meshBasicMaterial color={"#000000"}></meshBasicMaterial>
+      </mesh> */}
+      <MaxwellHoda/>
+      <mesh  scale={[50, 50, 50]} position-z={-30} >
+        <planeGeometry></planeGeometry >
+        <meshBasicMaterial color={"#000"} side={THREE.DoubleSide}></meshBasicMaterial>
       </mesh>
       <primitive ref={setStreet} object={scene ? scene : null} />
       {street && (
         <Clone
           ref={setCloneStreet1}
           object={street}
-          position-z={-size * 1}
+          position-y={0.01}
+          // rotation-y={Math.PI}
+          position-z={size * 1}
         ></Clone>
       )}
       {/* {street && <Clone ref={setCloneStreet2} object={street} position-z={-size*2}></Clone>} */}

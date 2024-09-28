@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-09-01 11:50:08
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-10 23:46:08
+ * @LastEditTime: 2024-09-28 19:36:41
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-hoda\maxwell-hoda.jsx
  * @Description:
  */
@@ -289,6 +289,7 @@ function Model() {
     // scene.add(helper);
   };
   const initParticlesPos = () => {
+    if(!particlesPos||particlesPos.length==0)return;
     const tempPos = new THREE.Vector3();
     const tempObject = new THREE.Object3D();
     const list = [];
@@ -549,19 +550,16 @@ function Model() {
         ref={setHoda}
         object={scene ? scene : null}
         scale={[scaleNum, scaleNum, scaleNum]}
+        rotation-y={Math.PI*0.5}
+        position-z={0}
       />
-      <instancedMesh
+      {/* <instancedMesh
         ref={particlesRef}
         args={[undefined, undefined, maxParticlesCount]}
       >
         <planeGeometry args={[particleSize, particleSize]}></planeGeometry>
         <loadingMaterial/>
-        {/* <Edges
-          linewidth={1}
-          scale={1.1}
-          color="red"
-        ></Edges> */}
-      </instancedMesh>
+      </instancedMesh> */}
     </group>
   );
 }
