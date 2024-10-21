@@ -17,15 +17,15 @@ import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler";
 import { smoothstep } from "three/src/math/MathUtils";
 import LoadingMaterial from "../material/loadingMaterial/loadingMaterial";
 import surfaceWeight from "./surfaceWeight.json";
-extend({LoadingMaterial})
-function Model() {
+extend({ LoadingMaterial })
+function Model({speed}) {
   const state = useThree();
-  const scaleNum = 0.01;
+  const scaleNum = 1;
   const seconds = 4;
   const maxParticlesCount = 14000;
   const particlesWidth = 0.2;
-  const  particleSize=0.05;
-  const sufarceNum=0.7;
+  const particleSize = 0.05;
+  const sufarceNum = 0.7;
   const particlesRef = useRef();
   const [particlesPos, setParticlesPos] = useState([]);
   const [hoda, setHoda] = useState(null);
@@ -87,13 +87,13 @@ function Model() {
     "EmissiveLogo.001": false,
     // "EmissiveLogo.003": false,
   });
-  const frontWheelRef = useRef(null);
+  // const frontWheelRef = useRef(null);
   /**
    * 加载Draco模型
    */
   const { scene, nodes, materials } = useLoader(
     GLTFLoader,
-    "model/本田规范化版本.glb",
+    "model/汽车.glb",
     (loader) => {
       const dracoLoader = new DRACOLoader();
       dracoLoader.setDecoderPath("draco/");
@@ -237,7 +237,7 @@ function Model() {
         float delayedProgress=(uProgress-.1)/.9;
         delayedProgress=clamp(delayedProgress,0.,1.);// 确保范围在 [0, 1]
     
-        float alphStrength=1.-step(delayedProgress,fmcStrength-${particlesWidth*0.5});
+        float alphStrength=1.-step(delayedProgress,fmcStrength-${particlesWidth * 0.5});
         if(alphStrength<0.01) discard;
 
         // vec3 selfColor=vec3(0.5,0.4,0.6);
@@ -289,7 +289,7 @@ function Model() {
     // scene.add(helper);
   };
   const initParticlesPos = () => {
-    if(!particlesPos||particlesPos.length==0)return;
+    if (!particlesPos || particlesPos.length == 0) return;
     const tempPos = new THREE.Vector3();
     const tempObject = new THREE.Object3D();
     const list = [];
@@ -339,208 +339,232 @@ function Model() {
     particlesRef.current.instanceMatrix.needsUpdate = true;
     setParticlesPos(list);
   };
-  useEffect(() => {
-    if (scene && hoda) {
-      const meshList = [];
-      const frontWheel = [];
-      const frontWheelNameList = [
-        "PneumaticoTrasero_Pneumatic_0",
-        "LlantaTrasera_Rims_0",
-        "TornillosLlantaTrasera_CarPaintBlack_0",
-        "TaponLlantaTrasera_CarPaintBlack_0",
-        "Llanta.002_ChromeRims_0",
+  // useEffect(() => {
+  //   if (scene && hoda) {
+  //     const meshList = [];
+  //     const frontWheel = [];
+  //     const frontWheelNameList = [
+  //       "PneumaticoTrasero_Pneumatic_0",
+  //       "LlantaTrasera_Rims_0",
+  //       "TornillosLlantaTrasera_CarPaintBlack_0",
+  //       "TaponLlantaTrasera_CarPaintBlack_0",
+  //       "Llanta.002_ChromeRims_0",
 
-        "Pneumatico_Pneumatic_0",
-        "Llanta_Rims_0",
-        "TornillosLlanta_CarPaintBlack_0",
-        "TaponLlanta_CarPaintBlack_0",
-        "Llanta.001_ChromeRims_0",
-      ];
+  //       "Pneumatico_Pneumatic_0",
+  //       "Llanta_Rims_0",
+  //       "TornillosLlanta_CarPaintBlack_0",
+  //       "TaponLlanta_CarPaintBlack_0",
+  //       "Llanta.001_ChromeRims_0",
+  //     ];
+  //     hoda.traverse((child) => {
+  //       if (child.isMesh) {
+  //         meshList.push(child);
+  //       }
+  //     });
+  //     meshList.forEach((mesh, index) => {
+  //       if (frontWheelNameList.includes(mesh.name)) {
+  //         frontWheel.push(mesh);
+  //       }
+  //     });
+  //     frontWheelRef.current = frontWheel;
+  //     getGroupBox3(hoda);
+  //     initParticlesPos();
+  //   }
+  // }, [scene, hoda]);
+  // useEffect(() => {
+  //   if (materials && hoda) {
+  //     applyProps(materials.CarPaintWhite, {
+  //       color: "#999999",
+  //     });
+  //     applyProps(materials.RoofCloth, {
+  //       color: "#999999",
+  //     });
+  //     applyProps(materials.Rims, {
+  //       metalness: 0.9,
+  //       roughness: 0.1,
+  //       color: "#909090",
+  //     });
+  //     // console.log("materials.CarPaintWhite", materials.CarPaintWhite);
+
+  //     applyProps(materials.HeadLampGlasses, {
+  //       emissiveIntensity: 1.5,
+  //       toneMapped: false,
+  //       color: "#FFA500",
+  //       emissive: "#FFA500",
+  //     });
+  //     applyProps(materials.MainHeadLightGlass, {
+  //       emissiveIntensity: 4,
+  //       toneMapped: false,
+  //       color: "#fff",
+  //       emissive: "#fff",
+  //     });
+
+  //     applyProps(materials.RearLampInteriorGlasses, {
+  //       emissiveIntensity: 5,
+  //       toneMapped: false,
+  //       emissive: "red",
+  //       color: "red",
+  //     });
+
+  //     applyProps(materials.BackRedReflectors, {
+  //       emissiveIntensity: 0.8,
+  //       toneMapped: false,
+  //       color: "red",
+  //       emissive: "red",
+  //     });
+  //     Object.entries(materials).forEach(([key, value]) => {
+  //       setShader(value);
+  //     });
+  //     // const { CristalTintado } = materials;
+  //     // nodes.CristalLateral_Cristal_0.material = CristalTintado;
+  //     // debugger
+  //     // nodes['CristalLateralEsquina_Cristal_0001'].material=CristalTintado;
+  //   }
+  // }, [hoda]);
+  // useEffect(() => {
+  //   let tween = null;
+  //   let allHaseComplieObj = Object.entries(compileObj).every(
+  //     ([key, value]) => value
+  //   );
+  //   if (allHaseComplieObj && carBox3) {
+  //     let targetMaterailList = [];
+  //     hoda.traverse((child) => {
+  //       if (child.isMesh && child.material) {
+  //         targetMaterailList.push(child.material.userData);
+  //       }
+  //     });
+  //     targetMaterailList = targetMaterailList.filter(
+  //       (item, index, self) =>
+  //         index === self.findIndex((t) => t.materialName === item.materialName)
+  //     );
+  //     // debugger
+
+  //     const size = new THREE.Vector3();
+  //     carBox3.getSize(size);
+  //     targetMaterailList.forEach(({ shader }) => {
+  //       shader.uniforms.uXlen.value = size.x * scaleNum;
+  //       shader.uniforms.uOffsetX.value = carBox3.min.x * scaleNum;
+  //     });
+
+  //     tween = new TWEEN.Tween({ value: 0 })
+  //       .to({ value: 1 }, seconds * 1000)
+  //       .onUpdate(({ value }) => {
+  //         targetMaterailList.forEach(({ shader }) => {
+  //           shader.uniforms.uProgress.value = value;
+  //         });
+  //       });
+  //     tween.start();
+  //   }
+  //   return () => {
+  //     if (tween) {
+  //       tween.stop();
+  //     }
+  //   };
+  // }, [compileObj, carBox3]);
+
+  // /**
+  //  * 粒子
+  //  */
+  // useEffect(() => {
+  //   let tween = null;
+  //   if (particlesPos.length < 1 || !carBox3) return;
+
+  //   const size = new THREE.Vector3();
+  //   carBox3.getSize(size);
+  //   // debugger
+  //   // debugger
+  //   const pos2 = new THREE.Vector3();
+  //   let mat4 = new THREE.Matrix4();
+  //   const { camera } = state;
+  //   const pos = new THREE.Vector3();
+  //   tween = new TWEEN.Tween({ value: 0 })
+  //     .to({ value: 1 }, seconds * 1000)
+  //     .onUpdate(({ value }) => {
+  //       for (let index = 0; index < particlesPos.length; index++) {
+  //         particlesRef.current.getMatrixAt(index, mat4);
+  //         pos.setFromMatrixPosition(mat4);
+  //         const xRadio =
+  //           (pos.x - carBox3.min.x * scaleNum) / (size.x * scaleNum);
+  //         // if (xRadio > value - 0.1 && xRadio < value - 0.1 + 0.1) {
+  //         //   pos2.copy(camera.position);
+  //         //   pos2.lerp(particlesPos[index], 0.5);
+  //         //   mat4.setPosition(pos2);
+  //         // }
+  //         // else if (xRadio > value - 0.05 && xRadio < value - 0.05 + 0.1) {
+  //         //   pos2.copy(camera.position);
+  //         //   pos2.lerp(particlesPos[index], 0.75);
+  //         //   mat4.setPosition(pos2);
+  //         // }
+  //         if (xRadio > value && xRadio < value + particlesWidth) {
+  //           let showRadio = (xRadio - value) / particlesWidth;
+  //           showRadio = smoothstep(showRadio, 0, 0.5);
+  //           // mat4.makeScale(showRadio, showRadio, showRadio);
+
+  //           pos2.copy(particlesPos[index]);
+  //           // if(showRadio<0.5){
+  //           //   pos2.setScalar(1.5)
+  //           // }else if(showRadio<1){
+  //           //   pos2.setScalar(1.25)
+  //           // }
+  //           // pos2.setScalar(1.2);
+  //           // pos2.lerp(particlesPos[index],showRadio);
+  //           // pos2.setScalar(1.5)
+  //           mat4.setPosition(pos2);
+  //         } else {
+  //           mat4.setPosition(
+  //             new THREE.Vector3(
+  //               particlesPos[index].x,
+  //               particlesPos[index].y,
+  //               9999
+  //             )
+  //           );
+  //         }
+  //         particlesRef.current.setMatrixAt(index, mat4);
+  //       }
+  //       particlesRef.current.instanceMatrix.needsUpdate = true;
+  //     });
+  //   tween.start();
+  //   return () => {
+  //     if (tween) {
+  //       tween.stop();
+  //     }
+  //   };
+  // }, [particlesPos, carBox3]);
+
+
+  const frontWheelRef = useRef(null);
+  /**
+   * 车辆运动状态初始化
+   */
+  useEffect(() => {
+    const fontWheel = ['polySurface481_前左轮毂', 'polySurface491_phong2_0', 'polySurface480_blinn7_0']
+    const rearWeel = ['polySurface477_后左轮毂', 'polySurface476_blinn7_0', 'polySurface539_phong2_0']
+    const list=[];
+    const meshList=[];
+    if (hoda) {
       hoda.traverse((child) => {
         if (child.isMesh) {
           meshList.push(child);
         }
       });
       meshList.forEach((mesh, index) => {
-        if (frontWheelNameList.includes(mesh.name)) {
-          frontWheel.push(mesh);
+        if (fontWheel.includes(mesh.name)||rearWeel.includes(mesh.name)) {
+          list.push(mesh);
         }
       });
-      frontWheelRef.current = frontWheel;
-      getGroupBox3(hoda);
-      initParticlesPos();
-    }
-  }, [scene, hoda]);
-  useEffect(() => {
-    if (materials && hoda) {
-      applyProps(materials.CarPaintWhite, {
-        color: "#999999",
-      });
-      applyProps(materials.RoofCloth, {
-        color: "#999999",
-      });
-      applyProps(materials.Rims, {
-        metalness: 0.9,
-        roughness: 0.1,
-        color: "#909090",
-      });
-      // console.log("materials.CarPaintWhite", materials.CarPaintWhite);
-
-      applyProps(materials.HeadLampGlasses, {
-        emissiveIntensity: 1.5,
-        toneMapped: false,
-        color: "#FFA500",
-        emissive: "#FFA500",
-      });
-      applyProps(materials.MainHeadLightGlass, {
-        emissiveIntensity: 4,
-        toneMapped: false,
-        color: "#fff",
-        emissive: "#fff",
-      });
-
-      applyProps(materials.RearLampInteriorGlasses, {
-        emissiveIntensity: 5,
-        toneMapped: false,
-        emissive: "red",
-        color: "red",
-      });
-
-      applyProps(materials.BackRedReflectors, {
-        emissiveIntensity: 0.8,
-        toneMapped: false,
-        color: "red",
-        emissive: "red",
-      });
-      Object.entries(materials).forEach(([key, value]) => {
-        setShader(value);
-      });
-      // const { CristalTintado } = materials;
-      // nodes.CristalLateral_Cristal_0.material = CristalTintado;
       // debugger
-      // nodes['CristalLateralEsquina_Cristal_0001'].material=CristalTintado;
+      frontWheelRef.current = list;
     }
-  }, [hoda]);
-  useEffect(() => {
-    let tween = null;
-    let allHaseComplieObj = Object.entries(compileObj).every(
-      ([key, value]) => value
-    );
-    if (allHaseComplieObj && carBox3) {
-      let targetMaterailList = [];
-      hoda.traverse((child) => {
-        if (child.isMesh && child.material) {
-          targetMaterailList.push(child.material.userData);
-        }
-      });
-      targetMaterailList = targetMaterailList.filter(
-        (item, index, self) =>
-          index === self.findIndex((t) => t.materialName === item.materialName)
-      );
-      // debugger
-
-      const size = new THREE.Vector3();
-      carBox3.getSize(size);
-      targetMaterailList.forEach(({ shader }) => {
-        shader.uniforms.uXlen.value = size.x * scaleNum;
-        shader.uniforms.uOffsetX.value = carBox3.min.x * scaleNum;
-      });
-
-      tween = new TWEEN.Tween({ value: 0 })
-        .to({ value: 1 }, seconds * 1000)
-        .onUpdate(({ value }) => {
-          targetMaterailList.forEach(({ shader }) => {
-            shader.uniforms.uProgress.value = value;
-          });
-        });
-      tween.start();
-    }
-    return () => {
-      if (tween) {
-        tween.stop();
-      }
-    };
-  }, [compileObj, carBox3]);
-
-  /**
-   * 粒子
-   */
-  useEffect(() => {
-    let tween = null;
-    if (particlesPos.length < 1 || !carBox3) return;
-
-    const size = new THREE.Vector3();
-    carBox3.getSize(size);
-    // debugger
-    // debugger
-    const pos2 = new THREE.Vector3();
-    let mat4 = new THREE.Matrix4();
-    const { camera } = state;
-    const pos = new THREE.Vector3();
-    tween = new TWEEN.Tween({ value: 0 })
-      .to({ value: 1 }, seconds * 1000)
-      .onUpdate(({ value }) => {
-        for (let index = 0; index < particlesPos.length; index++) {
-          particlesRef.current.getMatrixAt(index, mat4);
-          pos.setFromMatrixPosition(mat4);
-          const xRadio =
-            (pos.x - carBox3.min.x * scaleNum) / (size.x * scaleNum);
-          // if (xRadio > value - 0.1 && xRadio < value - 0.1 + 0.1) {
-          //   pos2.copy(camera.position);
-          //   pos2.lerp(particlesPos[index], 0.5);
-          //   mat4.setPosition(pos2);
-          // }
-          // else if (xRadio > value - 0.05 && xRadio < value - 0.05 + 0.1) {
-          //   pos2.copy(camera.position);
-          //   pos2.lerp(particlesPos[index], 0.75);
-          //   mat4.setPosition(pos2);
-          // }
-          if (xRadio > value && xRadio < value + particlesWidth) {
-            let showRadio = (xRadio - value) / particlesWidth;
-            showRadio = smoothstep(showRadio, 0, 0.5);
-            // mat4.makeScale(showRadio, showRadio, showRadio);
-
-            pos2.copy(particlesPos[index]);
-            // if(showRadio<0.5){
-            //   pos2.setScalar(1.5)
-            // }else if(showRadio<1){
-            //   pos2.setScalar(1.25)
-            // }
-            // pos2.setScalar(1.2);
-            // pos2.lerp(particlesPos[index],showRadio);
-            // pos2.setScalar(1.5)
-            mat4.setPosition(pos2);
-          } else {
-            mat4.setPosition(
-              new THREE.Vector3(
-                particlesPos[index].x,
-                particlesPos[index].y,
-                9999
-              )
-            );
-          }
-          particlesRef.current.setMatrixAt(index, mat4);
-        }
-        particlesRef.current.instanceMatrix.needsUpdate = true;
-      });
-    tween.start();
-    return () => {
-      if (tween) {
-        tween.stop();
-      }
-    };
-  }, [particlesPos, carBox3]);
-
+  }, [hoda])
   useFrame((state, delta) => {
     if (hoda) {
-      const speed = 25; // 汽车的移动速度
-      // const wheelRadius = 1.0; // 轮子的半径，假设是0.2
-      // const distance = delta * speed; // 移动的距离
-      // if(frontWheelRef.current){
-      //   frontWheelRef.current.forEach(item=>{
-      //     item.rotation.y-=distance / wheelRadius*0.4;
-      //   })
-      // }
+      if(frontWheelRef.current){
+        const wheelRadius = 1.0; // 轮子的半径，假设是0.2
+        const distance = delta * speed; // 移动的距离
+        frontWheelRef.current.forEach(item=>{
+          item.rotation.x+=distance / wheelRadius*0.4;
+        })
+      }
       // hodaRef.current.position.x-=distance*0.1;\
     }
   });
@@ -550,7 +574,7 @@ function Model() {
         ref={setHoda}
         object={scene ? scene : null}
         scale={[scaleNum, scaleNum, scaleNum]}
-        rotation-y={Math.PI*0.5}
+        // rotation-y={Math.PI*0.5}
         position-z={0}
       />
       {/* <instancedMesh
@@ -563,10 +587,10 @@ function Model() {
     </group>
   );
 }
-function MaxwellHoda() {
+function MaxwellHoda({speed=0}) {
   return (
     <Suspense>
-      <Model />
+      <Model speed={speed}/>
     </Suspense>
   );
 }

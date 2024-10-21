@@ -59,9 +59,9 @@ function MaxWellCarBaeEnv() {
       <OrbitControls ref={controls} makeDefault={true} />
       {/* <OrbitControls enablePan={false} enableZoom={false} minPolarAngle={Math.PI / 2.2} maxPolarAngle={Math.PI / 2.2} /> */}
       {/* <Environment files="/envMap/venice_sunset_1k.hdr"></Environment> */}
-      {/* {sceneType === "动态道路" && (
-        <Environment files="/envMap/夜晚.hdr" environmentIntensity={0.01}></Environment>
-      )} */}
+      {sceneType === "动态道路" && (
+        <Environment files="/envMap/abstract-lighting-ray-room-style-01_2K_f478fdd1-243a-4cc8-b454-0f522f1afb6b.exr" background={false} intensity={0.1}></Environment>
+      )}
       {sceneType === "静态展厅" && (
         <Environment resolution={512}>
           {/* Ceiling */}

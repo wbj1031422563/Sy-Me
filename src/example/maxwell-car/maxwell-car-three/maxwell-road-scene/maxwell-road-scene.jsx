@@ -14,8 +14,9 @@ import * as THREE from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import MaxwellHoda from "../maxwell-hoda/maxwell-hoda";
-function Model(props) {
-  const speed = 20;
+import TWEEN from "@tweenjs/tween.js";
+function Model({runState='STOP'}) {
+  const [speed,setSpeed] = useState(20);
   const [street, setStreet] = useState(null);
   const [cloneStreet1, setCloneStreet1] = useState(null);
   const [cloneStreet2, setCloneStreet2] = useState(null);
@@ -67,6 +68,7 @@ function Model(props) {
       //   }
       // })
       // debugger;
+      console.log('street',street)
     }
   }, [street]);
   useFrame((state, delta) => {
@@ -76,8 +78,6 @@ function Model(props) {
       // if(street.position.z<size*0.9){
       //   street.position.z += speed * delta;
       // }
-
-
       cloneStreet1.position.z -= speed * delta;
       street.position.z -= speed * delta;
       if (street.position.z < a) {
@@ -88,14 +88,40 @@ function Model(props) {
       }
     }
   });
+  useEffect(()=>{
+    let tween=null;
+    const seconds=2;
+    if(runState=='RUNNING'){
+      tween = new TWEEN.Tween({ value: 0 })
+      .to({ value: 20 }, seconds * 1000)
+      .onUpdate(({ value }) => {
+        console.log('value',value)
+        setSpeed(value);
+      })
+    }else if(runState=='STOP'){
+      tween = new TWEEN.Tween({ value: 20 })
+      .to({ value: 0 }, seconds * 1000)
+      .onUpdate(({ value }) => {
+        setSpeed(value);
+      })
+    }
+    if(tween){
+      tween.start();
+    }
+    return ()=>{
+      if(tween){
+        tween.stop()
+      }
+    }
+  },[runState])
 
   return (
-    <group {...props} >
+    <group >
       {/* <mesh position-y={0.51}>
         <boxGeometry></boxGeometry>
         <meshStandardMaterial color={"red"}></meshStandardMaterial>
       </mesh> */}
-      <MaxwellHoda/>
+      <MaxwellHoda speed={speed}/>
       <mesh  scale={[50, 50, 50]} position-z={-30} >
         <planeGeometry></planeGeometry >
         <meshBasicMaterial color={"#000"} side={THREE.DoubleSide}></meshBasicMaterial>
@@ -117,10 +143,10 @@ function Model(props) {
   );
 }
 
-function MaxWellRoadScene(props) {
+function MaxWellRoadScene({runState='STOP'}) {
   return (
     <Suspense>
-      <Model {...props} />
+      <Model runState={runState} />
     </Suspense>
   );
 }

@@ -39,7 +39,7 @@ function MaxWellCarThree() {
         />
         {/* <MaxWellGround /> */}
         <MaxWellCarBaeEnv></MaxWellCarBaeEnv>
-        <MaxwellRoadScene></MaxwellRoadScene>
+        <MaxwellRoadScene runState={'RUNNING'}></MaxwellRoadScene>
         <axesHelper></axesHelper>
         {/* <MaxwellText position={[1.5,1,-3.5]}/>
         <MaxwellEffects />
