@@ -18,7 +18,7 @@ import { smoothstep } from "three/src/math/MathUtils";
 import LoadingMaterial from "../material/loadingMaterial/loadingMaterial";
 import surfaceWeight from "./surfaceWeight.json";
 extend({ LoadingMaterial })
-function Model({speed}) {
+function Model({speed,rotation,position}) {
   const state = useThree();
   const scaleNum = 1;
   const seconds = 4;
@@ -575,7 +575,8 @@ function Model({speed}) {
         object={scene ? scene : null}
         scale={[scaleNum, scaleNum, scaleNum]}
         // rotation-y={Math.PI*0.5}
-        position-z={0}
+        rotation={rotation}
+        position={position}
       />
       {/* <instancedMesh
         ref={particlesRef}
@@ -587,10 +588,10 @@ function Model({speed}) {
     </group>
   );
 }
-function MaxwellHoda({speed=0}) {
+function MaxwellHoda({speed=0,position,rotation}) {
   return (
     <Suspense>
-      <Model speed={speed}/>
+      <Model speed={speed} rotation={rotation} position={position}/>
     </Suspense>
   );
 }

@@ -14,6 +14,11 @@ import * as THREE from "three";
 import MaxWellCarBaeEnv from "./maxwell-car-base-env/maxwell-car-base-env";
 import "./maxwell-car-three.less";
 import MaxwellRoadScene from "./maxwell-road-scene/maxwell-road-scene";
+import MaxWellGround from "./maxwell-ground/maxwell-ground";
+import MaxwellText from "./maxwell-text/maxwell-text";
+import MaxwellEffects from "./maxwell-effects/maxwell-effects";
+import MaxwellHoda from "./maxwell-hoda/maxwell-hoda";
+import { Suspense } from "react";
 function MaxWellCarThree() {
   return (
     <div className="maxwell-car-three">
@@ -37,16 +42,16 @@ function MaxWellCarThree() {
           opacity={1}
           far={20}
         />
-        {/* <MaxWellGround /> */}
+        <MaxWellGround />
         <MaxWellCarBaeEnv></MaxWellCarBaeEnv>
-        <MaxwellRoadScene runState={'RUNNING'}></MaxwellRoadScene>
+        {/* <MaxwellRoadScene runState={'RUNNING'}></MaxwellRoadScene> */}
         <axesHelper></axesHelper>
-        {/* <MaxwellText position={[1.5,1,-3.5]}/>
+        <MaxwellText position={[1.5,2,-3.5]}/>
         <MaxwellEffects />
         <Suspense fallback={null}>
           <fog args={[0x00000, 15, 20]} attach={"fog"}></fog>
-          <MaxwellHoda></MaxwellHoda>
-        </Suspense> */}
+          <MaxwellHoda rotation={[0,-Math.PI*0.5,0]} position={[3,0,0]}></MaxwellHoda>
+        </Suspense>
       </Canvas>
       <Stats />
       <Leva collapsed />

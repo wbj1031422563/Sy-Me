@@ -32,7 +32,7 @@ function MaxWellGround() {
         blur={[600, 200]}
         resolution={1024}
         mixBlur={1}
-        mixStrength={80}
+        mixStrength={300}
         roughness={1}
         depthScale={1.2}
         minDepthThreshold={0.4}
