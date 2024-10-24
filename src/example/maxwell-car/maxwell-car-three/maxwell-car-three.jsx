@@ -49,7 +49,7 @@ function MaxWellCarThree() {
         <MaxwellText position={[1.5,2,-3.5]}/>
         <MaxwellEffects />
         <Suspense fallback={null}>
-          <fog args={[0x00000, 15, 20]} attach={"fog"}></fog>
+          {/* <fog args={[0x00000, 15, 20]} attach={"fog"}></fog> */}
           <MaxwellHoda rotation={[0,-Math.PI*0.5,0]} position={[3,0,0]}></MaxwellHoda>
         </Suspense>
       </Canvas>

@@ -75,7 +75,7 @@ class RoadTestGeometry extends THREE.BufferGeometry {
       for (let i = 0; i < pathList.length; i++) {
         path = pathList[i];
         frames = path.computeFrenetFrames(tubularSegments, false);
-        // debugger
+        // 
         for (let j = 0; j < tubularSegments; j++) {
           generateSegment(j);
         }

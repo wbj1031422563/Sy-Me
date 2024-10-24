@@ -42,7 +42,7 @@ function SbpkChinaTrafficTest() {
           !geo.properties.NAME.includes("地铁")
         ) {
           line.points = geo.geometry.coordinates.map((point) => {
-            // debugger
+            // 
             const [x, y] = aProjection(point);
             //   line.points.push(new THREE.Vector3(x, 0,y));
             return new THREE.Vector3(x, 0.11, y);
@@ -70,7 +70,7 @@ function SbpkChinaTrafficTest() {
 
       reft.current.geometry = new RoadTestGeometry(line1, 40, 0.01, 2);
       reft.current.material = new RoadMaterial();
-      // debugger
+      // 
     });
   }, []);
   useFrame((state, delta) => {

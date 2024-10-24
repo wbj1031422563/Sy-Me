@@ -198,7 +198,7 @@ function Model(props) {
     setLinePoints(points);
     if (lightLine) {
       lightLine.computeLineDistances();
-      // debugger
+      // 
       const material = lightLine.material;
       material.onBeforeCompile = (shader) => {
         shader.uniforms.uTime = { value: 0 };

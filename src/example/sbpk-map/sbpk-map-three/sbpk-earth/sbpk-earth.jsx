@@ -169,7 +169,7 @@ function SbpkEarth({handelChangeScene}) {
     }
 
     return ()=>{
-      // debugger
+      // 
       // earthRef.current.material.dispose();
       // earthRef.current.geometry.dispose();
       // linerRefs.current.forEach(item=>{
@@ -393,7 +393,7 @@ function makeGlobeOfPoints() {
   // 黄金比例用作经度步长
   //经度指的是与x轴正方向的夹角，范围是【0,2*PI]
   const longitudeStep = Math.PI * (3 - Math.sqrt(5));
-  // debugger
+  // 
   /**
    * 1.标准球坐标系的半径为1，纬度角指的是球面上一点到赤道面的垂直距离
    * 2.当纬度角为1的时候在北极，0在赤道，-1在南极
@@ -430,7 +430,7 @@ function makeGlobeOfPoints() {
     const geometry = new THREE.PlaneGeometry(1, 1);
     geometry.applyMatrix4(dummyObj.matrix);
     // if(isNaN(p.x)){
-    //   debugger
+    //   
     // }
     geometry.translate(p.x, p.y, p.z);
 
