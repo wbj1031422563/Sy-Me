@@ -1,14 +1,18 @@
-import MaxwellEffects from "../maxwell-effects/maxwell-effects";
 import MaxWellGround from "../maxwell-ground/maxwell-ground";
 import MaxwellText from "../maxwell-text/maxwell-text";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
+
 function MaxWellRoomScene() {
-    return (
+  const maxWellGround = useMemo(() => <MaxWellGround />, []); // 通过 useMemo 缓存 MaxWellGround
+
+  return (
+    <>
       <Suspense>
-        <MaxwellEffects/>
-        <MaxWellGround/>
-        <MaxwellText position={[4,2,1]} rotation={[0,-Math.PI,0]} scale={[1.5,1.5,1.5]}/>
+        {maxWellGround} {/* 使用缓存的 MaxWellGround */}
+        <MaxwellText position={[4, 2, 1]} rotation={[0, -Math.PI, 0]} scale={[1.5, 1.5, 1.5]} />
       </Suspense>
-    );
-  }
-  export default MaxWellRoomScene;
+    </>
+  );
+}
+
+export default MaxWellRoomScene;

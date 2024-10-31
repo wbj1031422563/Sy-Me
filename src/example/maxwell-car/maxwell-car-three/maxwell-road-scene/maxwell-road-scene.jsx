@@ -88,16 +88,25 @@ function Model({runState='STOP',speed,setSpeed}) {
       }
     }
   });
+  const reset=()=>{
+    if(street&&cloneStreet1){
+      cloneStreet1.position.z=size * 1;
+      street.position.z=0
+    }
+  }
   useEffect(()=>{
     let tween=null;
     const seconds=2;
+    reset();
     if(runState=='RUNNING'){
+      console.log('RUNNING')
       tween = new TWEEN.Tween({ value: 0 })
       .to({ value: 20 }, seconds * 1000)
       .onUpdate(({ value }) => {
         setSpeed(value);
       })
     }else if(runState=='STOP'){
+      console.log('STOP')
       tween = new TWEEN.Tween({ value: 20 })
       .to({ value: 0 }, seconds * 1000)
       .onUpdate(({ value }) => {
@@ -141,7 +150,7 @@ function Model({runState='STOP',speed,setSpeed}) {
   );
 }
 
-function MaxWellRoadScene({runState='STOP',speed,setSpeed}) {
+function MaxWellRoadScene({runState,speed,setSpeed}) {
   return (
     <Suspense>
       <Model runState={runState} speed={speed} setSpeed={setSpeed}/>

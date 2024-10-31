@@ -512,7 +512,7 @@ function Model({ speed, rotation, position }) {
     </group>
   );
 }
-function MaxwellHoda({ speed = 0, position, rotation }) {
+function MaxwellHoda({ speed, position, rotation }) {
   return (
     <Suspense>
       <Model speed={speed} rotation={rotation} position={position} />
