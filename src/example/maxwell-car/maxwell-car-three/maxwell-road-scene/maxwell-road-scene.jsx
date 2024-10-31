@@ -15,8 +15,8 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import MaxwellHoda from "../maxwell-hoda/maxwell-hoda";
 import TWEEN from "@tweenjs/tween.js";
-function Model({runState='STOP'}) {
-  const [speed,setSpeed] = useState(20);
+function Model({runState='STOP',speed,setSpeed}) {
+  // const [speed,setSpeed] = useState(20);
   const [street, setStreet] = useState(null);
   const [cloneStreet1, setCloneStreet1] = useState(null);
   const [cloneStreet2, setCloneStreet2] = useState(null);
@@ -28,7 +28,7 @@ function Model({runState='STOP'}) {
    */
   const { scene, nodes, materials } = useLoader(
     GLTFLoader,
-    "model/街景材质.glb",
+    "model/街道.glb",
     (loader) => {
       const dracoLoader = new DRACOLoader();
       dracoLoader.setDecoderPath("draco/");
@@ -95,7 +95,6 @@ function Model({runState='STOP'}) {
       tween = new TWEEN.Tween({ value: 0 })
       .to({ value: 20 }, seconds * 1000)
       .onUpdate(({ value }) => {
-        console.log('value',value)
         setSpeed(value);
       })
     }else if(runState=='STOP'){
@@ -121,12 +120,11 @@ function Model({runState='STOP'}) {
         <boxGeometry></boxGeometry>
         <meshStandardMaterial color={"red"}></meshStandardMaterial>
       </mesh> */}
-      <MaxwellHoda speed={speed}/>
       <mesh  scale={[50, 50, 50]} position-z={-30} >
         <planeGeometry></planeGeometry >
         <meshBasicMaterial color={"#000"} side={THREE.DoubleSide}></meshBasicMaterial>
       </mesh>
-      <primitive ref={setStreet} object={scene ? scene : null} />
+      <primitive ref={setStreet}  object={scene ? scene : null} />
       {street && (
         <Clone
           ref={setCloneStreet1}
@@ -143,10 +141,10 @@ function Model({runState='STOP'}) {
   );
 }
 
-function MaxWellRoadScene({runState='STOP'}) {
+function MaxWellRoadScene({runState='STOP',speed,setSpeed}) {
   return (
     <Suspense>
-      <Model runState={runState} />
+      <Model runState={runState} speed={speed} setSpeed={setSpeed}/>
     </Suspense>
   );
 }

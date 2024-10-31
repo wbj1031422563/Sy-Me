@@ -48,7 +48,7 @@ import { LUTCubeLoader } from 'postprocessing'
   return (
     enabled && (
       <EffectComposer disableNormalPass>
-        <Bloom luminanceThreshold={0.7} mipmapBlur luminanceSmoothing={0} intensity={1.75} radius={0.85}/>
+        <Bloom luminanceThreshold={0.7} mipmapBlur luminanceSmoothing={0} intensity={1.4} radius={0.85}/>
         {/* <LUT lut={texture} /> */}
       </EffectComposer>
     )

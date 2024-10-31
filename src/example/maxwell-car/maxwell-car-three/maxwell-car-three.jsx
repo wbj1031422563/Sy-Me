@@ -18,14 +18,19 @@ import MaxWellGround from "./maxwell-ground/maxwell-ground";
 import MaxwellText from "./maxwell-text/maxwell-text";
 import MaxwellEffects from "./maxwell-effects/maxwell-effects";
 import MaxwellHoda from "./maxwell-hoda/maxwell-hoda";
-import { Suspense } from "react";
+import { Suspense, useContext, useMemo,useState } from "react";
+import MaxWellRoomScene from "./maxwll-room-scene/maxwll-room-scene";
+import { MaxWellContext } from "../context/maxwell-car-context";
+import { CAR_SCENE_TYPE } from "../enum/enum";
 function MaxWellCarThree() {
+  const { sceneType } = useContext(MaxWellContext);
+  const [speed,setSpeed] = useState(0);
   return (
     <div className="maxwell-car-three">
       <Canvas
         gl={{
           logarithmicDepthBuffer: true,
-          antialias: false,
+          antialias: true,
           outputColorSpace: THREE.SRGBColorSpace,
         }}
         dpr={[1, 1.5]}
@@ -42,16 +47,14 @@ function MaxWellCarThree() {
           opacity={1}
           far={20}
         />
-        <MaxWellGround />
         <MaxWellCarBaeEnv></MaxWellCarBaeEnv>
-        {/* <MaxwellRoadScene runState={'RUNNING'}></MaxwellRoadScene> */}
-        <axesHelper></axesHelper>
-        <MaxwellText position={[1.5,2,-3.5]}/>
-        <MaxwellEffects />
         <Suspense fallback={null}>
-          {/* <fog args={[0x00000, 15, 20]} attach={"fog"}></fog> */}
-          <MaxwellHoda rotation={[0,-Math.PI*0.5,0]} position={[3,0,0]}></MaxwellHoda>
+          <MaxwellHoda speed={speed}></MaxwellHoda>
         </Suspense>
+        {sceneType===CAR_SCENE_TYPE.SHOWROOM&& <MaxWellRoomScene></MaxWellRoomScene>}
+        {sceneType===CAR_SCENE_TYPE.ROAD&& <MaxwellRoadScene speed={speed} setSpeed={(val)=>{setSpeed(val)}}></MaxwellRoadScene>}
+        <MaxwellEffects />
+
       </Canvas>
       <Stats />
       <Leva collapsed />
