@@ -15,6 +15,7 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import MaxwellHoda from "../maxwell-hoda/maxwell-hoda";
 import TWEEN from "@tweenjs/tween.js";
+import MaxwellLightformers from "@/example/maxwell-car/maxwell-car-three/maxwell-lightformers/maxwell-lightformers.jsx";
 function Model({runState='STOP',speed,setSpeed}) {
   // const [speed,setSpeed] = useState(20);
   const [street, setStreet] = useState(null);

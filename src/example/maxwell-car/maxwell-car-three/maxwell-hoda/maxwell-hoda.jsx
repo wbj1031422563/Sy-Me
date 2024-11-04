@@ -27,6 +27,7 @@ import { computeModelSize } from "../../utils/utils";
 import { useTexture } from "@react-three/drei";
 import { CAR_COLOR } from "../../enum/enum";
 import { MaxWellContext } from "../../context/maxwell-car-context";
+import useDynamicLightformers from "@/example/maxwell-car/hooks/useDynamicLightformers.js";
 extend({ LoadingMaterial });
 function Model({ speed, rotation, position }) {
   const pointTransitionTime = {
@@ -40,6 +41,7 @@ function Model({ speed, rotation, position }) {
     };
   const { carColor } = useContext(MaxWellContext);
   const scaleNum = 1;
+  const {texture:dynamicLight}=useDynamicLightformers();
   const state = useThree();
   const [hoda, setHoda] = useState(null);
   // const frontWheelRef = useRef(null);
@@ -490,6 +492,19 @@ function Model({ speed, rotation, position }) {
       }
     }
   }, [hoda, carColor]);
+
+
+  /**
+   * 动态光源
+   * */
+  useEffect(() => {
+    if(materials){
+      const carPaint=materials['Car paint'];
+      // const  a=dynamicLight;
+      // debugger
+      // carPaint.envMap=dynamicLight;
+    }
+  },[materials])
 
   return (
     <group

@@ -11,6 +11,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import TWEEN from "@tweenjs/tween.js";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import MaxwellLightformers from "@/example/maxwell-car/maxwell-car-three/maxwell-lightformers/maxwell-lightformers.jsx";
 function MaxWellCarBaeEnv() {
   const sceneType = "静态展厅";
   const controls = useRef(null);
@@ -59,7 +60,8 @@ function MaxWellCarBaeEnv() {
       <OrbitControls ref={controls} makeDefault={true} />
       {/* <OrbitControls enablePan={false} enableZoom={false} minPolarAngle={Math.PI / 2.2} maxPolarAngle={Math.PI / 2.2} /> */}
       {/* <Environment files="/envMap/venice_sunset_1k.hdr"></Environment> */}
-      <Environment files="/envMap/abstract-lighting-ray-room-style-01_2K_f478fdd1-243a-4cc8-b454-0f522f1afb6b.exr" background={false} intensity={0.1}></Environment>
+      <Environment files="/envMap/abstract-lighting-ray-room-style-01_2K_f478fdd1-243a-4cc8-b454-0f522f1afb6b.exr" background={false} intensity={0.1}>
+      </Environment>
     </>
   );
 }
