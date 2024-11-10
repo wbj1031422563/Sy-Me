@@ -82,8 +82,8 @@ import * as THREE from "three";
 //   );
 // };
 
-function MaxwellText(prpos) {
-  const [isShow,setShow]=useState(false);
+function MaxwellText({isShow=true}) {
+  // const [isShow,setShow]=useState(false);
   const uProgress=useRef({
     value: 1,
   })
@@ -140,7 +140,7 @@ function MaxwellText(prpos) {
       "aUv",
       new THREE.BufferAttribute(new Float32Array(aUv), 2)
     );
-    setShow(true);
+    // setShow(true);
     console.log('text',aUv)
   }, [text]);
   const shaderCallback=(shader)=>{
@@ -227,8 +227,9 @@ function MaxwellText(prpos) {
   },[isShow])
   return (
 
-    <group {...prpos} dispose={null}>
+    <group position={[4, 2, 1]} rotation={[0, -Math.PI, 0]} scale={[1.5, 1.5, 1.5]} dispose={null}>
       <mesh
+          scale={[0.8, 0.8,0.8]}
         ref={setText}
         geometry={nodes['文本'].geometry}
       >

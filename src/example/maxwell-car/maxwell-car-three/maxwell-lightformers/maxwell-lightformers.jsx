@@ -7,7 +7,9 @@ import {Lightformer} from "@react-three/drei";
  * */
 function MaxwellLightformers({positions = [2, 0, 2, 0, 2, 0, 2, 0], layers = 1}) {
     const group = useRef();
-    useFrame((state, delta) => (group.current.position.z += delta * 10) > 20 && (group.current.position.z = -60))
+    useFrame((state, delta) => (
+        group.current.position.z -= delta * 10) < -30 && (group.current.position.z = 30)
+    )
     return (
         <>
             <group rotation={[0, 0.5, 0]}>

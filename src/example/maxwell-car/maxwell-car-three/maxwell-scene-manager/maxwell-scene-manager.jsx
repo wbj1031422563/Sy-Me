@@ -9,6 +9,7 @@ import MaxWellRoadScene from "../maxwell-road-scene/maxwell-road-scene";
 import { MaxWellContext } from "../../context/maxwell-car-context";
 import { CAR_SCENE_TYPE } from "../../enum/enum";
 import MaxWellRoomScene from "../maxwll-room-scene/maxwll-room-scene";
+import MaxwellText from "@/example/maxwell-car/maxwell-car-three/maxwell-text/maxwell-text.jsx";
 
 function MaxwellSceneManager() {
   const { sceneType } = useContext(MaxWellContext);
@@ -41,18 +42,28 @@ function MaxwellSceneManager() {
       <Suspense fallback={null}>
         <MaxwellHoda speed={speed}></MaxwellHoda>
       </Suspense>
+      <MaxwellText isShow={sceneType === CAR_SCENE_TYPE.SHOWROOM}  />
       {sceneType === CAR_SCENE_TYPE.SHOWROOM && (
         <MaxWellRoomScene></MaxWellRoomScene>
       )}
-      {sceneType === CAR_SCENE_TYPE.ROAD && (
-        <MaxWellRoadScene
+      <MaxWellRoadScene
           runState={runState}
           speed={speed}
           setSpeed={(val) => {
-            setSpeed(val);
+            // setSpeed(val);
           }}
-        ></MaxWellRoadScene>
-      )}
+          isShow={sceneType === CAR_SCENE_TYPE.ROAD}
+      ></MaxWellRoadScene>
+      {/*{sceneType === CAR_SCENE_TYPE.ROAD && (*/}
+      {/*  <MaxWellRoadScene*/}
+      {/*    runState={runState}*/}
+      {/*    speed={speed}*/}
+      {/*    setSpeed={(val) => {*/}
+      {/*      setSpeed(val);*/}
+      {/*    }}*/}
+      {/*    isShow={sceneType === CAR_SCENE_TYPE.ROAD}*/}
+      {/*  ></MaxWellRoadScene>*/}
+      {/*)}*/}
     </>
   );
 }

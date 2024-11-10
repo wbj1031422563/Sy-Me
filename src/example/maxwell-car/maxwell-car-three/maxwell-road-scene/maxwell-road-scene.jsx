@@ -7,29 +7,36 @@
  * @Description:
  */
 
-import { Clone, useTexture } from "@react-three/drei";
-import { useFrame, useLoader } from "@react-three/fiber";
-import { Suspense, useEffect, useState } from "react";
+import {Clone, useEnvironment, useTexture} from "@react-three/drei";
+import {useFrame, useLoader, useThree} from "@react-three/fiber";
+import {Suspense, useEffect, useRef, useState} from "react";
 import * as THREE from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import MaxwellHoda from "../maxwell-hoda/maxwell-hoda";
 import TWEEN from "@tweenjs/tween.js";
 import MaxwellLightformers from "@/example/maxwell-car/maxwell-car-three/maxwell-lightformers/maxwell-lightformers.jsx";
-function Model({runState='STOP',speed,setSpeed}) {
+import {CAR_SCENE_TYPE} from "@/example/maxwell-car/enum/enum.js";
+import MaxWellRoomScene from "@/example/maxwell-car/maxwell-car-three/maxwll-room-scene/maxwll-room-scene.jsx";
+function Model({runState='STOP',speed,setSpeed,isShow=true}) {
   // const [speed,setSpeed] = useState(20);
+  const  {scene: threeScene}=useThree()
   const [street, setStreet] = useState(null);
   const [cloneStreet1, setCloneStreet1] = useState(null);
   const [cloneStreet2, setCloneStreet2] = useState(null);
   const [cloneStreet3, setCloneStreet3] = useState(null);
   const [size, setSize] = useState(0);
+  const opacity=useRef({value:0});
+  const roadEnvMap=useEnvironment(
+      {files:'/envMap/odyssey_1K_ce4f3d58-1657-4fa5-985c-253a8cf20798.exr'}
+  )
 
   /**
    * 加载Draco模型
    */
   const { scene, nodes, materials } = useLoader(
     GLTFLoader,
-    "model/街道.glb",
+    "model/街景.glb",
     (loader) => {
       const dracoLoader = new DRACOLoader();
       dracoLoader.setDecoderPath("draco/");
@@ -47,6 +54,8 @@ function Model({runState='STOP',speed,setSpeed}) {
         box3.union(childBoundingBox);
       }
     });
+    // const  boxh=new THREE.Box3Helper(box3);
+    // threeScene.add(boxh);
     // console.log("size", box3.max.z - box3.min.z -5);
     setSize(box3.max.z - box3.min.z -1);
     // setCarBox3(box3);
@@ -124,6 +133,57 @@ function Model({runState='STOP',speed,setSpeed}) {
     }
   },[runState])
 
+
+  /**
+   * 渐变切换控制
+   */
+  useEffect(()=>{
+    for (let materialsName in materials) {
+      const material = materials[materialsName];
+      material.transparent=true;
+      // material.opacity=opacity.current.value;
+    }
+  },[materials])
+  const  setMaterialsOpacity=(opacity)=>{
+    for (let materialsName in materials) {
+      const material = materials[materialsName];
+      material.opacity=opacity
+    }
+  }
+  useEffect(()=>{
+    let tween=null;
+    if(isShow){
+      tween = new TWEEN.Tween(opacity.current).to(
+          { value: 1.0 },
+          5 * 1000
+      ).onUpdate(({ value }) => {
+        setMaterialsOpacity(value);
+      })
+    }else{
+      tween = new TWEEN.Tween(opacity.current).to(
+          { value: 0.0 },
+          5 * 1000
+      ).onUpdate(({ value }) => {
+        setMaterialsOpacity(value);
+      })
+    }
+    if(tween){
+      tween.start();
+    }
+    return ()=>{
+      if(tween){
+        tween.stop();
+      }
+    }
+  },[isShow])
+
+
+  useEffect(()=>{
+    if(materials){
+      materials['8k Wet road with puddles'].envMap=roadEnvMap;
+    }
+  },[materials])
+
   return (
     <group >
       {/* <mesh position-y={0.51}>
@@ -140,21 +200,23 @@ function Model({runState='STOP',speed,setSpeed}) {
           ref={setCloneStreet1}
           object={street}
           position-y={0.01}
-          // rotation-y={Math.PI}
           position-z={size * 1}
         ></Clone>
       )}
       {/* {street && <Clone ref={setCloneStreet2} object={street} position-z={-size*2}></Clone>} */}
       {/* {street && <Clone ref={setCloneStreet3} object={street} position-z={-size*3}></Clone>} */}
       {/* <boxHelper></boxHelper> */}
+      {isShow&& (
+          <MaxwellLightformers/>
+      )}
     </group>
   );
 }
 
-function MaxWellRoadScene({runState,speed,setSpeed}) {
+function MaxWellRoadScene({runState,speed,setSpeed,isShow}) {
   return (
     <Suspense>
-      <Model runState={runState} speed={speed} setSpeed={setSpeed}/>
+      <Model runState={runState} speed={speed} setSpeed={setSpeed} isShow={isShow}/>
     </Suspense>
   );
 }

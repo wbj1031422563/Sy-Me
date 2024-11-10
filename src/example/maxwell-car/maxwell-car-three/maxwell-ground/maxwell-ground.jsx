@@ -26,7 +26,7 @@ function MaxWellGround() {
 
 
     //tood  映入地面粗糙度纹理
-    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]}>
       <planeGeometry args={[50, 50]} />
       <MeshReflectorMaterial
         blur={[600, 200]}
