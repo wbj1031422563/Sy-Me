@@ -134,23 +134,42 @@ function MaxwellCircleWave(){
                     float waveWidth = 40.0;                    // 波动效果的宽度
                     float totalLength = 360.0;                 // 圆的总长度（360度）
                     float modUtime = mod(uTime * 30.0, 360.0); // 时间的循环，乘以 30.0 是加速效果
-                    float transitionwidth = 5.0;              // 平滑过渡的宽度，控制波动的范围
+                    float dw = 5.0;              // 平滑过渡的宽度，控制波动的范围
                 
                     // 计算波动强度
                     // 对首尾连接部分（0 和 360）进行平滑过渡处理
-                    float smoothStart = smoothstep(modUtime , modUtime+transitionwidth, selfIndex);
-                    float smoothEnd = 1.0-smoothstep(modUtime+waveWidth - transitionwidth,modUtime+waveWidth, selfIndex);
+                    float smoothStart = smoothstep(modUtime , modUtime+dw, selfIndex);
+                    float smoothEnd = 1.0-smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex);
                     
-                    // 创建平滑连接：确保波动在 [360 - transitionwidth, 360 + waveWidth] 和 [0, transitionwidth] 区间内平滑过渡
+                    // 创建平滑连接：确保波动在 [360 - dw, 360 + waveWidth] 和 [0, dw] 区间内平滑过渡
                     float strength = smoothStart * smoothEnd;
                     
                     
                     float isOver=step(360.0,modUtime+waveWidth);
-                    float overLeftStrength=smoothstep(modUtime , modUtime+transitionwidth, selfIndex);
-                    float overRightStrength=1.0-smoothstep(modUtime+waveWidth - transitionwidth,modUtime+waveWidth, (selfIndex+360.0));
-                    float overStrength=clamp(0.0,1.0,(overLeftStrength+overRightStrength));
+                    float over=(modUtime+waveWidth-360.0);
                     
-                    strength=max(strength,isOver*overStrength);
+                    float isOverStatus2=(1.0-step(dw,over))*isOver;
+                    float os2=smoothstep(modUtime,modUtime+dw,selfIndex)*(1.0-smoothstep(modUtime+waveWidth - dw,360.0,selfIndex));
+                    os2+=smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex+360.0);
+                    os2=isOverStatus2*os2;
+                    
+                    float isOverStatus3=(1.0-step(waveWidth-dw,over))*(step(dw,over))*isOver;
+                    float os3=smoothstep(modUtime,modUtime+dw,selfIndex);
+                    os3+=smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex+360.0);
+                    os3=isOverStatus3*os3;
+                    
+                    float isOverStatus4=step(waveWidth-dw,over)*isOver;
+                    float os4=smoothstep(modUtime,modUtime+dw,selfIndex);
+                    os4+=smoothstep(modUtime,modUtime+dw, selfIndex+360.0)*(1.0-smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth,selfIndex));
+                    os4=isOverStatus4*os4;
+                    
+                    
+                    float os=clamp(0.0,1.0,(os2+os3*os4));
+
+                    
+                    
+     
+                    strength=strength+os;
                 
 
                 
