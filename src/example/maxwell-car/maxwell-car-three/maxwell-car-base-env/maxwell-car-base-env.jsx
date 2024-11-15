@@ -34,7 +34,7 @@ function MaxWellCarBaeEnv() {
     useEffect(() => {
         const {camera} = state;
         if (controls.current) {
-            if (sceneType === "静态展厅") {
+            if (sceneType === CAR_SCENE_TYPE.SHOWROOM) {
                 camera.position.set(-13.29, 2.59, 2.98);
                 controls.current.target = new THREE.Vector3(0.86, 1.36, 2.019);
             }

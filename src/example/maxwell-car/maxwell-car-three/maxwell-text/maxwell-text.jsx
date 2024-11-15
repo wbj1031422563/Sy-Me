@@ -111,7 +111,6 @@ function MaxwellText({isShow=true}) {
     if(!text||!textRef)return;
     const boundingBox=new THREE.Box3();
     boundingBox.setFromObject(text);
-    console.log(boundingBox)
     const size = new THREE.Vector3();
     boundingBox.getSize(size);
     const help=new THREE.Box3Helper(boundingBox,'#ffffff')
@@ -141,7 +140,6 @@ function MaxwellText({isShow=true}) {
       new THREE.BufferAttribute(new Float32Array(aUv), 2)
     );
     // setShow(true);
-    console.log('text',aUv)
   }, [text]);
   const shaderCallback=(shader)=>{
       shader.uniforms.uProgress=uProgress.current;

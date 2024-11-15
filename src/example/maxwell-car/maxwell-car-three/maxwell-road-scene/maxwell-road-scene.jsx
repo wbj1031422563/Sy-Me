@@ -28,7 +28,7 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
   const [size, setSize] = useState(0);
   const opacity=useRef({value:0});
   const roadEnvMap=useEnvironment(
-      {files:'/envMap/odyssey_1K_ce4f3d58-1657-4fa5-985c-253a8cf20798.exr'}
+      {files:'/envMap/路灯.hdr'}
   )
 
   /**
@@ -78,24 +78,37 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
       //   }
       // })
       // ;
-      console.log('street',street)
     }
   }, [street]);
   useFrame((state, delta) => {
-    const a = -size * 0.9;
+    const a = -size * 2.0;
     const outView = -1 * (100 + size * 0.5);
-    if (cloneStreet1 && street) {
+    if (cloneStreet1 && street&&cloneStreet2) {
       // if(street.position.z<size*0.9){
       //   street.position.z += speed * delta;
       // }
-      cloneStreet1.position.z -= speed * delta;
-      street.position.z -= speed * delta;
-      if (street.position.z < a) {
-        street.position.z = cloneStreet1.position.z + size;
+      // cloneStreet1.position.z -= speed * delta;
+      // street.position.z -= speed * delta;
+      // if (street.position.z < a) {
+      //   street.position.z = cloneStreet1.position.z + size;
+      // }
+      // if (cloneStreet1.position.z < a) {
+      //   cloneStreet1.position.z = street.position.z + size;
+      // }
+
+      const list=[cloneStreet1,street,cloneStreet2];
+      list.forEach(item1=>{
+        item1.position.z -= speed * delta;
+      })
+      //升序排列
+      list.sort((a,b) => a.position.z - b.position.z);
+      // console.log(sortByz);
+      if(list[0].position.z <a){
+        list[0].position.z = list[1].position.z + size*2;
       }
-      if (cloneStreet1.position.z < a) {
-        cloneStreet1.position.z = street.position.z + size;
-      }
+      list[0].position.y=[0.01]
+      list[1].position.y=[0]
+      list[2].position.y=[0.01]
     }
   });
   const reset=()=>{
@@ -108,14 +121,13 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
     let tween=null;
     const seconds=2;
     reset();
-    if(runState=='RUNNING'){
-      console.log('RUNNING')
+    if(runState==='RUNNING'){
       tween = new TWEEN.Tween({ value: 0 })
       .to({ value: 20 }, seconds * 1000)
       .onUpdate(({ value }) => {
         setSpeed(value);
       })
-    }else if(runState=='STOP'){
+    }else if(runState==='STOP'){
       console.log('STOP')
       tween = new TWEEN.Tween({ value: 20 })
       .to({ value: 0 }, seconds * 1000)
@@ -180,17 +192,35 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
 
   useEffect(()=>{
     if(materials){
-      materials['8k Wet road with puddles'].envMap=roadEnvMap;
+      // materials['8k Wet road with puddles'].envMap=roadEnvMap;
     }
   },[materials])
 
+
+  /**
+   * 路灯光源
+   */
+  // useEffect(()=>{
+  //   if(street){
+  //     street.traverse(child=>{
+  //       if(child.isMesh&&child.name.includes('光源')&&(!child.children||!child.children.length===0)){
+  //         const light=new THREE.PointLight(0xffffff,0);
+  //         child.add(light);
+  //       }
+  //       if(child.isLight&&isShow){
+  //         child.intensity=1.0;
+  //         console.log('设置管')
+  //       }
+  //     })
+  //   }
+  // },[street,isShow])
   return (
     <group >
       {/* <mesh position-y={0.51}>
         <boxGeometry></boxGeometry>
         <meshStandardMaterial color={"red"}></meshStandardMaterial>
       </mesh> */}
-      <mesh  scale={[50, 50, 50]} position-z={-30} >
+      <mesh  scale={[50, 50, 50]} position-z={-100} >
         <planeGeometry></planeGeometry >
         <meshBasicMaterial color={"#000"} side={THREE.DoubleSide}></meshBasicMaterial>
       </mesh>
@@ -199,11 +229,11 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
         <Clone
           ref={setCloneStreet1}
           object={street}
-          position-y={0.01}
-          position-z={size * 1}
+          // position-y={0.1}
+          // position-z={0.01}
         ></Clone>
       )}
-      {/* {street && <Clone ref={setCloneStreet2} object={street} position-z={-size*2}></Clone>} */}
+       {street && <Clone ref={setCloneStreet2} object={street} position-z={-size} ></Clone>}
       {/* {street && <Clone ref={setCloneStreet3} object={street} position-z={-size*3}></Clone>} */}
       {/* <boxHelper></boxHelper> */}
       {isShow&& (

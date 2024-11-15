@@ -44,6 +44,7 @@ function Model({ speed, rotation, position }) {
   const {dynamicEnvMap,baseEnvMap}=useDynamicLightformers();
   const state = useThree();
   const [hoda, setHoda] = useState(null);
+  const [isInit, setIsInit] = useState(false);
   // const frontWheelRef = useRef(null);
   /**
    * 加载Draco模型
@@ -418,14 +419,13 @@ function Model({ speed, rotation, position }) {
 #endif
 `
             )
-            console.log('Car paint',shader.fragmentShader);
           }
         };
       }
     });
   };
   useEffect(() => {
-    if (hoda) {
+    if (hoda&&!isInit) {
       // setTimeout(() => {
       //   // disposeTargetModelMaterial(hoda);
 
@@ -518,7 +518,9 @@ function Model({ speed, rotation, position }) {
 
       const tween3 = new TWEEN.Tween(targetModelTransitionTime)
         .to({ value: targetBox3.min.y - 1 }, totalTime * 0.75 * 1000)
-        .delay(totalTime * 0.25 * 1000);
+        .delay(totalTime * 0.25 * 1000).onComplete(()=>{
+          setIsInit(true);
+          })
 
       if (tween1) {
         tween1.start();
@@ -533,7 +535,7 @@ function Model({ speed, rotation, position }) {
         }
       };
     }
-  }, [hoda]);
+  }, [hoda,isInit]);
 
   /**
    *
@@ -591,13 +593,6 @@ function Model({ speed, rotation, position }) {
 
     }
   },[hoda])
-  // useEffect(()=>{
-  //   if(materials){
-  //     for (const key in materials) {
-  //           materials[key].envMap=baseEnvMap;
-  //     }
-  //   }
-  // },[materials])
 
 
   return (

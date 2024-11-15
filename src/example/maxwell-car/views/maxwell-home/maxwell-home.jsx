@@ -4,12 +4,14 @@ import "./maxwell-home.less";
 import { MaxWellContext } from "../../context/maxwell-car-context";
 function MaxWellHome({ handleSceneChange,handleColorChange }) {
   const { sceneType, carColor } = useContext(MaxWellContext);
-  console.log('首页初始化')
   const getIndex = (type) => {
     if (type == CAR_SCENE_TYPE.SHOWROOM) {
       return 3.5;
     } else if (type == CAR_SCENE_TYPE.ROAD) {
       return 17.5;
+    }
+    else if (type == CAR_SCENE_TYPE.TECH) {
+      return 31.5;
     }
   };
   const getBottom = (color) => {
@@ -46,18 +48,18 @@ function MaxWellHome({ handleSceneChange,handleColorChange }) {
         <div className="maxwell-home-right maxwell-home-fixed">
           {/* 造型 */}
           <div
-            className="item"
-            onClick={()=>{
-              handleSceneChange(CAR_SCENE_TYPE.SHOWROOM)
-            }
-          }
+              className="item"
+              onClick={() => {
+                handleSceneChange(CAR_SCENE_TYPE.SHOWROOM)
+              }
+              }
           >
             <div
-              className={
-                sceneType == CAR_SCENE_TYPE.SHOWROOM
-                  ? "item-text active"
-                  : "item-text"
-              }
+                className={
+                  sceneType == CAR_SCENE_TYPE.SHOWROOM
+                      ? "item-text active"
+                      : "item-text"
+                }
             >
               造型
             </div>
@@ -66,42 +68,61 @@ function MaxWellHome({ handleSceneChange,handleColorChange }) {
 
           {/* 行驶 */}
           <div
-            className="item"
-            onClick={()=>{
-              handleSceneChange(CAR_SCENE_TYPE.ROAD)
-            }}
+              className="item"
+              onClick={() => {
+                handleSceneChange(CAR_SCENE_TYPE.ROAD)
+              }}
           >
             <div
-              className={
-                sceneType == CAR_SCENE_TYPE.ROAD
-                  ? "item-text active"
-                  : "item-text"
-              }
+                className={
+                  sceneType == CAR_SCENE_TYPE.ROAD
+                      ? "item-text active"
+                      : "item-text"
+                }
             >
               行驶
             </div>
+
             <div className="item-Line"></div>
           </div>
           <div
-            className="line"
-            style={{ top: `${getIndex(sceneType)}vmin` }}
+              className="item"
+              onClick={() => {
+                handleSceneChange(CAR_SCENE_TYPE.TECH)
+              }}
+          >
+            <div
+                className={
+                  sceneType === CAR_SCENE_TYPE.TECH
+                      ? "item-text active"
+                      : "item-text"
+                }
+            >
+              科技
+            </div>
+
+            <div className="item-Line"></div>
+          </div>
+          <div
+              className="line"
+              style={{top: `${getIndex(sceneType)}vmin`}}
           ></div>
           {/* <div>行驶</div> */}
         </div>
         <div className="maxwell-home-bottom maxwell-home-fixed">
           <div className="bar-content">
             <div
-              className="bar"
-              onClick={()=>{
-                handleColorChange(CAR_COLOR.BLUE)
-              }}
+                className="bar"
+                onClick={() => {
+                  handleColorChange(CAR_COLOR.BLUE)
+                }}
             >
-              <img src={"/texture/蓝色车漆预览.png"} className="active" />
+              <img src={"/texture/蓝色车漆预览.png"} className="active"/>
               <div className="bar-line"></div>
             </div>
             <div
-              className="bar"
-              onClick={()=>{
+                className="bar"
+                onClick={()=>{
                 handleColorChange(CAR_COLOR.SLIVER)
               }}
             >
