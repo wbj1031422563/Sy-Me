@@ -126,41 +126,41 @@ function MaxwellCircleWave(){
                 "#include <begin_vertex>",
                 /* glsl */ `
 
-                #include <begin_vertex>
-                float selfIndex=mod(aIndex,360.0);
-                float circleNum=(aIndex - selfIndex)/360.0;
+                   #include <begin_vertex>
+                    float selfIndex = mod(aIndex, 360.0);      // 计算每个点在圆环上的位置索引
+                    float circleNum = (aIndex - selfIndex) / 360.0; // 计算点所在的“圈号”，但此值目前未使用
                 
-                vec3 pDir=normalize(aNormal);
-                float waveWidth=30.0;
-                float modUtime=mod(uTime*30.0,360.0);
-                float modUtimeOver=mod(uTime*30.0,(360.0+waveWidth));
-//                float strength=step(modUtime,selfIndex)*step(selfIndex,modUtime+waveWidth)+step(0.0,selfIndex)*step(selfIndex,modUtime+waveWidth-360.0)*step(360.0,modUtime+waveWidth);
-
+                    vec3 pDir = normalize(aNormal);            // 获取法线方向，后续将用其调整偏移方向
+                    float waveWidth = 40.0;                    // 波动效果的宽度
+                    float totalLength = 360.0;                 // 圆的总长度（360度）
+                    float modUtime = mod(uTime * 30.0, 360.0); // 时间的循环，乘以 30.0 是加速效果
+                    float transitionwidth = 5.0;              // 平滑过渡的宽度，控制波动的范围
+                
+                    // 计算波动强度
+                    // 对首尾连接部分（0 和 360）进行平滑过渡处理
+                    float smoothStart = smoothstep(modUtime , modUtime+transitionwidth, selfIndex);
+                    float smoothEnd = 1.0-smoothstep(modUtime+waveWidth - transitionwidth,modUtime+waveWidth, selfIndex);
                     
-                   
- //                float strength=
-//                 smoothstep(modUtime-10.0,modUtime,selfIndex)*smoothstep(selfIndex-10.0,selfIndex,modUtime+waveWidth)*(1.0-smoothstep(360.0-10.0,360.0,modUtime+waveWidth))+
- //               smoothstep(360.0,370.0,modUtime+waveWidth)*(1.0-smoothstep(modUtime+waveWidth-360.0-10.0,modUtime+waveWidth-360.0,selfIndex));
+                    // 创建平滑连接：确保波动在 [360 - transitionwidth, 360 + waveWidth] 和 [0, transitionwidth] 区间内平滑过渡
+                    float strength = smoothStart * smoothEnd;
+                    
+                    
+                    float isOver=step(360.0,modUtime+waveWidth);
+                    float overLeftStrength=smoothstep(modUtime , modUtime+transitionwidth, selfIndex);
+                    float overRightStrength=1.0-smoothstep(modUtime+waveWidth - transitionwidth,modUtime+waveWidth, (selfIndex+360.0));
+                    float overStrength=clamp(0.0,1.0,(overLeftStrength+overRightStrength));
+                    
+                    strength=max(strength,isOver*overStrength);
                 
-                
-                float strength=
-                 smoothstep(modUtime-10.0,modUtime,selfIndex)*smoothstep(selfIndex-10.0,selfIndex,modUtime+waveWidth)*(1.0-smoothstep(360.0-10.0,360.0,modUtime+waveWidth))+
-                smoothstep(360.0,370.0,modUtime+waveWidth)*(1.0-smoothstep(modUtime+waveWidth-360.0-10.0,modUtime+waveWidth-360.0,selfIndex));
-                strength=clamp(0.0,1.0,strength);
-                
-                float g=(sin(selfIndex*0.1)+1.0)*0.5*(circleNum+1.0)*0.5;
-                g=1.0;
-         
-                
-                transformed.x+=pDir.x*strength*g;
-                 transformed.z+=pDir.z*strength*g;
- //               transformed.y+=strength*g;
-//                transformed = transformed+pDir*sin(uTime+selfIndex)*0.5;
-       //         transformed *= (sin(uTime+mod(selfIndex,4.0))+1.0)*0.5;
 
                 
+                    float g = 1.0;                             // 偏移的强度因子，当前没有动态变化
                 
-                vIndex=aIndex;
+                    // 基于法线方向和波动强度偏移点的 x 和 z 坐标
+                    transformed.x += pDir.x * strength * g;
+                    transformed.z += pDir.z * strength * g;
+                
+                    vIndex = aIndex;                          // 将索引传递给片段着色器（或者用于调试）
             `
             );
             shader.fragmentShader = shader.fragmentShader.replace(
