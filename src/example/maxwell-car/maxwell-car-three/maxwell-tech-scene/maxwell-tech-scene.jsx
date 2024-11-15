@@ -147,29 +147,13 @@ function MaxwellCircleWave(){
                     
                     float isOver=step(360.0,modUtime+waveWidth);
                     float over=(modUtime+waveWidth-360.0);
-                    
-                    float isOverStatus2=(1.0-step(dw,over))*isOver;
-                    float os2=smoothstep(modUtime,modUtime+dw,selfIndex)*(1.0-smoothstep(modUtime+waveWidth - dw,360.0,selfIndex));
-                    os2+=smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex+360.0);
-                    os2=isOverStatus2*os2;
-                    
-                    float isOverStatus3=(1.0-step(waveWidth-dw,over))*(step(dw,over))*isOver;
-                    float os3=smoothstep(modUtime,modUtime+dw,selfIndex);
-                    os3+=smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex+360.0);
-                    os3=isOverStatus3*os3;
-                    
-                    float isOverStatus4=step(waveWidth-dw,over)*isOver;
-                    float os4=smoothstep(modUtime,modUtime+dw,selfIndex);
-                    os4+=smoothstep(modUtime,modUtime+dw, selfIndex+360.0)*(1.0-smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth,selfIndex));
-                    os4=isOverStatus4*os4;
-                    
-                    
-                    float os=clamp(0.0,1.0,(os2+os3*os4));
 
+                   float os=1.0-smoothstep(over-dw,over,selfIndex)*(1.0-smoothstep(modUtime,modUtime+dw,selfIndex));
+                   os*=isOver;
                     
                     
      
-                    strength=strength+os;
+                    strength=max(strength,os);
                 
 
                 
