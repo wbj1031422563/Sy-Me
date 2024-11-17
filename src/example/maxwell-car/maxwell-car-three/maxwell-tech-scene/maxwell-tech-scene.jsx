@@ -54,6 +54,7 @@ function MaxwellCarFlow() {
 function MaxwellCircleWave(){
     const {scene}=useThree();
     const pointsTexture = useTexture("texture/circle_05.png");
+    const perlinTexture=useTexture('texture/noiseTexture.png');
     const innerRadius=5;
     const uTime=useRef({value:0});
     const pointsRef=useRef(null);
@@ -109,6 +110,7 @@ function MaxwellCircleWave(){
         })
         pointsMaterial.onBeforeCompile=((shader)=>{
             shader.uniforms.uTime = uTime.current;
+            shader.uniforms.uPerlinTexture={value:perlinTexture};
             shader.vertexShader = shader.vertexShader.replace(
                 "#include <common>",
                 /* glsl */ `
@@ -117,24 +119,20 @@ function MaxwellCircleWave(){
             attribute float aIndex;
             attribute vec3 aNormal;
             uniform float uTime;
+            uniform sampler2D uPerlinTexture;
             varying float vIndex;
             varying float vSelfIndex;
             varying float vCircleNum;
-        `
-            );
-            shader.vertexShader = shader.vertexShader.replace(
-                "#include <begin_vertex>",
-                /* glsl */ `
-
-                   #include <begin_vertex>
-                    float selfIndex = mod(aIndex, 360.0);      // 计算每个点在圆环上的位置索引
+            
+            float getStrength(float aIndex,float uTime,vec3 aNormal){
+                float selfIndex = mod(aIndex, 360.0);      // 计算每个点在圆环上的位置索引
                     float circleNum = (aIndex - selfIndex) / 360.0; // 计算点所在的“圈号”，但此值目前未使用
                 
                     vec3 pDir = normalize(aNormal);            // 获取法线方向，后续将用其调整偏移方向
-                    float waveWidth = 40.0;                    // 波动效果的宽度
+                    float waveWidth = 30.0;                    // 波动效果的宽度
                     float totalLength = 360.0;                 // 圆的总长度（360度）
                     float modUtime = mod(uTime * 30.0, 360.0); // 时间的循环，乘以 30.0 是加速效果
-                    float dw = 5.0;              // 平滑过渡的宽度，控制波动的范围
+                    float dw = 15.0;              // 平滑过渡的宽度，控制波动的范围
                 
                     // 计算波动强度
                     // 对首尾连接部分（0 和 360）进行平滑过渡处理
@@ -142,26 +140,63 @@ function MaxwellCircleWave(){
                     float smoothEnd = 1.0-smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex);
                     
                     // 创建平滑连接：确保波动在 [360 - dw, 360 + waveWidth] 和 [0, dw] 区间内平滑过渡
-                    float strength = smoothStart * smoothEnd;
+                    float strength = min(smoothStart,smoothEnd);
                     
                     
                     float isOver=step(360.0,modUtime+waveWidth);
                     float over=(modUtime+waveWidth-360.0);
+                    float isOverStep1=(1.0-step(dw,over))*isOver;
+                    float isOverStep2=step(dw,over);
+                    
+                    float overStep1Left=min(smoothstep(modUtime,modUtime+dw,selfIndex),(1.0-smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex)));
+                    float overStep1Right=1.0-smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex+360.0);
+                    float overStep1=max(overStep1Left,overStep1Right);
+                    
+                    float overStep2Left=smoothstep(modUtime,modUtime+dw,selfIndex);
+                    float overStep2Right=min(smoothstep(modUtime,modUtime+dw,selfIndex+360.0),(1.0-smoothstep(modUtime+waveWidth - dw,modUtime+waveWidth, selfIndex+360.0)));
+                    float overStep2=max(overStep2Left,overStep2Right);
+                    
+                    float os=isOverStep1*overStep1+overStep2*isOverStep2;
 
-                   float os=1.0-smoothstep(over-dw,over,selfIndex)*(1.0-smoothstep(modUtime,modUtime+dw,selfIndex));
-                   os*=isOver;
+
+ 
                     
                     
      
-                    strength=max(strength,os);
-                
+                    strength=(1.0-isOver)*strength+isOver*os;
+                    return strength;
+            }
+        `
+            );
+            shader.vertexShader = shader.vertexShader.replace(
+                "#include <begin_vertex>",
+                /* glsl */ `
+
+                   #include <begin_vertex>
+                       float selfIndex = mod(aIndex, 360.0);
+                     float circleNum = (aIndex - selfIndex) / 360.0;
+                    vec3 pDir = normalize(aNormal);  
 
                 
-                    float g = 1.0;                             // 偏移的强度因子，当前没有动态变化
+                    float noise=texture(uPerlinTexture,vec2((selfIndex/360.0),0.2)).r;
+               
+                    float strength=getStrength(aIndex,uTime,aNormal);
+                        strength+=getStrength(aIndex,uTime+10.0+noise,aNormal);
+                        strength+=getStrength(aIndex,uTime+20.0+noise,aNormal);
+                        strength+=getStrength(aIndex,uTime+30.0+noise,aNormal);
+                        strength+=getStrength(aIndex,uTime+40.0+noise,aNormal);                        
+                        strength+=getStrength(aIndex,uTime+50.0+noise,aNormal); 
+                        strength+=getStrength(aIndex,uTime+60.0+noise,aNormal);                      
+
+
+                                     // 偏移的强度因子，当前没有动态变化
                 
                     // 基于法线方向和波动强度偏移点的 x 和 z 坐标
-                    transformed.x += pDir.x * strength * g;
-                    transformed.z += pDir.z * strength * g;
+                    transformed.x += pDir.x * strength*0.5;
+                    transformed.z += pDir.z* strength*0.5;
+                     transformed.y += strength*circleNum*0.25 ;
+                    //transformed.y +=strength * circleNum*0.1;
+                    
                 
                     vIndex = aIndex;                          // 将索引传递给片段着色器（或者用于调试）
             `
@@ -171,6 +206,7 @@ function MaxwellCircleWave(){
                 /* glsl */ `
 
                  varying float vIndex;
+                 
                   uniform float uTime;
                 #include <common>
             `
