@@ -13,11 +13,12 @@ function MaxWellCar() {
   // })
   const [sceneType, setSceneType] = useState(CAR_SCENE_TYPE.SHOWROOM);
   const [carColor, setCarColor] = useState(CAR_COLOR.BLUE);
+  const [techType, setTechType] = useState(CAR_COLOR.BLUE);
   return (
     <>
       <div className="maxwell-car">
         <MaxWellContext.Provider 
-        value={{ sceneType, carColor, setSceneType, setCarColor }}
+        value={{ sceneType, carColor, techType,setSceneType, setCarColor ,setTechType}}
         >
           <MaxWellHome handleSceneChange={(val)=>{
             setSceneType(val)
@@ -27,6 +28,7 @@ function MaxWellCar() {
               setCarColor(val)
             }
           }
+                       handleTechTypeChange= {(val)=>{setTechType(val)}}
           />
           <MaxWellCarThree />
         </MaxWellContext.Provider>

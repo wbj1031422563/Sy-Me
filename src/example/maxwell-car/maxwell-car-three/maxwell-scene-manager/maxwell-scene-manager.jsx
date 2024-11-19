@@ -15,7 +15,7 @@ function MaxwellSceneManager() {
     // const maxwellHoda = useMemo(() => <MaxWellGround speed={speed}/>, [speed]);
     useEffect(() => {
         let tween = null;
-        if (sceneType === CAR_SCENE_TYPE.SHOWROOM) {
+        if (sceneType === CAR_SCENE_TYPE.SHOWROOM||sceneType===CAR_SCENE_TYPE.TECH) {
             tween = new TWEEN.Tween({value: 20})
                 .to({value: 0}, 2 * 1000)
                 .onUpdate(({value}) => {

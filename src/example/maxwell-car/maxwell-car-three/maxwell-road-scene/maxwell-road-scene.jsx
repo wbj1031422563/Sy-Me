@@ -112,8 +112,9 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
     }
   });
   const reset=()=>{
-    if(street&&cloneStreet1){
-      cloneStreet1.position.z=size * 1;
+    if(street&&cloneStreet1&&cloneStreet2){
+      cloneStreet1.position.z=size;
+      cloneStreet2.position.z=-size;
       street.position.z=0
     }
   }

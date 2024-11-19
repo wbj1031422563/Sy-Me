@@ -11,5 +11,6 @@ import { CAR_COLOR, CAR_SCENE_TYPE } from '../enum/enum';
 
 export const MaxWellContext = createContext({
     sceneType:CAR_SCENE_TYPE.SHOWROOM,
-    carColor:CAR_COLOR.BLUE
+    carColor:CAR_COLOR.BLUE,
+    techType:''
 });

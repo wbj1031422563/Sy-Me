@@ -1,8 +1,8 @@
 import { useContext } from "react";
-import { CAR_COLOR, CAR_SCENE_TYPE } from "../../enum/enum";
+import {CAR_COLOR, CAR_SCENE_TYPE, CAR_TECH_TYPE} from "../../enum/enum";
 import "./maxwell-home.less";
 import { MaxWellContext } from "../../context/maxwell-car-context";
-function MaxWellHome({ handleSceneChange,handleColorChange }) {
+function MaxWellHome({ handleSceneChange,handleColorChange ,handleTechTypeChange }) {
   const { sceneType, carColor } = useContext(MaxWellContext);
   const getIndex = (type) => {
     if (type == CAR_SCENE_TYPE.SHOWROOM) {
@@ -109,41 +109,79 @@ function MaxWellHome({ handleSceneChange,handleColorChange }) {
           ></div>
           {/* <div>行驶</div> */}
         </div>
-        <div className="maxwell-home-bottom maxwell-home-fixed">
-          <div className="bar-content">
-            <div
-                className="bar"
-                onClick={() => {
-                  handleColorChange(CAR_COLOR.BLUE)
-                }}
-            >
-              <img src={"/texture/蓝色车漆预览.png"} className="active"/>
-              <div className="bar-line"></div>
-            </div>
-            <div
-                className="bar"
-                onClick={()=>{
-                handleColorChange(CAR_COLOR.SLIVER)
-              }}
-            >
-              <img src={"/img/银色.png"} className="active" />
-              <div className="bar-line"></div>
-            </div>
-            <div
-              className="bar"
-              onClick={()=>{
-                handleColorChange(CAR_COLOR.OTHER)
-              }}
-            >
-              <img src={"/texture/123374379_p0_master1200.jpg"} className="active" />
-              <div className="bar-line"></div>
-            </div>
-            <div
-              className="line"
-              style={{ left: `${getBottom(carColor)}vmin` }}
-            ></div>
+          <div className="maxwell-home-bottom maxwell-home-fixed">
+              {(sceneType == CAR_SCENE_TYPE.SHOWROOM || sceneType == CAR_SCENE_TYPE.ROAD) && (<div className="bar-content">
+                  <div
+                      className="bar"
+                      onClick={() => {
+                          handleColorChange(CAR_COLOR.BLUE)
+                      }}
+                  >
+                      <img src={"/texture/蓝色车漆预览.png"} className="active"/>
+                      <div className="bar-line"></div>
+                  </div>
+                  <div
+                      className="bar"
+                      onClick={() => {
+                          handleColorChange(CAR_COLOR.SLIVER)
+                      }}
+                  >
+                      <img src={"/img/银色.png"} className="active"/>
+                      <div className="bar-line"></div>
+                  </div>
+                  <div
+                      className="bar"
+                      onClick={() => {
+                          handleColorChange(CAR_COLOR.OTHER)
+                      }}
+                  >
+                      <img src={"/texture/123374379_p0_master1200.jpg"} className="active"/>
+                      <div className="bar-line"></div>
+                  </div>
+                  <div
+                      className="line"
+                      style={{left: `${getBottom(carColor)}vmin`}}
+                  ></div>
+              </div>)}
+              {sceneType===CAR_SCENE_TYPE.TECH && (
+                  <div className="bar-content">
+                      <div
+                          className="bar"
+                          title={"空气动力"}
+                          onClick={() => {
+                              handleTechTypeChange(CAR_TECH_TYPE.FLOW)
+                          }}
+                      >
+                          <img src={"/texture/wind-flow-2--wind-flow-weather.png"} className="active"/>
+                          <div className="bar-line"></div>
+                      </div>
+                      <div
+                          className="bar"
+                          title={"智驾辅助"}
+                          onClick={() => {
+                              handleTechTypeChange(CAR_TECH_TYPE.LD)
+                          }}
+                      >
+                          <img src={"/texture/雷达.png"} className="active"/>
+                          <div className="bar-line"></div>
+                      </div>
+                      <div
+                          className="bar"
+                          title={"影音娱乐"}
+                          onClick={() => {
+                              handleTechTypeChange(CAR_TECH_TYPE.MEDEA)
+                          }}
+                      >
+                          <img src={"/texture/多媒体 (1).png"} className="active"/>
+                          <div className="bar-line"></div>
+                      </div>
+                      <div
+                          className="line"
+                          style={{left: `${getBottom(carColor)}vmin`}}
+                      ></div>
+                  </div>
+              )}
           </div>
-        </div>
       </div>
     </>
   );

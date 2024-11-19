@@ -184,6 +184,7 @@ function Model({ speed, rotation, position }) {
                 transformed = aPosition;
             }
 
+
         `
       );
       shader.vertexShader = shader.vertexShader.replace(
@@ -202,7 +203,7 @@ function Model({ speed, rotation, position }) {
                 gl_PointSize = 0.0;
             } else if (aPosition.y > uTargetModelTransitionTime + strength) {
                 gl_PointSize = 0.0;
-            }
+            }                        
 
         `
       );
@@ -503,8 +504,8 @@ function Model({ speed, rotation, position }) {
       // 创建粒子材质
       const pointsMaterial = createPointsMaterial(sourceBox3);
       const totalTime = 4;
-
-      scene.add(new THREE.Points(geometry, pointsMaterial));
+      const ponits=new THREE.Points(geometry, pointsMaterial)
+      scene.add(ponits);
       disposeTargetModelMaterial(hoda);
       const tween1 = new TWEEN.Tween(pointTransitionTime).to(
         { value: 2 },
@@ -520,6 +521,8 @@ function Model({ speed, rotation, position }) {
         .to({ value: targetBox3.min.y - 1 }, totalTime * 0.75 * 1000)
         .delay(totalTime * 0.25 * 1000).onComplete(()=>{
           setIsInit(true);
+          ponits.material.dispose();
+          scene.remove(ponits);
           })
 
       if (tween1) {
