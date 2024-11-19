@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 21:16:27
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-24 21:04:13
+ * @LastEditTime: 2024-11-19 22:18:47
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-car-three.jsx
  * @Description:
  *
@@ -13,16 +13,7 @@ import { Leva } from "leva";
 import * as THREE from "three";
 import MaxWellCarBaeEnv from "./maxwell-car-base-env/maxwell-car-base-env";
 import "./maxwell-car-three.less";
-import MaxwellRoadScene from "./maxwell-road-scene/maxwell-road-scene";
-import MaxWellGround from "./maxwell-ground/maxwell-ground";
-import MaxwellText from "./maxwell-text/maxwell-text";
 import MaxwellEffects from "./maxwell-effects/maxwell-effects";
-import MaxwellHoda from "./maxwell-hoda/maxwell-hoda";
-import { Suspense, useContext, useEffect, useMemo,useState } from "react";
-import MaxWellRoomScene from "./maxwll-room-scene/maxwll-room-scene";
-import { MaxWellContext } from "../context/maxwell-car-context";
-import { CAR_SCENE_TYPE } from "../enum/enum";
-import TWEEN from "@tweenjs/tween.js";
 import MaxwellSceneManager from "./maxwell-scene-manager/maxwell-scene-manager";
 function MaxWellCarThree() {
   return (
@@ -36,7 +27,7 @@ function MaxWellCarThree() {
         dpr={[1, 1.5]}
         camera={{ position: [0, 0, 15], fov: 25 }}
       >
-        <color attach="background" args={["#000000"]} />
+        <color attach="background" args={["#cccccc"]} />
         <hemisphereLight intensity={0.8} />
         <ContactShadows
           resolution={1024}

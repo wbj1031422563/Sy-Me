@@ -2,22 +2,19 @@
  * @Author: FMC
  * @Date: 2024-09-24 20:41:25
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-28 19:39:15
+ * @LastEditTime: 2024-11-19 22:09:47
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-road-scene\maxwell-road-scene.jsx
  * @Description:
  */
 
-import {Clone, useEnvironment, useTexture} from "@react-three/drei";
-import {useFrame, useLoader, useThree} from "@react-three/fiber";
-import {Suspense, useEffect, useRef, useState} from "react";
+import MaxwellLightformers from "@/example/maxwell-car/maxwell-car-three/maxwell-lightformers/maxwell-lightformers.jsx";
+import { Clone, useEnvironment, useTexture } from "@react-three/drei";
+import { useFrame, useLoader, useThree } from "@react-three/fiber";
+import TWEEN from "@tweenjs/tween.js";
+import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import MaxwellHoda from "../maxwell-hoda/maxwell-hoda";
-import TWEEN from "@tweenjs/tween.js";
-import MaxwellLightformers from "@/example/maxwell-car/maxwell-car-three/maxwell-lightformers/maxwell-lightformers.jsx";
-import {CAR_SCENE_TYPE} from "@/example/maxwell-car/enum/enum.js";
-import MaxWellRoomScene from "@/example/maxwell-car/maxwell-car-three/maxwll-room-scene/maxwll-room-scene.jsx";
 function Model({runState='STOP',speed,setSpeed,isShow=true}) {
   // const [speed,setSpeed] = useState(20);
   const  {scene: threeScene}=useThree()

@@ -3,25 +3,26 @@
  * @returns {JSX.Element}
  * @constructor
  */
-import {extend, useFrame, useLoader, useThree} from "@react-three/fiber";
+import { extend, useFrame, useLoader, useThree } from "@react-three/fiber";
 
 
 /*
  * @Author: FMC
  * @Date: 2024-09-04 22:04:29
  * @LastEditors: FMC
- * @LastEditTime: 2024-09-08 11:35:25
- * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-text\maxwell-text.jsx
+ * @LastEditTime: 2024-11-19 22:21:17
+ * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-tech-scene\maxwell-tech-scene.jsx
  * @Description:
  */
 // import { Depth, LayerMaterial } from "lamina";
-import {Suspense, useEffect, useMemo, useRef, useState} from "react";
-import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
-import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader";
-import * as THREE from "three";
-import {shaderMaterial, useTexture} from "@react-three/drei";
 import MaxWellGround from "@/example/maxwell-car/maxwell-car-three/maxwell-ground/maxwell-ground.jsx";
-
+import { useTexture } from "@react-three/drei";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import * as THREE from "three";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import radaMaterailFs from './shader/rada.fs.glsl';
+import radaMaterailVs from './shader/rada.vs.glsl';
 
 function MaxwellCarFlow() {
     const {nodes, materials} = useLoader(
@@ -259,9 +260,37 @@ function MaxwellCircleWave(){
     )
 }
 
-const RadaMaterail=shaderMaterial({
-
-})
+// const RadaMaterail=shaderMaterial({
+    // uSpeed: { value: props.speed },
+    // uRadius: { value: props.radius },
+    // uTime: timeDelta,
+    // uFollowWidth: { value: props.followWidth },
+    // ncolor: { value: new Color(props.color) },
+// },
+// radaMaterailVs,
+// radaMaterailFs,
+// )
+class RadaMaterail extends THREE.ShaderMaterial {
+    constructor(props) {
+      super({
+        uniforms: {
+            uSpeed: { value: props.speed },
+            uRadius: { value: props.radius },
+            uTime: {value:0},
+            uFollowWidth: { value: props.followWidth },
+            ncolor: { value: new THREE.Color(props.color) },
+        },
+        // wireframe:true,
+        // transparent: true,
+        // blending: THREE.AdditiveBlending,
+        // depthWrite: true,
+        // side: THREE.DoubleSide,
+        // depthTest: true,
+        vertexShader:radaMaterailVs,
+        fragmentShader:radaMaterailFs
+      });
+    }
+  }
 extend({RadaMaterail})
 
 function MaxwellRaDa(){
@@ -278,19 +307,39 @@ function MaxwellRaDa(){
             loader.setDRACOLoader(dracoLoader);
         }
     );
-    useEffect(()=>{},[rada]);
+    useEffect(()=>{
+        // if(rada){
+        //     const rotateMatrix = new THREE.Matrix4().makeRotationX(-Math.PI / 180 * 90)
+        //     rada.geometry.value.applyMatrix4(rotateMatrix)
+        // }
+    },[rada]);
+    // useFrame((state, delta)=>{
+    //     if(rada&& rada.material.uniforms.uTime){
+    //         const a=rada.material.uniforms.uTime;
+    //         a.value+=delta;
+    //     }
+    // })
+    const size=300;
     return (
         <>
-            <group
+            {/* <group
             >
                 <primitive
                     ref={setRada}
                     object={scene ? scene : null}
                 />
-            </group>
-            <mesh ref={setRada} position={[0.0,2.0,0.0]}  rotation-x={-Math.PI*0.5}>
-                <circleGeometry args={[10,32]}></circleGeometry>
-                <radaMaterail></radaMaterail>
+            </group> */}
+            <mesh ref={setRada} position-y={4.0} >
+                <circleGeometry ></circleGeometry>
+                <radaMaterail args={[{
+                            radius: 8,
+                            size: 10,
+                            color: '#ffff00',
+                            opacity: 0.9,
+                            speed: 300,
+                            followWidth: Math.PI*10*10*0.1, //扇面大小
+                }]}></radaMaterail>
+                {/* <meshBasicMaterial color={'red'}></meshBasicMaterial> */}
             </mesh>
         </>
     )

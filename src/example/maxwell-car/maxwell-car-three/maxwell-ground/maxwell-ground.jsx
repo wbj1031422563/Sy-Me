@@ -1,7 +1,5 @@
-import { Helper, useTexture } from "@react-three/drei";
-import { useEffect, useRef } from "react";
-import * as THREE from "three";
-import { MeshReflectorMaterial } from "@react-three/drei";
+import { MeshReflectorMaterial, useTexture } from "@react-three/drei";
+import { useRef } from "react";
 /*
  * @Author: FMC
  * @Date: 2024-08-29 21:05:01
