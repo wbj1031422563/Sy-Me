@@ -27,7 +27,7 @@ function MaxWellCarThree() {
         dpr={[1, 1.5]}
         camera={{ position: [0, 0, 15], fov: 25 }}
       >
-        <color attach="background" args={["#cccccc"]} />
+        <color attach="background" args={["#000000"]} />
         <hemisphereLight intensity={0.8} />
         <ContactShadows
           resolution={1024}

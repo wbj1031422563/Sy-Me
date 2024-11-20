@@ -295,6 +295,7 @@ extend({RadaMaterail})
 
 function MaxwellRaDa(){
     const [rada, setRada] = useState(null);
+    const uTime=useRef({value:0});
     /**
      * 加载Draco模型
      */
@@ -308,10 +309,18 @@ function MaxwellRaDa(){
         }
     );
     useEffect(()=>{
-        // if(rada){
-        //     const rotateMatrix = new THREE.Matrix4().makeRotationX(-Math.PI / 180 * 90)
-        //     rada.geometry.value.applyMatrix4(rotateMatrix)
-        // }
+        if(rada){
+            const props={
+                position: [0, 0, 0],
+                radius: 240,
+                size: 300,
+                color: 0x409eff,
+                opacity: 0.9,
+                speed: 300,
+                followWidth: 220, //扇面大小
+            }
+            // rada.material=material;
+        }
     },[rada]);
     // useFrame((state, delta)=>{
     //     if(rada&& rada.material.uniforms.uTime){
@@ -319,27 +328,114 @@ function MaxwellRaDa(){
     //         a.value+=delta;
     //     }
     // })
-    const size=300;
+    const test=(shader)=>{
+        const props={
+            position: [0, 0, 0],
+            radius: 3*0.99,
+            size: 3,
+            color: 0x409eff,
+            opacity: 0.9,
+            speed: 110,
+            followWidth: 90, //扇面大小
+        }
+        shader.uniforms.uTime = uTime.current;
+        shader.uniforms.uSpeed={value:props.speed};
+        shader.uniforms.uRadius={value:props.radius};
+        shader.uniforms.uFollowWidth={value:props.followWidth};
+        shader.uniforms.ncolor={value:new THREE.Color(props.color)};
+
+        shader.vertexShader = shader.vertexShader.replace(
+            "#include <common>",
+            /* glsl */ `
+
+        #include <common>
+        varying vec3 vPosition;
+        `
+        );
+        shader.vertexShader = shader.vertexShader.replace(
+            "#include <begin_vertex>",
+            /* glsl */ `
+               #include <begin_vertex>                    
+                vPosition = position; 
+        `
+        );
+        shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <common>",
+            /* glsl */ `
+            uniform float uRadius;     
+            uniform float uTime;            
+            uniform float uSpeed; 
+            uniform float uFollowWidth; 
+            varying vec3 vPosition;
+            uniform vec3 ncolor;
+            float calcAngle(vec3 oFrag){
+                float fragAngle;
+                const vec3 ox = vec3(1,0,0);
+                float dianji = oFrag.x * ox.x + oFrag.z*ox.z;
+                float oFrag_length = length(oFrag); // length是内置函数
+                float ox_length = length(ox); // length是内置函数
+                float yuxian = dianji / (oFrag_length * ox_length);
+                fragAngle = acos(yuxian);
+                fragAngle = degrees(fragAngle);
+                if(oFrag.z > 0.0) {
+                fragAngle = -fragAngle + 360.0;
+                }
+                float scanAngle = uTime * uSpeed - floor(uTime * uSpeed / 360.0) * 360.0;
+                float angle = scanAngle - fragAngle;
+                if(angle < 0.0){
+                angle = angle + 360.0;
+                }
+                return angle;
+            }
+            #include <common>
+        `
+        );
+        shader.fragmentShader = shader.fragmentShader.replace(
+            "vec4 diffuseColor = vec4( diffuse, opacity );",
+            /* glsl */ `
+            vec4 finalColor=vec4(0.0,0.0,0.0,1.0);
+        if(length(vPosition) == 0.0 || length(vPosition) > uRadius){
+			finalColor = vec4( ncolor, 1.0);
+		} else {
+			float angle = calcAngle(vPosition);
+			if(angle < uFollowWidth){
+				// 尾焰区域
+				float opacity1 =  1.0 - angle / uFollowWidth; 
+				finalColor = vec4( ncolor, 1.0 * opacity1 );  
+			} else {
+				// 其他位置的像素均为透明
+				finalColor = vec4( ncolor, 0.0 ); 
+			}
+		}
+            float angle = calcAngle(vPosition);
+            //vec4 diffuseColor =vec4((angle/360.0),0.0,0.0,1.0);
+            vec4 diffuseColor =finalColor;
+        `
+        );
+    }
+    useFrame((state,delta)=>{
+        if(rada){
+            uTime.current.value+=delta;
+        }
+    })
     return (
         <>
-            {/* <group
+            <group
             >
                 <primitive
                     ref={setRada}
                     object={scene ? scene : null}
                 />
-            </group> */}
-            <mesh ref={setRada} position-y={4.0} >
-                <circleGeometry ></circleGeometry>
-                <radaMaterail args={[{
-                            radius: 8,
-                            size: 10,
-                            color: '#ffff00',
-                            opacity: 0.9,
-                            speed: 300,
-                            followWidth: Math.PI*10*10*0.1, //扇面大小
-                }]}></radaMaterail>
-                {/* <meshBasicMaterial color={'red'}></meshBasicMaterial> */}
+            </group>
+            <mesh ref={setRada} position-y={0.2} rotation-x={Math.PI*0.5} scale={[3.0,3.0,3.0]} rotation-z={Math.PI*0.5}>
+                <circleGeometry args={[3,1000]}></circleGeometry>
+                <meshBasicMaterial  
+                transparent={true} 
+                 blending={THREE.AdditiveBlending} 
+                 side={THREE.DoubleSide}
+                 depthTest={true}
+                 depthWrite={false}
+                 onBeforeCompile={test}></meshBasicMaterial>
             </mesh>
         </>
     )
