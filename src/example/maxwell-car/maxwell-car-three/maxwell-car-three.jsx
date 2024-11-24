@@ -29,21 +29,21 @@ function MaxWellCarThree() {
       >
         <color attach="background" args={["#000000"]} />
         <hemisphereLight intensity={0.8} />
-        <ContactShadows
-          resolution={1024}
-          frames={1}
-          position={[0, -0.01, 0]}
-          scale={15}
-          blur={0.5}
-          opacity={1}
-          far={20}
-        />
+        {/*<ContactShadows*/}
+        {/*  resolution={1024}*/}
+        {/*  frames={1}*/}
+        {/*  position={[0, -0.01, 0]}*/}
+        {/*  scale={15}*/}
+        {/*  blur={0.5}*/}
+        {/*  opacity={1}*/}
+        {/*  far={20}*/}
+        {/*/>*/}
         <MaxWellCarBaeEnv></MaxWellCarBaeEnv>
         <MaxwellEffects/>
         <MaxwellSceneManager/>
       </Canvas>
       <Stats />
-      <Leva collapsed />
+      {/*<Leva collapsed />*/}
       {/* <Stats/> */}
       <Loader />
     </div>

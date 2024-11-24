@@ -16,13 +16,15 @@ import { extend, useFrame, useLoader, useThree } from "@react-three/fiber";
  */
 // import { Depth, LayerMaterial } from "lamina";
 import MaxWellGround from "@/example/maxwell-car/maxwell-car-three/maxwell-ground/maxwell-ground.jsx";
-import { useTexture } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {Clone, useTexture} from "@react-three/drei";
+import {Suspense, useContext, useEffect, useMemo, useRef, useState} from "react";
 import * as THREE from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import radaMaterailFs from './shader/rada.fs.glsl';
 import radaMaterailVs from './shader/rada.vs.glsl';
+import {MaxWellContext} from "@/example/maxwell-car/context/maxwell-car-context.js";
+import {CAR_TECH_TYPE} from "@/example/maxwell-car/enum/enum.js";
 
 function MaxwellCarFlow() {
     const {nodes, materials} = useLoader(
@@ -260,42 +262,19 @@ function MaxwellCircleWave(){
     )
 }
 
-// const RadaMaterail=shaderMaterial({
-    // uSpeed: { value: props.speed },
-    // uRadius: { value: props.radius },
-    // uTime: timeDelta,
-    // uFollowWidth: { value: props.followWidth },
-    // ncolor: { value: new Color(props.color) },
-// },
-// radaMaterailVs,
-// radaMaterailFs,
-// )
-class RadaMaterail extends THREE.ShaderMaterial {
-    constructor(props) {
-      super({
-        uniforms: {
-            uSpeed: { value: props.speed },
-            uRadius: { value: props.radius },
-            uTime: {value:0},
-            uFollowWidth: { value: props.followWidth },
-            ncolor: { value: new THREE.Color(props.color) },
-        },
-        // wireframe:true,
-        // transparent: true,
-        // blending: THREE.AdditiveBlending,
-        // depthWrite: true,
-        // side: THREE.DoubleSide,
-        // depthTest: true,
-        vertexShader:radaMaterailVs,
-        fragmentShader:radaMaterailFs
-      });
-    }
-  }
-extend({RadaMaterail})
+
 
 function MaxwellRaDa(){
     const [rada, setRada] = useState(null);
+    const [size, setSize] = useState(0);
+    const radaRadius=9;
+    const [otherCarScene, setOtherCarScene] = useState(null);
+    const [otherCarScene1, setOtherCarScene1] = useState(null);
+    const [otherCarScene2, setOtherCarScene2] = useState(null);
+    const carScanMaterail=useRef(null)
+
     const uTime=useRef({value:0});
+
     /**
      * 加载Draco模型
      */
@@ -308,31 +287,119 @@ function MaxwellRaDa(){
             loader.setDRACOLoader(dracoLoader);
         }
     );
-    useEffect(()=>{
-        if(rada){
-            const props={
-                position: [0, 0, 0],
-                radius: 240,
-                size: 300,
-                color: 0x409eff,
-                opacity: 0.9,
-                speed: 300,
-                followWidth: 220, //扇面大小
+    const getGroupBox3 = (group) => {
+        let box3 = new THREE.Box3();
+        group.traverse((child) => {
+            if (child.isMesh) {
+                const mesh = child.clone();
+                mesh.updateMatrixWorld(true);
+                const childBoundingBox = new THREE.Box3().setFromObject(mesh);
+                box3.union(childBoundingBox);
             }
-            // rada.material=material;
+        });
+        setSize(box3.max.z - box3.min.z -1);
+        console.log('setSize');
+    };
+    const updateCar=(carScene)=>{
+        const worldPos=new THREE.Vector3();
+        carScene.traverse((child)=>{
+            if(child.isMesh&&child.name.includes('car')){
+                child.updateMatrixWorld(true);
+                const pos3=child.getWorldPosition(worldPos);
+                const pos2=new THREE.Vector2(pos3.x,pos3.z);
+                if(pos2.length()<=radaRadius){
+                    if(carScanMaterail.current){
+                        child.material=carScanMaterail.current;
+                    }
+                }else{
+                    child.material=materials['车白模'];
+                }
+            }
+        })
+    }
+    const reset=()=>{
+        if (otherCarScene1&&otherCarScene2&&otherCarScene) {
+            otherCarScene.position.z=0;
+            otherCarScene1.position.z=size;
+            otherCarScene2.position.z=-size;
         }
-    },[rada]);
-    // useFrame((state, delta)=>{
-    //     if(rada&& rada.material.uniforms.uTime){
-    //         const a=rada.material.uniforms.uTime;
-    //         a.value+=delta;
+    }
+    useEffect(()=>{
+        if(otherCarScene){
+            getGroupBox3(otherCarScene);
+            // updateCar(otherCarScene);
+        }
+    },[otherCarScene]);
+    useEffect(()=>{
+        if(materials&&!carScanMaterail.current){
+            const carMaterials=materials['车白模'];
+            carScanMaterail.current=carMaterials.clone();
+        }
+    },[materials])
+    useEffect(()=>{
+        if(!carScanMaterail.current) return;
+        carScanMaterail.current.onBeforeCompile=((shader)=>{
+            {
+                console.log('carScanMaterail shader', shader);
+                shader.uniforms.uTime = uTime.current;
+                shader.vertexShader = shader.vertexShader.replace(
+                    "#include <common>",
+                    /* glsl */ `
+
+                    #include <common>
+                    varying vec3 vPosition;
+                 `
+                );
+                shader.vertexShader = shader.vertexShader.replace(
+                    "#include <begin_vertex>",
+                    /* glsl */ `
+               #include <begin_vertex>                    
+                vPosition = transformed; 
+        `
+                );
+                shader.fragmentShader = shader.fragmentShader.replace(
+                    "#include <common>",
+                    /* glsl */ `
+     
+                    uniform float uTime;            
+                    varying vec3 vPosition;
+                    #include <common>
+                `
+                );
+                shader.fragmentShader = shader.fragmentShader.replace(
+                    "vec4 diffuseColor = vec4( diffuse, opacity );",
+                    /* glsl */ `
+                    float progress=clamp(0.0,1.0,vPosition.y/3.2);
+                    float dw=0.05;
+                    float start=uTime*0.6;
+                    start=mod(start,1.0);
+                    float end=start+0.1;
+                    float strength=min(smoothstep(start,start+dw,progress),(1.0-smoothstep(end-dw,end,progress)));
+                    
+                    vec3 mixColor=mix(diffuse,vec3(0.6,0.6,0.6),strength);
+                    vec4 diffuseColor =vec4(mixColor, opacity );;
+        `
+                );
+            }
+        })
+    },[carScanMaterail.current])
+    // useEffect(()=>{
+    //     if(nodes){
+    //         const mesh=nodes['car12'];
+    //         mesh.updateMatrixWorld(true);
+    //         let box3 = new THREE.Box3();
+    //         box3=box3.setFromObject(mesh);
+    //         console.log(box3);
+    //         // const tesh=new THREE.Box3Helper(box3);
+    //         // scene.add(tesh);
     //     }
-    // })
-    const test=(shader)=>{
+    // },[nodes])
+
+    const radaShader =(shader)=>{
         const props={
             position: [0, 0, 0],
-            radius: 3*0.99,
-            size: 3,
+            radius: radaRadius*0.99,
+            size: radaRadius,
             color: 0x409eff,
             opacity: 0.9,
             speed: 110,
@@ -417,37 +484,122 @@ function MaxwellRaDa(){
         if(rada){
             uTime.current.value+=delta;
         }
+
     })
+    useEffect(()=>{
+        reset();
+    },[otherCarScene,otherCarScene1,otherCarScene2])
+    useFrame((state, delta) => {
+        const a = -size * 2.0;
+        if (otherCarScene1&&otherCarScene2&&otherCarScene) {
+            const speed=10.0;
+            updateCar(otherCarScene1);
+            updateCar(otherCarScene);
+            updateCar(otherCarScene2);
+            const list=[otherCarScene1,otherCarScene,otherCarScene2];
+            list.forEach(item1=>{
+                item1.position.z -= speed * delta;
+            })
+            //升序排列
+            list.sort((a,b) => a.position.z - b.position.z);
+            if(list[0].position.z <a){
+                list[0].position.z = list[1].position.z + size*2;
+            }
+            list[0].position.y=[0.01]
+            list[1].position.y=[0]
+            list[2].position.y=[0.01]
+        }
+    });
     return (
         <>
             <group
             >
                 <primitive
-                    ref={setRada}
+                    ref={setOtherCarScene}
+                    castShadow={false}
+                    receiveShadow={false}
                     object={scene ? scene : null}
                 />
+                {otherCarScene && (
+                    <Clone
+                        ref={setOtherCarScene1}
+                        object={otherCarScene}
+                        deep={true}
+                        position-z={size}
+                        castShadow={false}
+                        receiveShadow={false}
+                        inject={(clone) => {
+                            // console.log('更新')
+                            // clone.traverse((child) => {
+                            //     if (child.isMesh) {
+                            //         child.updateMatrixWorld(true)
+                            //     }
+                            // });
+                        }}
+                    ></Clone>
+                )}
+                {otherCarScene && (
+                    <Clone
+                        ref={setOtherCarScene2}
+                        object={otherCarScene}
+                        deep={true}
+                        castShadow={false}
+                        receiveShadow={false}
+                        position-z={-size}
+                        inject={(clone) => {
+                            // clone.traverse((child) => {
+                            //     if (child.isMesh) {
+                            //         child.updateMatrixWorld(true);
+                            //     }
+                            // });
+                        }}
+                    ></Clone>
+                )}
             </group>
-            <mesh ref={setRada} position-y={0.2} rotation-x={Math.PI*0.5} scale={[3.0,3.0,3.0]} rotation-z={Math.PI*0.5}>
-                <circleGeometry args={[3,1000]}></circleGeometry>
+            <mesh ref={setRada} position-y={0.2} rotation-x={Math.PI*0.5} rotation-z={Math.PI*0.5}>
+                <circleGeometry args={[radaRadius,1000]}></circleGeometry>
                 <meshBasicMaterial  
                 transparent={true} 
                  blending={THREE.AdditiveBlending} 
                  side={THREE.DoubleSide}
                  depthTest={true}
                  depthWrite={false}
-                 onBeforeCompile={test}></meshBasicMaterial>
+                 onBeforeCompile={radaShader }></meshBasicMaterial>
             </mesh>
         </>
     )
 }
+function  TY(){
+    const [box,setBox]=useState(null);
+    const [box2,setBox2]=useState(null);
+    useEffect(()=>{
+        const vec3=new THREE.Vector3();
+        const vec3a=new THREE.Vector3();
+        if(box2&&box){
+            box.updateMatrixWorld(true);
+            box2.updateMatrixWorld(true);
+        }
+    },[box,box2])
+    return <>
+        <mesh ref={setBox} position-y={2.5}>
+            <boxGeometry></boxGeometry>
+            <meshBasicMaterial color={'#550000'}></meshBasicMaterial>
+        </mesh>
+        {
+            box&&<Clone ref={setBox2} object={box} position-x={3}></Clone>
+        }
+    </>
+}
 
 function MaxwellTechScene() {
+    const {techType} = useContext(MaxWellContext);
     const maxWellGround = useMemo(() => <MaxWellGround/>, []);
+
     return <>
-        {/*<MaxwellCarFlow/>*/}
-        {maxWellGround}
-        {/*<MaxwellCircleWave/>*/}
-        {<MaxwellRaDa/>}
+        {techType===CAR_TECH_TYPE.FLOW&&<MaxwellCarFlow/>}
+        {techType!==CAR_TECH_TYPE.LD&&maxWellGround}
+        {techType===CAR_TECH_TYPE.MEDEA&&<MaxwellCircleWave/>}
+        {techType===CAR_TECH_TYPE.LD&&<MaxwellRaDa/>}
     </>
 }
 

@@ -32,13 +32,13 @@ export const CAR_TECH_TYPE = Object.freeze({
     /**
      * 空气动力
      */
-    FLOW: 0,
+    FLOW: 1,
     /**
      * 雷达
      */
-    LD: 1,
+    LD: 2,
     /**
      * 影音娱乐
      */
-    MEDEA: 2,
+    MEDEA: 0,
 });

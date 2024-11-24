@@ -19,6 +19,8 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
   // const [speed,setSpeed] = useState(20);
   const  {scene: threeScene}=useThree()
   const [street, setStreet] = useState(null);
+  //必须的
+  const [viseabk, setViseabk] = useState(false);
   const [cloneStreet1, setCloneStreet1] = useState(null);
   const [cloneStreet2, setCloneStreet2] = useState(null);
   const [cloneStreet3, setCloneStreet3] = useState(null);
@@ -163,6 +165,8 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
   useEffect(()=>{
     let tween=null;
     if(isShow){
+      reset();
+      setViseabk(true);
       tween = new TWEEN.Tween(opacity.current).to(
           { value: 1.0 },
           5 * 1000
@@ -175,6 +179,8 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
           5 * 1000
       ).onUpdate(({ value }) => {
         setMaterialsOpacity(value);
+      }).onComplete(()=>{
+        setViseabk(false);
       })
     }
     if(tween){
@@ -222,16 +228,17 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
         <planeGeometry></planeGeometry >
         <meshBasicMaterial color={"#000"} side={THREE.DoubleSide}></meshBasicMaterial>
       </mesh>
-      <primitive ref={setStreet}  object={scene ? scene : null} />
+      <primitive visible={viseabk}  ref={setStreet}    object={scene ? scene : null} />
       {street && (
         <Clone
+          visible={viseabk}
           ref={setCloneStreet1}
           object={street}
           // position-y={0.1}
           // position-z={0.01}
         ></Clone>
       )}
-       {street && <Clone ref={setCloneStreet2} object={street} position-z={-size} ></Clone>}
+       {street && <Clone  visible={viseabk}  ref={setCloneStreet2} object={street} position-z={-size} ></Clone>}
       {/* {street && <Clone ref={setCloneStreet3} object={street} position-z={-size*3}></Clone>} */}
       {/* <boxHelper></boxHelper> */}
       {isShow&& (

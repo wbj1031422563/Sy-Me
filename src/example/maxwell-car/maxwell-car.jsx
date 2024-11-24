@@ -4,7 +4,7 @@ import { MaxWellContext } from "./context/maxwell-car-context";
 import MaxWellCarThree from "./maxwell-car-three/maxwell-car-three";
 import "./maxwell-car.less";
 import MaxWellHome from "./views/maxwell-home/maxwell-home";
-import { CAR_SCENE_TYPE } from "./enum/enum";
+import {CAR_SCENE_TYPE, CAR_TECH_TYPE} from "./enum/enum";
 import { CAR_COLOR } from "./enum/enum";
 function MaxWellCar() {
   // const [carStore,setCarStore]=useState({
@@ -13,7 +13,7 @@ function MaxWellCar() {
   // })
   const [sceneType, setSceneType] = useState(CAR_SCENE_TYPE.SHOWROOM);
   const [carColor, setCarColor] = useState(CAR_COLOR.BLUE);
-  const [techType, setTechType] = useState(CAR_COLOR.BLUE);
+  const [techType, setTechType] = useState(CAR_TECH_TYPE.MEDEA);
   return (
     <>
       <div className="maxwell-car">

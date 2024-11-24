@@ -3,7 +3,7 @@ import {CAR_COLOR, CAR_SCENE_TYPE, CAR_TECH_TYPE} from "../../enum/enum";
 import "./maxwell-home.less";
 import { MaxWellContext } from "../../context/maxwell-car-context";
 function MaxWellHome({ handleSceneChange,handleColorChange ,handleTechTypeChange }) {
-  const { sceneType, carColor } = useContext(MaxWellContext);
+  const { sceneType, carColor,techType } = useContext(MaxWellContext);
   const getIndex = (type) => {
     if (type == CAR_SCENE_TYPE.SHOWROOM) {
       return 3.5;
@@ -17,6 +17,9 @@ function MaxWellHome({ handleSceneChange,handleColorChange ,handleTechTypeChange
   const getBottom = (color) => {
     return color * 8 + 2;
   };
+  const  resetTechTye=()=>{
+      handleTechTypeChange(CAR_TECH_TYPE.MEDEA)
+  }
   return (
     <>
       <div className="maxwell-home">
@@ -44,12 +47,49 @@ function MaxWellHome({ handleSceneChange,handleColorChange ,handleTechTypeChange
               </p>
             </>
           )}
+            {sceneType == CAR_SCENE_TYPE.TECH&&techType==CAR_TECH_TYPE.MEDEA && (
+                <>
+                    <h2 className="blue mb-10">沉浸式车载娱乐系统</h2>
+                    <p className="wihte mb-5">
+                        杜比环绕声，让每一个音符触动心弦
+                    </p>
+                    <p className="wihte mb-5">
+                        智能在线连接，畅享音乐、电影与导航的无缝融合
+                    </p>
+                    <p className="wihte mb-5">
+
+                    </p>
+                </>
+            )}
+            {sceneType == CAR_SCENE_TYPE.TECH&&techType==CAR_TECH_TYPE.FLOW && (
+                <>
+                    <h2 className="blue mb-10">突破风的桎梏，尽享速度的激情</h2>
+                    <p className="wihte mb-5">
+                        流线型车身，宛如风中舞者，将阻力降至最低
+                    </p>
+                    <p className="wihte mb-5">
+                        卓越空气动力性能，赋予您无与伦比的加速体验
+                    </p>
+                </>
+            )}
+            {sceneType == CAR_SCENE_TYPE.TECH&&techType==CAR_TECH_TYPE.LD && (
+                <>
+                    <h2 className="blue mb-10">智感未来，驾驭无忧</h2>
+                    <p className="wihte mb-5">
+                        智能雷达系统，全天候感知周围环境，精准扫描、实时反馈，助您从容应对复杂路况
+                    </p>
+                    <p className="wihte mb-5">
+                        先进智驾系统，融合AI科技，智能规划行车路线，自动辅助驾驶，让每一次出行更安全、更高效。
+                    </p>
+                </>
+            )}
         </div>
-        <div className="maxwell-home-right maxwell-home-fixed">
-          {/* 造型 */}
+          <div className="maxwell-home-right maxwell-home-fixed">
+              {/* 造型 */}
           <div
               className="item"
               onClick={() => {
+                  resetTechTye();
                 handleSceneChange(CAR_SCENE_TYPE.SHOWROOM)
               }
               }
@@ -70,6 +110,7 @@ function MaxWellHome({ handleSceneChange,handleColorChange ,handleTechTypeChange
           <div
               className="item"
               onClick={() => {
+                  resetTechTye();
                 handleSceneChange(CAR_SCENE_TYPE.ROAD)
               }}
           >
@@ -88,6 +129,7 @@ function MaxWellHome({ handleSceneChange,handleColorChange ,handleTechTypeChange
           <div
               className="item"
               onClick={() => {
+                  resetTechTye();
                 handleSceneChange(CAR_SCENE_TYPE.TECH)
               }}
           >
@@ -147,6 +189,20 @@ function MaxWellHome({ handleSceneChange,handleColorChange ,handleTechTypeChange
                   <div className="bar-content">
                       <div
                           className="bar"
+                          title={"影音娱乐"}
+                          onClick={() => {
+                              handleTechTypeChange(CAR_TECH_TYPE.MEDEA)
+                          }}
+                      >
+                          <img src={"/texture/多媒体 (1).png"} className="active"/>
+                          <div className="bar-line"></div>
+                      </div>
+                      <div
+                          className="line"
+                          style={{left: `${getBottom(techType)}vmin`}}
+                      ></div>
+                      <div
+                          className="bar"
                           title={"空气动力"}
                           onClick={() => {
                               handleTechTypeChange(CAR_TECH_TYPE.FLOW)
@@ -165,20 +221,6 @@ function MaxWellHome({ handleSceneChange,handleColorChange ,handleTechTypeChange
                           <img src={"/texture/雷达.png"} className="active"/>
                           <div className="bar-line"></div>
                       </div>
-                      <div
-                          className="bar"
-                          title={"影音娱乐"}
-                          onClick={() => {
-                              handleTechTypeChange(CAR_TECH_TYPE.MEDEA)
-                          }}
-                      >
-                          <img src={"/texture/多媒体 (1).png"} className="active"/>
-                          <div className="bar-line"></div>
-                      </div>
-                      <div
-                          className="line"
-                          style={{left: `${getBottom(carColor)}vmin`}}
-                      ></div>
                   </div>
               )}
           </div>
