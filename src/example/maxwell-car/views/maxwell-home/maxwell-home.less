@@ -1,0 +1,135 @@
+.maxwell-home {
+  &-fixed {
+    position: fixed;
+    z-index: 999;
+  }
+  &-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    top: 0;
+    padding-top: 20px;
+    width: 100%;
+    .brand {
+      font-size: 72px;
+    }
+  }
+  &-right {
+    right: 0;
+    height: 32%;
+    width: 3%;
+    top: 30%;
+    .item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      height: 14vmin;
+    }
+    .item-text {
+      margin-top: 0.1vmin;
+      -webkit-user-select: none;
+      user-select: none;
+      writing-mode: vertical-rl;
+      letter-spacing: 0.5vmin;
+      color: #fff;
+      // font-size: 1.5vmin;
+      margin-right: 2vmin;
+      text-shadow: 0px 0px 6px #1e90ff;
+      transition: all 0.5s;
+      opacity: 0.6;
+    }
+    .line {
+      position: absolute;
+      height: 6.5vmin;
+      width: 2vmin;
+      right: -1.5vmin;
+      border-radius: 0.6vmin;
+      background-color: #1e90ff;
+      box-shadow: 0 0 1vmin #1e90ff;
+      transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+      // top: 26.75vmin;
+      // top: 0;
+    }
+    .active {
+      transform: scale(1.1);
+      color: #fff;
+      opacity: 1;
+    }
+    // background-color: red;
+  }
+  &-bottom {
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    .bar-content {
+        position: relative;
+        display: flex;
+        align-items: center;
+        transition: .4s all .4s cubic-bezier(.5,0,.5,1);
+    }
+    .bar {
+      pointer-events: all;
+      cursor: pointer;
+      border-radius: 50%;
+      background-size: 100% 100%;
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+      -webkit-tap-highlight-color: transparent;
+      tap-highlight-color: transparent;
+      transition: all 0.2s;
+    }
+    .bar-line{
+        width: 4vmin;
+        height: 1vmin;
+        margin: 0vmin 2vmin -.6vmin;
+        border-radius: 3px;
+        opacity: 0;
+    }
+    .line {
+
+        position: absolute;
+        width: 4vmin;
+        height: 2vmin;
+        bottom: -1.6vmin;
+        border-radius: .6vmin;
+        background-color: #1e90ff;
+        box-shadow: 0 0 1vmin #1e90ff;
+        transition: all .5s cubic-bezier(.165,.84,.44,1);
+        left: 0;
+    }
+    img {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      height: 4vmin;
+      margin-bottom: 3vmin;
+      border-radius: 10%;
+      transition: all 0.5s;
+    }
+    .active {
+    //   box-shadow: rgba(30, 144, 255, 0.616) 1.5px 1.5px px;
+    //   box-shadow: rgba(30, 144, 255, 0.616) 0px 0px 6vmin;
+      transform: scale(1.1);
+    }
+  }
+  .blue {
+    color: #1e90ff;
+  }
+  .wihte {
+    color: #fff;
+  }
+  .huise {
+    color: #c0c0c0;
+  }
+  .mb-10 {
+    margin-bottom: 10px;
+  }
+  .mb-5 {
+    margin-bottom: 5px;
+  }
+  // color: #fff;
+}

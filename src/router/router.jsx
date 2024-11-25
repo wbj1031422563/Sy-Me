@@ -2,7 +2,7 @@
  * @Author: FMC
  * @Date: 2024-07-15 19:50:43
  * @LastEditors: FMC
- * @LastEditTime: 2024-07-15 21:09:15
+ * @LastEditTime: 2024-08-29 20:46:34
  * @FilePath: \fmc-personal-blog\src\router\router.jsx
  * @Description:
  */
@@ -22,6 +22,10 @@ const routerList=[
   {
     path:'/sbpk-map',
     component:lazy(()=>import('../example/sbpk-map/sbpk-map.jsx'))
+  },
+  {
+    path:'/maxwell-car',
+    component:lazy(()=>import('../example/maxwell-car/maxwell-car.jsx'))
   },
 ]
 
