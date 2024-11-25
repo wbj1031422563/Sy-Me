@@ -128,7 +128,6 @@ function Model({runState='STOP',speed,setSpeed,isShow=true}) {
         setSpeed(value);
       })
     }else if(runState==='STOP'){
-      console.log('STOP')
       tween = new TWEEN.Tween({ value: 20 })
       .to({ value: 0 }, seconds * 1000)
       .onUpdate(({ value }) => {

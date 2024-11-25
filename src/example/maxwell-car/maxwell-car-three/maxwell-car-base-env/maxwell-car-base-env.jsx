@@ -49,7 +49,10 @@ function MaxWellCarBaeEnv() {
                 controls.current.minDistance=8;
                 controls.current.minPolarAngle =-Math.PI * 0.5
                 controls.current.maxPolarAngle =Math.PI * 0.5
-                console.log('造型');
+
+                controls.current.minAzimuthAngle=-Infinity
+                controls.current.maxAzimuthAngle=Infinity
+
             }
             if(sceneType===CAR_SCENE_TYPE.ROAD) {
                 camera.position.set(-13.29, 2.59, 2.98);
