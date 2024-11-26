@@ -1,4 +1,4 @@
-import MaxwellHoda from "../maxwell-hoda/maxwell-hoda";
+import MaxwellHoda from "../maxwell-hoda/maxwell-hoda-re.jsx";
 import {useContext, useEffect, useState} from "react";
 import TWEEN from "@tweenjs/tween.js";
 import MaxWellRoadScene from "../maxwell-road-scene/maxwell-road-scene";

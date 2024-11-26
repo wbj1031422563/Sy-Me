@@ -244,7 +244,7 @@ function MaxwellCircleWave(){
         })
         const points=new THREE.Points(geometry, pointsMaterial);
         scene.add(points);
-        console.log('点波被调用');
+
         return points;
     }
   useEffect(()=>{
@@ -298,7 +298,7 @@ function MaxwellRaDa(){
             }
         });
         setSize(box3.max.z - box3.min.z -1);
-        console.log('setSize');
+
     };
     const updateCar=(carScene)=>{
         const worldPos=new THREE.Vector3();
@@ -340,7 +340,7 @@ function MaxwellRaDa(){
         if(!carScanMaterail.current) return;
         carScanMaterail.current.onBeforeCompile=((shader)=>{
             {
-                console.log('carScanMaterail shader', shader);
+
                 shader.uniforms.uTime = uTime.current;
                 shader.vertexShader = shader.vertexShader.replace(
                     "#include <common>",
