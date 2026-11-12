@@ -248,3 +248,229 @@
   margin: 12px 0 0;
 }
 
+.asset-capability-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+
+  h3 { margin-bottom: 4px; }
+  p {
+    margin: 0;
+    color: #8ea19d;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+}
+
+.asset-capability-state {
+  flex: 0 0 auto;
+  border: 1px solid rgba(241, 199, 127, 0.34);
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: #f1c77f;
+  font-size: 9px;
+  white-space: nowrap;
+
+  &.is-ready {
+    border-color: rgba(120, 225, 174, 0.38);
+    color: #8fe4b0;
+  }
+}
+
+.asset-capability-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 10px;
+
+  span {
+    border-radius: 6px;
+    padding: 6px 4px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.045);
+    color: #7f9790;
+    font-size: 9px;
+  }
+
+  strong {
+    display: block;
+    margin-top: 2px;
+    color: #d7e7e1;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+.asset-motion-candidates {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.asset-motion-candidate {
+  display: grid;
+  grid-template-columns: 15px 1fr;
+  gap: 7px;
+  align-items: start;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  padding: 7px;
+  background: rgba(255, 255, 255, 0.035);
+
+  &.is-selected {
+    border-color: rgba(120, 225, 174, 0.45);
+    background: rgba(70, 190, 123, 0.12);
+  }
+
+  input {
+    margin-top: 2px;
+    accent-color: #78e1ae;
+  }
+
+  strong, small, em {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong { color: #dbece5; font-size: 10px; font-weight: 600; }
+  small { margin-top: 3px; color: #98dbbb; font-size: 9px; }
+  em { margin-top: 2px; color: #788d87; font-size: 8px; font-style: normal; }
+}
+
+.asset-motion-manual {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  input, select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 7px;
+    padding: 7px 8px;
+    outline: none;
+    background: #142323;
+    color: #dce7e7;
+    font-size: 10px;
+  }
+}
+
+.asset-motion-manual-title,
+.asset-tuning-label {
+  color: #b9d0c7;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.asset-motion-manual-grid,
+.asset-motion-manual-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.asset-motion-manual-row {
+  align-items: end;
+
+  label {
+    display: grid;
+    gap: 4px;
+    color: #8ea19d;
+    font-size: 9px;
+  }
+
+  .asset-secondary-button {
+    margin-top: 0;
+  }
+}
+
+.asset-render-tuning {
+  .asset-tuning-group + .asset-tuning-group {
+    margin-top: 13px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+}
+
+.asset-tuning-group {
+  display: grid;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.asset-tuning-control {
+  display: grid;
+  gap: 4px;
+  color: #9fb3ac;
+  font-size: 9px;
+
+  span {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  output {
+    color: #98dbbb;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    margin: 0;
+    accent-color: #78e1ae;
+  }
+}
+
+.asset-tuning-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #b9d0c7;
+  font-size: 10px;
+
+  input { accent-color: #78e1ae; }
+}
+
+.asset-tuning-color {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #b9d0c7;
+  font-size: 10px;
+
+  input {
+    width: 30px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+}
+
+.asset-light-control {
+  display: grid;
+  grid-template-columns: 54px 26px 1fr;
+  align-items: center;
+  gap: 7px;
+  color: #b9d0c7;
+  font-size: 10px;
+
+  input[type="color"] {
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .asset-tuning-control { min-width: 0; }
+}
+

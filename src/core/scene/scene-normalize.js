@@ -43,6 +43,18 @@ export function normalizeScene(input = {}) {
       exposure: source.renderer?.exposure ?? 1,
       shadows: source.renderer?.shadows ?? true,
     },
+    particles: {
+      enabled: source.particles?.enabled ?? false,
+      preset: source.particles?.preset || "dust",
+      count: source.particles?.count ?? 90,
+      size: source.particles?.size ?? 1.1,
+      speed: source.particles?.speed ?? 0.18,
+      opacity: source.particles?.opacity ?? 0.28,
+      color: source.particles?.color || "#d8ba7a",
+      scale: source.particles?.scale || [18, 5, 12],
+      position: source.particles?.position || [0, 1.5, 0],
+      noise: source.particles?.noise ?? 1,
+    },
     controls: {
       ...(source.controls || {}),
       autoRotate: source.controls?.autoRotate ?? false,

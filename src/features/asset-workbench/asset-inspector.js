@@ -1,3 +1,5 @@
+import { analyzeMotionCapabilities } from "./motion-analysis.js";
+
 const EXTENSION_FORMATS = {
   glb: "glb",
   gltf: "gltf",
@@ -32,6 +34,7 @@ function emptyReport(file, format) {
     nodes: null,
     nodeNames: [],
     animations: null,
+    motion: null,
     notes: [],
   };
 }
@@ -42,6 +45,7 @@ function parseGltfJson(json, report) {
   report.nodes = json.nodes?.length ?? 0;
   report.nodeNames = (json.nodes || []).map((node) => node.name).filter(Boolean);
   report.animations = json.animations?.length ?? 0;
+  report.motion = analyzeMotionCapabilities(json);
   const hasExternalDependencies = [...(json.buffers || []), ...(json.images || [])]
     .some((item) => item.uri && !item.uri.startsWith("data:"));
   report.previewSupported = !hasExternalDependencies;

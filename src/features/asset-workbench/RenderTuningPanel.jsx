@@ -1,0 +1,182 @@
+const PARTICLE_PRESETS = [
+  {
+    id: "none",
+    label: "关闭粒子",
+    config: { enabled: false },
+  },
+  {
+    id: "dust",
+    label: "田间尘埃",
+    config: {
+      enabled: true, preset: "dust", count: 110, size: 1.05, speed: 0.14,
+      opacity: 0.24, color: "#d6bb83", scale: [18, 5, 12], position: [0, 1.1, 0], noise: 1,
+    },
+  },
+  {
+    id: "harvest",
+    label: "收获金尘",
+    config: {
+      enabled: true, preset: "harvest", count: 150, size: 1.35, speed: 0.22,
+      opacity: 0.34, color: "#ffd36a", scale: [15, 4.5, 10], position: [0, 1.8, 0], noise: 1.2,
+    },
+  },
+  {
+    id: "technical",
+    label: "技术光点",
+    config: {
+      enabled: true, preset: "technical", count: 80, size: 1.5, speed: 0.32,
+      opacity: 0.42, color: "#6de7ff", scale: [16, 6, 12], position: [0, 2.5, 0], noise: 0.8,
+    },
+  },
+];
+
+const QUALITY_PRESETS = [
+  {
+    id: "cinematic",
+    label: "电影高光",
+    config: {
+      renderer: { dpr: [1, 1.5], toneMapping: "ACESFilmic", exposure: 1.15, shadows: true },
+      effects: { enabled: true, multisampling: 2, bloom: { enabled: true, threshold: 0.72, intensity: 1.2, radius: 0.72 }, vignette: { enabled: true, offset: 0.24, darkness: 0.56 }, noise: { enabled: true, opacity: 0.018 } },
+    },
+  },
+  {
+    id: "soft",
+    label: "柔和展示",
+    config: {
+      renderer: { dpr: [1, 1.25], toneMapping: "ACESFilmic", exposure: 1.05, shadows: true },
+      effects: { enabled: true, multisampling: 2, bloom: { enabled: true, threshold: 0.86, intensity: 0.68, radius: 0.62 }, vignette: { enabled: true, offset: 0.2, darkness: 0.34 }, noise: { enabled: false, opacity: 0 } },
+    },
+  },
+  {
+    id: "performance",
+    label: "性能优先",
+    config: {
+      renderer: { dpr: [1, 1], toneMapping: "ACESFilmic", exposure: 1, shadows: false },
+      effects: { enabled: false, multisampling: 0, bloom: { enabled: false }, vignette: { enabled: false }, noise: { enabled: false } },
+    },
+  },
+];
+
+function updateSection(onChange, section, values) {
+  onChange((previous) => ({
+    ...previous,
+    [section]: { ...previous[section], ...values },
+  }));
+}
+
+function updateLight(onChange, id, key, value) {
+  onChange((previous) => ({
+    ...previous,
+    environment: {
+      ...previous.environment,
+      [id]: { ...previous.environment?.[id], [key]: value },
+    },
+  }));
+}
+
+function NumberControl({ label, value, min, max, step, onChange, suffix }) {
+  return (
+    <label className="asset-tuning-control">
+      <span>{label}<output>{Number(value ?? 0).toFixed(step < 1 ? 2 : 0)}{suffix || ""}</output></span>
+      <input type="range" min={min} max={max} step={step} value={value ?? min} onChange={(event) => onChange(Number(event.target.value))} />
+    </label>
+  );
+}
+
+export default function RenderTuningPanel({ scene, onChange }) {
+  const environment = scene.environment || {};
+  const effects = scene.effects || {};
+  const renderer = scene.renderer || {};
+  const particles = scene.particles || {};
+  const particlePreset = particles.enabled ? particles.preset || "custom" : "none";
+
+  const applyQuality = (preset) => {
+    onChange((previous) => ({
+      ...previous,
+      renderer: { ...previous.renderer, ...preset.config.renderer },
+      effects: {
+        ...previous.effects,
+        ...preset.config.effects,
+        bloom: { ...previous.effects?.bloom, ...preset.config.effects.bloom },
+        vignette: { ...previous.effects?.vignette, ...preset.config.effects.vignette },
+        noise: { ...previous.effects?.noise, ...preset.config.effects.noise },
+      },
+    }));
+  };
+
+  const applyParticles = (preset) => {
+    onChange((previous) => ({ ...previous, particles: { ...previous.particles, ...preset.config } }));
+  };
+
+  return (
+    <section className="asset-render-tuning" aria-label="灯光渲染与粒子">
+      <div className="asset-capability-heading">
+        <div>
+          <h3>灯光 / 渲染 / 粒子</h3>
+          <p>先用预设快速定调，再用滑杆微调并随场景一起导出。</p>
+        </div>
+      </div>
+
+      <div className="asset-tuning-group">
+        <span className="asset-tuning-label">渲染质量</span>
+        <div className="asset-theme-list">
+          {QUALITY_PRESETS.map((preset) => (
+            <button key={preset.id} type="button" onClick={() => applyQuality(preset)}>{preset.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="asset-tuning-group">
+        <span className="asset-tuning-label">曝光与环境</span>
+        <NumberControl label="曝光" value={renderer.exposure} min={0.5} max={2} step={0.05} suffix="×" onChange={(value) => updateSection(onChange, "renderer", { exposure: value })} />
+        <NumberControl label="环境光" value={environment.ambientIntensity} min={0} max={1.5} step={0.05} onChange={(value) => updateSection(onChange, "environment", { ambientIntensity: value })} />
+        <label className="asset-tuning-color">
+          <span>背景色</span>
+          <input type="color" value={environment.background || "#071015"} onChange={(event) => updateSection(onChange, "environment", { background: event.target.value })} />
+        </label>
+        <label className="asset-tuning-checkbox">
+          <input type="checkbox" checked={renderer.shadows !== false} onChange={(event) => updateSection(onChange, "renderer", { shadows: event.target.checked })} />
+          <span>启用实时阴影</span>
+        </label>
+      </div>
+
+      <div className="asset-tuning-group">
+        <span className="asset-tuning-label">三点灯光</span>
+        {[
+          ["keyLight", "主光", "#fff0d2"],
+          ["fillLight", "补光", "#83b9ff"],
+          ["rimLight", "轮廓光", "#ffd18a"],
+        ].map(([id, label, fallbackColor]) => {
+          const light = environment[id] || {};
+          return (
+            <div key={id} className="asset-light-control">
+              <span>{label}</span>
+              <input type="color" value={light.color || fallbackColor} aria-label={`${label}颜色`} onChange={(event) => updateLight(onChange, id, "color", event.target.value)} />
+              <NumberControl label="强度" value={light.intensity ?? 1} min={0} max={5} step={0.1} onChange={(value) => updateLight(onChange, id, "intensity", value)} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="asset-tuning-group">
+        <span className="asset-tuning-label">后期效果</span>
+        <NumberControl label="Bloom" value={effects.bloom?.intensity} min={0} max={2.5} step={0.05} onChange={(value) => updateSection(onChange, "effects", { bloom: { ...effects.bloom, enabled: value > 0, intensity: value } })} />
+        <NumberControl label="暗角" value={effects.vignette?.darkness} min={0} max={1} step={0.05} onChange={(value) => updateSection(onChange, "effects", { vignette: { ...effects.vignette, enabled: value > 0, darkness: value } })} />
+        <NumberControl label="颗粒" value={effects.noise?.opacity} min={0} max={0.08} step={0.002} onChange={(value) => updateSection(onChange, "effects", { noise: { ...effects.noise, enabled: value > 0, opacity: value } })} />
+      </div>
+
+      <div className="asset-tuning-group">
+        <span className="asset-tuning-label">粒子氛围</span>
+        <div className="asset-theme-list">
+          {PARTICLE_PRESETS.map((preset) => (
+            <button key={preset.id} type="button" className={particlePreset === preset.id ? "is-active" : ""} onClick={() => applyParticles(preset)}>{preset.label}</button>
+          ))}
+        </div>
+        {particles.enabled && (
+          <NumberControl label="粒子数量" value={particles.count} min={0} max={240} step={10} onChange={(value) => updateSection(onChange, "particles", { count: value })} />
+        )}
+      </div>
+    </section>
+  );
+}
+

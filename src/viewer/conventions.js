@@ -100,10 +100,12 @@ export function inspectModel(root) {
   let vertexCount = 0;
   let triangleCount = 0;
   const materialNames = new Set();
+  const nodeNames = [];
   const box = new THREE.Box3();
 
   root.updateMatrixWorld(true);
   root.traverse((node) => {
+    if (node.name) nodeNames.push(node.name);
     if (!node.isMesh) return;
     meshCount++;
     const geo = node.geometry;
@@ -124,6 +126,7 @@ export function inspectModel(root) {
     vertexCount,
     triangleCount: Math.round(triangleCount),
     materialNames: [...materialNames],
+    nodeNames,
     bbox: { size: size.toArray(), center: center.toArray() },
     ...parseConventions(root),
   };

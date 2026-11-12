@@ -7,7 +7,10 @@ import {
 } from "../../scenes/presets/harvester-preset.js";
 import { WORKSPACE_HEADER_MOTION, WORKSPACE_KNIFE_SHOT } from "../../scenes/presets/header-motion.js";
 import { inspectAssetFile } from "./asset-inspector.js";
+import { createMotionCapabilitiesFromDefinitions } from "./motion-analysis.js";
+import MotionCapabilityPanel from "./MotionCapabilityPanel.jsx";
 import PartMotionPanel from "./PartMotionPanel.jsx";
+import RenderTuningPanel from "./RenderTuningPanel.jsx";
 import "./asset-workbench.less";
 
 const DEMO_MODEL_URL = "/model/汽车.glb";
@@ -137,7 +140,11 @@ export default function AssetWorkbench() {
   }, []);
   const handleModelInspect = useCallback((id, info, url) => {
     setMotionInspection({ id, url, trackIds: info.motionTrackIds });
+    setReport((previous) => previous
+      ? { ...previous, nodeNames: info.nodeNames?.length ? info.nodeNames : previous.nodeNames }
+      : previous);
   }, []);
+  const activeModel = scene.models.find((model) => model.id === selectedModelId) || scene.models[0];
   const activeMotionModel = scene.models.find((model) => model.motionTracks?.length > 0);
   const boundTrackIds =
     motionInspection?.id === activeMotionModel?.id && motionInspection?.url === activeMotionModel?.url
@@ -157,6 +164,17 @@ export default function AssetWorkbench() {
       ...update(previous),
       defaultVariant: selectedVariant ?? previous.defaultVariant,
     }));
+  };
+
+  const setMotionDefinitions = (definitions) => {
+    resetPreviewForModel();
+    updateScene((previous) => ({
+      ...setKnifeView(previous, definitions.length > 0),
+      models: previous.models.map((model) => model.id === activeModel?.id
+        ? { ...model, motionTracks: definitions.length > 0 ? definitions : undefined }
+        : model),
+    }));
+    setMessage(definitions.length > 0 ? `已配置 ${definitions.length} 个可选动作。` : "已清空当前模型的动作绑定。");
   };
 
   const exportScene = () => {
@@ -272,10 +290,12 @@ export default function AssetWorkbench() {
       meshes: 113,
       materials: 37,
       nodes: 121,
+      nodeNames: WORKSPACE_HEADER_MOTION.map((track) => track.node),
       animations: 0,
       vertices: null,
       faces: null,
       notes: ["工作区割台模型已接入当前场景，正在等待渲染器完成几何体体检。"],
+      motion: createMotionCapabilitiesFromDefinitions(preset.motionTracks),
     });
     setMessage(`${preset.fileName} 已加载到当前场景。`);
   };
@@ -404,6 +424,15 @@ export default function AssetWorkbench() {
           </button>
         </section>
 
+        {(report || activeMotionModel) && (
+          <MotionCapabilityPanel
+            report={report}
+            definitions={activeModel?.motionTracks || []}
+            boundTrackIds={boundTrackIds}
+            onSetDefinitions={setMotionDefinitions}
+          />
+        )}
+
         {activeMotionModel && (
           <PartMotionPanel
             definitions={activeMotionModel.motionTracks}
@@ -476,6 +505,8 @@ export default function AssetWorkbench() {
             选择 HDR / EXR
           </button>
         </section>
+
+        <RenderTuningPanel scene={scene} onChange={updateScene} />
 
         <button className="asset-export-button" onClick={exportScene}>
           导出当前场景配置

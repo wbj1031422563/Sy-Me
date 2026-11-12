@@ -41,6 +41,7 @@ import {
 import MachinePanel from "./MachinePanel.jsx";
 import HarvesterAnimationDriver from "./HarvesterAnimationDriver.jsx";
 import ModelMotionDriver from "./ModelMotionDriver.jsx";
+import SceneParticles from "./SceneParticles.jsx";
 import "./scene-viewer.less";
 
 /* ---------------- 模型 ---------------- */
@@ -262,6 +263,26 @@ function SceneEffects({ config }) {
   );
 }
 
+function getToneMapping(name) {
+  return {
+    None: THREE.NoToneMapping,
+    Linear: THREE.LinearToneMapping,
+    ACESFilmic: THREE.ACESFilmicToneMapping,
+    Cineon: THREE.CineonToneMapping,
+  }[name] ?? THREE.NoToneMapping;
+}
+
+function RendererSettings({ renderer }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    gl.toneMapping = getToneMapping(renderer.toneMapping);
+    gl.toneMappingExposure = renderer.exposure ?? 1;
+    gl.shadowMap.enabled = renderer.shadows !== false;
+    gl.outputColorSpace = THREE.SRGBColorSpace;
+  }, [gl, renderer.exposure, renderer.shadows, renderer.toneMapping]);
+  return null;
+}
+
 /* ---------------- 镜头编排 ---------------- */
 
 function CameraRig({ shot, controlsRef }) {
@@ -375,6 +396,7 @@ function SceneContent({
 
   return (
     <>
+      <RendererSettings renderer={scene.renderer || {}} />
       <color attach="background" args={[env.background || "#05060a"]} />
       <ambientLight intensity={env.ambientIntensity ?? 0.3} />
       {env.keyLight && (
@@ -417,6 +439,7 @@ function SceneContent({
       />
 
       <SceneGround config={scene.ground} />
+      <SceneParticles config={scene.particles} />
 
       {models.map((entry) => (
         <Suspense key={entry.id} fallback={null}>
@@ -648,16 +671,10 @@ export default function SceneViewer({ scene, onRuntimeReady, onModelInspect, mot
 
   const activeShot = shotId?.startsWith("__focus_") ? focusShot.current : shot;
   const renderer = normalizedScene.renderer;
-  const toneMapping = {
-    None: THREE.NoToneMapping,
-    Linear: THREE.LinearToneMapping,
-    ACESFilmic: THREE.ACESFilmicToneMapping,
-    Cineon: THREE.CineonToneMapping,
-  }[renderer.toneMapping] ?? THREE.NoToneMapping;
   const handleRendererCreated = useCallback(({ gl }) => {
-    gl.toneMapping = toneMapping;
+    gl.toneMapping = getToneMapping(renderer.toneMapping);
     gl.toneMappingExposure = renderer.exposure;
-  }, [renderer.exposure, toneMapping]);
+  }, [renderer.exposure, renderer.toneMapping]);
 
   return (
     <div className="scene-viewer">
