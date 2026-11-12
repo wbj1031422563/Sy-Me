@@ -14,6 +14,7 @@ def make_motion_glb():
         "scene": 0,
         "scenes": [{"nodes": [0, 1]}],
         "nodes": [{"name": "拨禾轮"}, {"name": "动刀"}],
+        "materials": [{"name": "车身漆面"}, {"name": "轮胎橡胶"}],
     }
     json_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     json_bytes += b" " * ((4 - len(json_bytes) % 4) % 4)
@@ -79,6 +80,10 @@ with sync_playwright() as playwright:
     assert page.locator(".asset-motion-candidate").count() == 2
     page.locator(".asset-motion-capability-actions button").first.click(force=True)
     assert page.locator("section.asset-part-motion").count() > 0
+    material_panel = page.locator(".asset-material-overrides")
+    assert material_panel.count() == 1
+    material_panel.get_by_role("button", name="应用材质", exact=True).click(force=True)
+    material_panel.get_by_role("button", name="恢复原材质", exact=True).click(force=True)
     page.locator(".asset-action-subgroup button").filter(has_text="收割作业").click(force=True)
     assert page.locator(".asset-part-motion .asset-primary-button").first.inner_text() == "暂停动作"
     global_play = page.locator(".asset-action-center button").filter(has_text="播放全部")

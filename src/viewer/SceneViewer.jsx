@@ -181,7 +181,8 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
   // 材质：变体目标模型用 variant，其他模型可用 entry.material 做覆盖；都没有则保留原材质
   useEffect(() => {
     const preset = entry.variantTarget ? variant : entry.material;
-    if (!preset || preset.useOriginal) return;
+    const materialOverrides = entry.materialOverrides || [];
+    if ((!preset || preset.useOriginal) && materialOverrides.length === 0) return;
 
     const hasVariantSlot = (material) => material?.name?.startsWith(PREFIX.VARIANT_SLOT);
     const variantSlots = entry.variantTarget && meshMaterials.some(([, original]) =>
@@ -189,11 +190,17 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
     );
     const generated = new Map();
     const replaceMaterial = (material) => {
-      if (!material || (variantSlots && !hasVariantSlot(material))) return material;
-      if (!generated.has(material)) {
-        generated.set(material, applyMaterialPreset(material, preset));
+      if (!material) return material;
+      const override = materialOverrides.find((item) => item.materialName === material.name);
+      const nextPreset = override || preset;
+      if (!nextPreset || nextPreset.useOriginal || (!override && variantSlots && !hasVariantSlot(material))) {
+        return material;
       }
-      return generated.get(material);
+      const generatedKey = override ? `${material.uuid}:${override.materialName}` : material;
+      if (!generated.has(generatedKey)) {
+        generated.set(generatedKey, applyMaterialPreset(material, nextPreset));
+      }
+      return generated.get(generatedKey);
     };
 
     for (const [mesh, original] of meshMaterials) {
@@ -207,7 +214,7 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
       for (const [mesh, original] of meshMaterials) mesh.material = original;
       for (const material of generated.values()) material.dispose();
     };
-  }, [meshMaterials, variant, entry.variantTarget, entry.material]);
+  }, [meshMaterials, variant, entry.variantTarget, entry.material, entry.materialOverrides]);
 
   return (
     <group

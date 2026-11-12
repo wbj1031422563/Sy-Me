@@ -10,6 +10,7 @@ import { inspectAssetFile } from "./asset-inspector.js";
 import { createMotionCapabilitiesFromDefinitions } from "./motion-analysis.js";
 import ClipMotionPanel from "./ClipMotionPanel.jsx";
 import MotionCapabilityPanel from "./MotionCapabilityPanel.jsx";
+import MaterialOverridePanel from "./MaterialOverridePanel.jsx";
 import PartMotionPanel from "./PartMotionPanel.jsx";
 import RenderTuningPanel from "./RenderTuningPanel.jsx";
 import ScenePerformancePanel from "./ScenePerformancePanel.jsx";
@@ -182,6 +183,7 @@ export default function AssetWorkbench() {
       ? {
         ...previous,
         nodeNames: info.nodeNames?.length ? info.nodeNames : previous.nodeNames,
+        materialNames: info.materialNames?.length ? info.materialNames : previous.materialNames,
         clipNames: info.animationNames?.length ? info.animationNames : previous.clipNames,
         animations: info.animationNames?.length ?? previous.animations,
       }
@@ -468,6 +470,22 @@ export default function AssetWorkbench() {
     setMessage(`已应用“${preset.label}”动作方案。`);
   };
 
+  const setMaterialOverrides = (nextOverrides) => {
+    updateScene((previous) => {
+      const currentModel = previous.models.find((model) => model.id === activeModel?.id);
+      const resolved = typeof nextOverrides === "function"
+        ? nextOverrides(currentModel?.materialOverrides || [])
+        : nextOverrides;
+      return {
+        ...previous,
+        models: previous.models.map((model) => model.id === activeModel?.id
+          ? { ...model, materialOverrides: resolved.length > 0 ? resolved : undefined }
+          : model),
+      };
+    });
+    setMessage("已更新局部材质覆盖配置。");
+  };
+
   const setMotionDefinitions = (definitions) => {
     resetPreviewForModel();
     updateScene((previous) => ({
@@ -606,6 +624,7 @@ export default function AssetWorkbench() {
       materials: 37,
       nodes: 121,
       nodeNames: WORKSPACE_HEADER_MOTION.map((track) => track.node),
+      materialNames: [],
       animations: 0,
       clipNames: [],
       vertices: null,
@@ -887,6 +906,14 @@ export default function AssetWorkbench() {
             boundTrackIds={boundTrackIds}
             preview={motionPreview}
             onChange={setMotionPreview}
+          />
+        )}
+
+        {report?.materialNames?.length > 0 && (
+          <MaterialOverridePanel
+            materials={report.materialNames}
+            overrides={activeModel?.materialOverrides || []}
+            onChange={setMaterialOverrides}
           />
         )}
 

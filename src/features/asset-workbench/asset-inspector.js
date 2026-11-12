@@ -33,6 +33,7 @@ function emptyReport(file, format) {
     materials: null,
     nodes: null,
     nodeNames: [],
+    materialNames: [],
     animations: null,
     clipNames: [],
     motion: null,
@@ -45,6 +46,7 @@ function parseGltfJson(json, report) {
   report.materials = json.materials?.length ?? 0;
   report.nodes = json.nodes?.length ?? 0;
   report.nodeNames = (json.nodes || []).map((node) => node.name).filter(Boolean);
+  report.materialNames = [...new Set((json.materials || []).map((material) => material.name).filter(Boolean))];
   report.animations = json.animations?.length ?? 0;
   report.clipNames = (json.animations || []).map((animation, index) => ({
     id: `clip-${index}-${animation.name || "animation"}`,
