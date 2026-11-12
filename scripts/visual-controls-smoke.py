@@ -39,7 +39,7 @@ with sync_playwright() as playwright:
     page.locator(".asset-color-grade .asset-theme-list button").nth(1).click(force=True)
     assert page.locator(".asset-color-grade .asset-tuning-control output").first.inner_text() == "-8°"
 
-    page.locator('input[type="file"]').first.set_input_files({
+    page.locator('input[type="file"][accept*=".glb"]').set_input_files({
         "name": "probe-motion.glb",
         "mimeType": "model/gltf-binary",
         "buffer": make_motion_glb(),
@@ -49,11 +49,32 @@ with sync_playwright() as playwright:
     assert page.locator(".asset-motion-candidate").count() == 2
     page.locator(".asset-motion-capability-actions button").first.click(force=True)
     assert page.locator("section.asset-part-motion").count() > 0
+    global_play = page.locator(".asset-action-center button").filter(has_text="播放全部")
+    global_play.click(force=True)
+    assert page.locator(".asset-part-motion .asset-primary-button").first.inner_text() == "暂停动作"
+    page.locator(".asset-action-center button").filter(has_text="全部暂停").click(force=True)
+    assert page.locator(".asset-part-motion .asset-primary-button").first.inner_text() == "播放动作"
+    page.locator(".asset-action-center button").filter(has_text="全部复位").click(force=True)
     diagnostics_button = page.locator(".asset-motion-capability-actions button").nth(1)
     diagnostics_button.click(force=True)
     assert diagnostics_button.inner_text() == "隐藏诊断轴"
     page.locator(".asset-part-motion .asset-primary-button").first.click(force=True)
     assert page.locator(".asset-part-motion .asset-primary-button").first.inner_text() == "暂停动作"
+
+    page.locator('input[type="file"][accept*=".scene.json"]').set_input_files({
+        "name": "quick-replay.scene.json",
+        "mimeType": "application/json",
+        "buffer": json.dumps({
+            "version": 1,
+            "id": "quick-replay",
+            "title": "快捷回放场景",
+            "models": [{"id": "harvester", "label": "回放模型", "url": "/model/汽车.glb"}],
+            "shots": [],
+            "materialVariants": [],
+        }).encode("utf-8"),
+    })
+    page.wait_for_function("document.querySelector('.scene-viewer-header h2')?.textContent === '快捷回放场景'", timeout=10000)
+    assert page.get_by_text("快捷回放场景", exact=True).count() == 1
 
     print("motion_candidates: ok")
     print("render_tuning: ok")

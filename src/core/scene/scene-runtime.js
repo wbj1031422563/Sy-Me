@@ -28,7 +28,7 @@ function createInitialState(scene) {
     shotId: scene.camera?.defaultShot,
     variantId: scene.defaultVariant || variants[0]?.id,
     parameters: { ...(scene.parameters || {}) },
-    machine: createMachineState(scene.machine),
+    machine: createMachineState(scene.machine || {}),
   };
 }
 

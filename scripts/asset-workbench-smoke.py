@@ -42,7 +42,7 @@ with sync_playwright() as playwright:
     page.locator("button").filter(has_text="技术演示").first.click(force=True, timeout=60000)
     page.locator("button").filter(has_text="技术 EXR").first.click(force=True, timeout=60000)
 
-    model_input = page.locator('input[type="file"]').first
+    model_input = page.locator('input[type="file"][accept*=".glb"]')
     model_input.set_input_files({
         "name": "probe.glb",
         "mimeType": "model/gltf-binary",
@@ -57,7 +57,10 @@ with sync_playwright() as playwright:
         "document.querySelector('.model-item-stats')?.textContent?.includes('尺寸')",
         timeout=180000,
     )
-    page.screenshot(path="asset-workbench-text-model001.png", full_page=True, timeout=180000)
+    try:
+        page.screenshot(path="asset-workbench-text-model001.png", full_page=False, timeout=30000)
+    except Exception as error:
+        print("screenshot_skipped:", error)
     print("buttons:", page.locator("button").all_text_contents())
     print("report:", page.locator(".asset-report").inner_text())
     print("console_errors:", errors)

@@ -53,7 +53,10 @@ export default function MotionCapabilityPanel({
     () => new Set(definitions.map(definitionKey)),
     [definitions]
   );
-  const nodeNames = report?.nodeNames || [];
+  const nodeNames = useMemo(
+    () => [...new Set(report?.nodeNames || [])],
+    [report?.nodeNames]
+  );
 
   const toggleCandidate = (candidate) => {
     const key = definitionKey(candidate);

@@ -45,6 +45,62 @@
   }
 }
 
+.asset-action-center {
+  .asset-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .asset-action-grid + .asset-action-grid {
+    margin-top: 6px;
+  }
+
+  .asset-secondary-button {
+    margin-top: 0;
+  }
+
+  button:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  button.is-active {
+    border-color: rgba(120, 225, 174, 0.72);
+    background: rgba(70, 190, 123, 0.28);
+    color: #ffffff;
+  }
+}
+
+.asset-workbench-status {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 5px;
+  margin-top: 8px;
+
+  span {
+    min-width: 0;
+    padding: 6px 5px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.045);
+    color: #718781;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    display: block;
+    margin-top: 2px;
+    overflow: hidden;
+    color: #d7e7e1;
+    font-size: 9px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+  }
+}
+
 .asset-workbench-hint,
 .asset-workbench-message,
 .asset-report p {

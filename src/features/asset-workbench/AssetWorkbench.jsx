@@ -140,6 +140,7 @@ export default function AssetWorkbench() {
   const [message, setMessage] = useState("请选择模型文件开始预处理。");
   const modelInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
+  const sceneInputRef = useRef(null);
   const modelUrlRef = useRef(null);
   const backgroundUrlRef = useRef(null);
   const runtimeRef = useRef(null);
@@ -176,6 +177,74 @@ export default function AssetWorkbench() {
       resetVersion: previous.resetVersion + 1,
     }));
     setMotionInspection(null);
+  };
+
+  const handleSceneFile = async (file) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const imported = JSON.parse(await file.text());
+      if (!Array.isArray(imported.models) || imported.models.length === 0) {
+        throw new Error("场景配置缺少 models 模型列表");
+      }
+      const nextTheme = THEME_LABELS[imported.theme] ? imported.theme : "studio";
+      const nextBackground = BACKGROUND_PRESETS.find((preset) => preset.files === imported.environment?.files);
+      setScene(imported);
+      setTheme(nextTheme);
+      setBackgroundPreset(nextBackground?.id || (imported.environment?.files ? "custom" : "field"));
+      setSelectedModelId(imported.models[0].id);
+      setAssetManifest(imported.assetManifest || { model: null, background: null });
+      setReport(null);
+      resetPreviewForModel();
+      setMessage(`${file.name} 已导入，场景参数与动作绑定已恢复。`);
+    } catch (error) {
+      setMessage(`场景配置导入失败：${error.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetWorkspace = () => {
+    if (modelUrlRef.current) URL.revokeObjectURL(modelUrlRef.current);
+    if (backgroundUrlRef.current) URL.revokeObjectURL(backgroundUrlRef.current);
+    modelUrlRef.current = null;
+    backgroundUrlRef.current = null;
+    setScene(createDefaultScene());
+    setTheme("studio");
+    setBackgroundPreset("field");
+    setSelectedModelId("harvester");
+    setAssetManifest({ model: null, background: null });
+    setReport(null);
+    resetPreviewForModel();
+    setMessage("已恢复完整工作台默认配置。");
+  };
+
+  const hasBoundMotion = Boolean(boundTrackIds?.length);
+  const hasClipMotion = Boolean(report?.animations || motionPreview.clipId);
+  const hasMotionControls = hasBoundMotion || hasClipMotion;
+
+  const playAllMotion = () => {
+    setMotionPreview((state) => ({
+      ...state,
+      playing: hasBoundMotion,
+      clipPlaying: Boolean(report?.animations || state.clipId),
+    }));
+    setMessage("已播放当前模型的全部可用动作。");
+  };
+
+  const pauseAllMotion = () => {
+    setMotionPreview((state) => ({ ...state, playing: false, clipPlaying: false }));
+    setMessage("已暂停全部动作。");
+  };
+
+  const resetAllMotion = () => {
+    setMotionPreview((state) => ({
+      ...state,
+      playing: false,
+      clipPlaying: false,
+      resetVersion: state.resetVersion + 1,
+    }));
+    setMessage("全部动作已复位。");
   };
 
   const updateScene = (update) => {
@@ -411,6 +480,71 @@ export default function AssetWorkbench() {
           <span>收获机视觉工作台</span>
           <small>Asset Lab</small>
         </div>
+
+        <section className="asset-action-center" aria-label="工作台快捷操作">
+          <h3>快捷操作</h3>
+          <p className="asset-workbench-hint">把常用预览、诊断和配置管理集中到这里。</p>
+          <div className="asset-action-grid">
+            <button
+              type="button"
+              className="asset-primary-button"
+              disabled={!hasMotionControls}
+              onClick={playAllMotion}
+            >
+              ▶ 播放全部
+            </button>
+            <button
+              type="button"
+              className="asset-secondary-button"
+              disabled={!hasMotionControls}
+              onClick={pauseAllMotion}
+            >
+              ❚❚ 全部暂停
+            </button>
+            <button
+              type="button"
+              className="asset-secondary-button"
+              disabled={!hasMotionControls}
+              onClick={resetAllMotion}
+            >
+              ↺ 全部复位
+            </button>
+            <button
+              type="button"
+              className={`asset-secondary-button ${motionPreview.diagnostics ? "is-active" : ""}`}
+              disabled={!activeMotionModel}
+              onClick={() => setMotionPreview((state) => ({ ...state, diagnostics: !state.diagnostics }))}
+            >
+              {motionPreview.diagnostics ? "隐藏诊断轴" : "显示诊断轴"}
+            </button>
+          </div>
+          <input
+            ref={sceneInputRef}
+            type="file"
+            accept=".scene.json,application/json"
+            hidden
+            onChange={(event) => {
+              handleSceneFile(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
+          <div className="asset-action-grid asset-config-actions">
+            <button type="button" className="asset-secondary-button" disabled={busy} onClick={() => sceneInputRef.current?.click()}>
+              导入场景配置
+            </button>
+            <button type="button" className="asset-secondary-button" disabled={busy} onClick={exportScene}>
+              导出场景配置
+            </button>
+            <button type="button" className="asset-secondary-button" disabled={busy} onClick={resetWorkspace}>
+              恢复完整默认
+            </button>
+          </div>
+          <div className="asset-workbench-status" role="status">
+            <span>模型<strong>{activeModel?.label || "未加载"}</strong></span>
+            <span>动作<strong>{hasBoundMotion ? `${boundTrackIds.length} 个已绑定` : "未绑定"}</strong></span>
+            <span>片段<strong>{report?.animations || 0}</strong></span>
+          </div>
+        </section>
 
         <section>
           <h3>模型预处理</h3>
