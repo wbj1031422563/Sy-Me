@@ -1,13 +1,33 @@
-import { useEffect, useState, useRef,useContext } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { getDataQyfb, getDataFgfb } from "../service/index.js";
 import { AreaContext } from "../context/sbpk-area-context.js";
-import * as echarts from "echarts";
+import * as echarts from "echarts/core";
+import { BarChart, LineChart, PieChart } from "echarts/charts";
+import {
+  DatasetComponent,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+} from "echarts/components";
+import { LabelLayout, UniversalTransition } from "echarts/features";
+import { CanvasRenderer } from "echarts/renderers";
 import "./sbpk-echart.less";
-import SbpkLeftOne from "./sbpk-left-one/sbpk-left-one";
-import SbpkRightOne from "./sbpk-right-one/sbpk-right-one";
+
+echarts.use([
+  BarChart,
+  LineChart,
+  PieChart,
+  DatasetComponent,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  LabelLayout,
+  UniversalTransition,
+  CanvasRenderer,
+]);
+
 function SbpkEchart({handleAreaChange}) {
   const area=useContext(AreaContext);
-  const chartRef = useRef(null);
   const chartQyfbRef = useRef(null);
   const chartYszbRef = useRef(null);
   const chartFgfbRef = useRef(null);
@@ -418,7 +438,7 @@ function SbpkEchart({handleAreaChange}) {
 }
 export default SbpkEchart;
 
-function getChartOptions(type, data) {
+function getChartOptions(type) {
   let options = {};
   const ystj = {
     data: [70, 34, 60, 78, 69],
@@ -515,7 +535,7 @@ function getChartOptions(type, data) {
                 color: "#fff",
                 formatter: (v) => {
                   const { data, percent } = v;
-                  const { name, value } = data;
+                  const { name } = data;
                   const list = [
                     `{a|${percent.toFixed(2)}}{x|%}`,
                     `{b|${name}}`,

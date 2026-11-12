@@ -7,10 +7,19 @@
  * @Description: 
  */
 import { createContext } from 'react';
-import { CAR_COLOR, CAR_SCENE_TYPE } from '../enum/enum';
+import { CAR_COLOR, CAR_SCENE_TYPE, CAR_TECH_TYPE } from '../enum/enum';
 
 export const MaxWellContext = createContext({
     sceneType:CAR_SCENE_TYPE.SHOWROOM,
     carColor:CAR_COLOR.BLUE,
-    techType:''
+    techType:CAR_TECH_TYPE.MEDEA,
+    speed:0,
+    runState:'STOP',
+    parameters:{},
+    setSceneType:()=>{},
+    setCarColor:()=>{},
+    setTechType:()=>{},
+    setSpeed:()=>{},
+    setRunState:()=>{},
+    runtime:null,
 });

@@ -60,9 +60,19 @@ function Home() {
             <p className="project-item-time">2024-08-29</p>
           </div>
           <div className="project-list-item">
-            <img className="pre-img" src="/img/banner1.jpg" />
-            <p className="project-item-name">项目1</p>
-            <p className="project-item-time">2024-07-14</p>
+            <div
+              className="image-container"
+              onClick={() => {
+                goRouter("/viewer/houtou");
+              }}
+            >
+              <img className="pre-img" src="/img/banner2.jpg" />
+              <div className="mask">
+                <span>猴头展厅</span>
+              </div>
+            </div>
+            <p className="project-item-name">猴头展厅（SceneViewer）</p>
+            <p className="project-item-time">2026-11-02</p>
           </div>
           <div className="project-list-item">
             <img className="pre-img" src="/img/banner1.jpg" />

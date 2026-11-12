@@ -1,0 +1,138 @@
+{
+  "id": "houtou",
+  "title": "猴头 · 苏珊娜",
+  "dracoDecoderPath": "/draco/",
+  "models": [
+    {
+      "id": "suzanne",
+      "label": "苏珊娜（猴头）",
+      "url": "/assets/scenes/houtou/model_houtou_text.glb",
+      "position": [0, 0, 0],
+      "scale": 1,
+      "variantTarget": true
+    },
+    {
+      "id": "tiantan",
+      "label": "天坛",
+      "url": "/model/天坛.glb",
+      "position": [4.2, -1.0, -2.2],
+      "rotation": [-1.5708, 0, 0],
+      "scale": 0.12,
+      "variantTarget": false,
+      "material": { "color": "#d8c9a3", "metalness": 0.05, "roughness": 0.75 }
+    }
+  ],
+  "environment": {
+    "background": "#05060a",
+    "files": "/envMap/apartment.hdr",
+    "keyLight": { "position": [4, 4, 3], "intensity": 1.1 },
+    "ambientIntensity": 0.25,
+    "contactShadow": true,
+    "contactShadowPosition": [0, -1.05, 0],
+    "contactShadowScale": 14
+  },
+  "camera": {
+    "fov": 35,
+    "defaultShot": "front"
+  },
+  "shots": [
+    {
+      "id": "front",
+      "label": "正面",
+      "position": [0, 0.4, 4.2],
+      "target": [0, 0, 0],
+      "durationMs": 1600
+    },
+    {
+      "id": "profile",
+      "label": "侧面",
+      "position": [3.4, 0.2, 1.6],
+      "target": [0, 0, 0],
+      "durationMs": 1600
+    },
+    {
+      "id": "top",
+      "label": "顶视",
+      "position": [0, 4.2, 1.2],
+      "target": [0, 0, 0],
+      "durationMs": 1800
+    },
+    {
+      "id": "wide",
+      "label": "全景",
+      "position": [5.5, 2.6, 6.5],
+      "target": [1.6, -0.4, -0.8],
+      "durationMs": 1800
+    }
+  ],
+  "materialVariants": [
+    {
+      "id": "bronze",
+      "label": "青铜",
+      "color": "#b08d57",
+      "metalness": 0.9,
+      "roughness": 0.32
+    },
+    {
+      "id": "ceramic",
+      "label": "白瓷",
+      "color": "#f2f0ea",
+      "metalness": 0.0,
+      "roughness": 0.22
+    },
+    {
+      "id": "obsidian",
+      "label": "曜石",
+      "color": "#1b1e26",
+      "metalness": 0.6,
+      "roughness": 0.15
+    },
+    {
+      "id": "jade",
+      "label": "翡翠",
+      "color": "#3f9d7a",
+      "metalness": 0.2,
+      "roughness": 0.35
+    }
+  ],
+  "defaultVariant": "bronze",
+  "hotspots": [
+    {
+      "id": "hs-head",
+      "label": "整体",
+      "anchor": "object",
+      "modelId": "suzanne",
+      "offset": [0, 1.35, 0],
+      "panel": {
+        "title": "苏珊娜（猴头）",
+        "body": "Blender 自带的测试网格，本场景中作为管线的示例模型：约 2000 顶点，带法线与 UV。"
+      }
+    },
+    {
+      "id": "hs-ear",
+      "label": "耳部",
+      "anchor": "world",
+      "position": [1.15, 0.45, 0.1],
+      "panel": {
+        "title": "局部标注",
+        "body": "热点可绑定到模型包围盒（anchor=object）或场景坐标（anchor=world），位置由场景 JSON 描述。"
+      }
+    },
+    {
+      "id": "hs-tiantan",
+      "label": "天坛",
+      "anchor": "object",
+      "modelId": "tiantan",
+      "offset": [0, 1.2, 0],
+      "panel": {
+        "title": "场景填充示例",
+        "body": "第二个模型通过 models[] 填入场景：位置、缩放由 JSON 描述，管理面板可单独控制显隐与定位。"
+      }
+    }
+  ],
+  "controls": {
+    "autoRotate": false,
+    "minDistance": 1.5,
+    "maxDistance": 30
+  }
+}

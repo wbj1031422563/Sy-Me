@@ -2,11 +2,11 @@
 * 混合环境贴图，模拟动态光照
 * */
 import useDynamicLightformers from "@/example/maxwell-car/hooks/useDynamicLightformers.js";
-import {useEffect} from "react";
+import {useCallback, useEffect} from "react";
 
 function MaxWellMixEnvMap({registerShaderLogic}){
     const {dynamicEnvMap}=useDynamicLightformers();
-    const applyDynamicEnvMap = (shader,material) => {
+    const applyDynamicEnvMap = useCallback((shader,material) => {
         if(material.name==='Car paint'){
             // item.material.envMap=dynamicEnvMap;
             shader.uniforms.uDynamicEnvMap={value:dynamicEnvMap};
@@ -82,10 +82,10 @@ function MaxWellMixEnvMap({registerShaderLogic}){
 `
             )
         }
-    };
+    }, [dynamicEnvMap]);
     useEffect(() => {
-        registerShaderLogic(applyDynamicEnvMap);
-    }, []);
+        registerShaderLogic("dynamic-env-map", applyDynamicEnvMap);
+    }, [applyDynamicEnvMap, registerShaderLogic]);
 
     return null;
 }

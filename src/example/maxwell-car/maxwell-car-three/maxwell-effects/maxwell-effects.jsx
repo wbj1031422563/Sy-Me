@@ -6,13 +6,18 @@
  * @FilePath: \fmc-personal-blog\src\example\maxwell-car\maxwell-car-three\maxwell-effects\maxwell-effects.jsx
  * @Description: 
  */
-import { useLoader } from '@react-three/fiber'
-import { EffectComposer, SSR, Bloom, LUT } from '@react-three/postprocessing'
-import { useControls } from 'leva'
-import { LUTCubeLoader } from 'postprocessing'
+import { useContext } from "react";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import { MaxWellContext } from "../../context/maxwell-car-context";
 
- function MaxwellEffects() {
-  const texture = useLoader(LUTCubeLoader, '/F-6800-STD.cube')
+function MaxwellEffects() {
+  const { parameters } = useContext(MaxWellContext);
+  const enabled = parameters.bloomEnabled ?? true;
+  const intensity = parameters.bloomIntensity ?? 1.4;
+  const threshold = parameters.bloomThreshold ?? 0.7;
+  const radius = parameters.bloomRadius ?? 0.85;
+
+  if (!enabled) return null;
   // const { enabled, ...props } = useControls({
   //   enabled: true,
   //   temporalResolve: true,
@@ -48,8 +53,13 @@ import { LUTCubeLoader } from 'postprocessing'
   return (
 
       <EffectComposer disableNormalPass>
-        <Bloom luminanceThreshold={0.7} mipmapBlur luminanceSmoothing={0} intensity={1.4} radius={0.85}/>
-        {/* <LUT lut={texture} /> */}
+        <Bloom
+          luminanceThreshold={threshold}
+          mipmapBlur
+          luminanceSmoothing={0}
+          intensity={intensity}
+          radius={radius}
+        />
       </EffectComposer>
 
   )

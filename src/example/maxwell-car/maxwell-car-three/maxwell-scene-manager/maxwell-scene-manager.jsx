@@ -1,5 +1,5 @@
 import MaxwellHoda from "../maxwell-hoda/maxwell-hoda-re.jsx";
-import {useContext, useEffect, useState} from "react";
+import {useContext, useEffect, useRef} from "react";
 import TWEEN from "@tweenjs/tween.js";
 import MaxWellRoadScene from "../maxwell-road-scene/maxwell-road-scene";
 import {MaxWellContext} from "../../context/maxwell-car-context";
@@ -9,62 +9,44 @@ import MaxwellText from "@/example/maxwell-car/maxwell-car-three/maxwell-text/ma
 import MaxwellTechScene from "@/example/maxwell-car/maxwell-car-three/maxwell-tech-scene/maxwell-tech-scene.jsx";
 
 function MaxwellSceneManager() {
-    const {sceneType,techType} = useContext(MaxWellContext);
-    const [speed, setSpeed] = useState(0);
-    const [runState, setRunState] = useState("RUNNING");
-    // const maxwellHoda = useMemo(() => <MaxWellGround speed={speed}/>, [speed]);
-    useEffect(() => {
-        let tween = null;
-        if (sceneType === CAR_SCENE_TYPE.SHOWROOM) {
-            tween = new TWEEN.Tween({value: 20})
-                .to({value: 0}, 2 * 1000)
-                .onUpdate(({value}) => {
-                    setSpeed(value);
-                });
-            setRunState("STOP");
-        }else if(sceneType===CAR_SCENE_TYPE.TECH){
-            switch (techType) {
-                case CAR_TECH_TYPE.MEDEA:
-                    if(speed===20){
-                        tween = new TWEEN.Tween({value: 20})
-                            .to({value: 0}, 2 * 1000)
-                            .onUpdate(({value}) => {
-                                setSpeed(value);
-                            });
-                        setRunState("STOP");
-                    }
-                    break;
-                case CAR_TECH_TYPE.FLOW:
-                case CAR_TECH_TYPE.LD:
-                    if(speed===0){
-                        setRunState("RUNNING");
-                        tween = new TWEEN.Tween({value: 0})
-                            .to({value: 20}, 2 * 1000)
-                            .onUpdate(({value}) => {
-                                setSpeed(value);
-                            });
-                    }
-                    break;
-            }
+    const {sceneType,techType,speed,runState,setSpeed,setRunState,parameters} = useContext(MaxWellContext);
+    const speedRef = useRef(speed);
 
+    useEffect(() => {
+        speedRef.current = speed;
+    }, [speed]);
+
+    useEffect(() => {
+        const maxSpeed = parameters.maxSpeed ?? 20;
+        const targetSpeed = sceneType === CAR_SCENE_TYPE.SHOWROOM
+            || (sceneType === CAR_SCENE_TYPE.TECH && techType === CAR_TECH_TYPE.MEDEA)
+            ? 0
+            : maxSpeed;
+        const targetRunState = targetSpeed > 0 ? "RUNNING" : "STOP";
+        const startSpeed = speedRef.current;
+        let tween = null;
+
+        setRunState(targetRunState);
+        if (Math.abs(startSpeed - targetSpeed) < 0.001) {
+            setSpeed(targetSpeed);
+            return undefined;
         }
-        else if (sceneType === CAR_SCENE_TYPE.ROAD) {
-            setRunState("RUNNING");
-            tween = new TWEEN.Tween({value: 0})
-                .to({value: 20}, 2 * 1000)
-                .onUpdate(({value}) => {
-                    setSpeed(value);
-                });
-        }
-        if (tween) {
-            tween.start();
-        }
+
+        tween = new TWEEN.Tween({value: startSpeed})
+            .to({value: targetSpeed}, 2 * 1000)
+            .easing(TWEEN.Easing.Cubic.InOut)
+            .onUpdate(({value}) => {
+                setSpeed(value);
+            })
+            .onComplete(() => {
+                setSpeed(targetSpeed);
+            })
+            .start();
+
         return () => {
-            if (tween) {
-                tween.stop();
-            }
+            tween?.stop();
         };
-    }, [sceneType,techType]);
+    }, [parameters.maxSpeed, sceneType, setRunState, setSpeed, techType]);
     return (
         <>
             <MaxwellHoda speed={speed}></MaxwellHoda>

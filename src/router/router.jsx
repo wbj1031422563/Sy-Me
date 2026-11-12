@@ -27,6 +27,18 @@ const routerList=[
     path:'/maxwell-car',
     component:lazy(()=>import('../example/maxwell-car/maxwell-car.jsx'))
   },
+  {
+    path:'/viewer/houtou',
+    component:lazy(()=>import('../views/scene-viewer-page/houtou-page.jsx'))
+  },
+  {
+    path:'/viewer/harvester',
+    component:lazy(()=>import('../views/scene-viewer-page/harvester-page.jsx'))
+  },
+  {
+    path:'/tools/asset-workbench',
+    component:lazy(()=>import('../features/asset-workbench/AssetWorkbench.jsx'))
+  },
 ]
 
 

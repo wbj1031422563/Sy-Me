@@ -1,32 +1,83 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-const useProcessModelShaders = (model) => {
-    const [shaderLogicQueue, setShaderLogicQueue] = useState([]);
 
-    const registerShaderLogic = (applyShaderLogic) => {
-        if(shaderLogicQueue.every(fn => fn.toString()!==applyShaderLogic.toString())){
-            setShaderLogicQueue((prevQueue) => [...prevQueue, applyShaderLogic]);
+/**
+ * 为模型材质维护可组合的 Shader 插件管线。
+ * 兼容旧调用方式 registerShaderLogic(fn)，同时支持
+ * registerShaderLogic("plugin-id", fn)。
+ */
+const useProcessModelShaders = (model) => {
+    const shaderPluginsRef = useRef(new Map());
+    const materialStateRef = useRef(new WeakMap());
+    const modelRef = useRef(model);
+    const anonymousIdRef = useRef(0);
+    const [, setRevision] = useState(0);
+    modelRef.current = model;
+
+    const registerShaderLogic = useCallback((idOrLogic, maybeLogic) => {
+        const isNamed = typeof idOrLogic === "string";
+        const logic = isNamed ? maybeLogic : idOrLogic;
+        if (typeof logic !== "function") return () => {};
+
+        const id = isNamed
+            ? idOrLogic
+            : logic.shaderId || logic.name || `shader-${anonymousIdRef.current++}`;
+        const previous = shaderPluginsRef.current.get(id);
+        if (previous !== logic) {
+            shaderPluginsRef.current.set(id, logic);
+            modelRef.current?.traverse((item) => {
+                if (item instanceof THREE.Mesh && item.material) {
+                    item.material.needsUpdate = true;
+                }
+            });
+            setRevision((value) => value + 1);
         }
-    };
+
+        return () => {
+            if (shaderPluginsRef.current.get(id) === logic) {
+                shaderPluginsRef.current.delete(id);
+                setRevision((value) => value + 1);
+            }
+        };
+    }, []);
 
     useEffect(() => {
-        if (!model||shaderLogicQueue.length===0) return;
-        // console.log('applyShaderLogic')
+        if (!model) return undefined;
+
+        const appliedMaterials = [];
+        const materialState = materialStateRef.current;
         model.traverse((item) => {
-            if (item instanceof THREE.Mesh && item.material) {
-                item.material.transparent = true;
-                // console.log('applyShaderLogic')
-                item.material.needsUpdate = true;
-                // 合并所有逻辑到一个 onBeforeCompile
-                item.material.onBeforeCompile = (shader) => {
-                    // console.log('applyShaderLogic')
-                    shaderLogicQueue.forEach((applyShaderLogic,index) => {
-                        applyShaderLogic(shader, item.material);
-                    });
-                };
-            }
+            if (!(item instanceof THREE.Mesh) || !item.material) return;
+
+            const material = item.material;
+            const originalOnBeforeCompile = materialState.get(material)
+                ?.originalOnBeforeCompile ?? material.onBeforeCompile;
+            const wrappedOnBeforeCompile = (shader, renderer) => {
+                originalOnBeforeCompile?.call(material, shader, renderer);
+                shaderPluginsRef.current.forEach((plugin) => {
+                    plugin(shader, material, renderer);
+                });
+            };
+
+            materialState.set(material, {
+                originalOnBeforeCompile,
+                wrappedOnBeforeCompile,
+            });
+            material.transparent = true;
+            material.onBeforeCompile = wrappedOnBeforeCompile;
+            material.needsUpdate = true;
+            appliedMaterials.push(material);
         });
-    }, [model,shaderLogicQueue]);
+
+        return () => {
+            appliedMaterials.forEach((material) => {
+                const state = materialState.get(material);
+                if (!state || material.onBeforeCompile !== state.wrappedOnBeforeCompile) return;
+                material.onBeforeCompile = state.originalOnBeforeCompile;
+                material.needsUpdate = true;
+            });
+        };
+    }, [model]);
 
     return { registerShaderLogic };
 };

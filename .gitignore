@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Original high-poly workspace model (local preview only)
+/public/model/text_model001.glb
+
+# Local screenshots captured while validating the asset workbench
+/asset-workbench-*.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

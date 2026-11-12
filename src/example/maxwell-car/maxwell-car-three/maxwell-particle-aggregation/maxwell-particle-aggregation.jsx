@@ -333,9 +333,9 @@ function MaxWellParticleAggregation({hoda,registerShaderLogic}){
 
     useEffect(() => {
         if(hoda){
-            registerShaderLogic(applyParticleAnimation)
+            registerShaderLogic("particle-animation", applyParticleAnimation)
         }
-    }, [registerShaderLogic]);
+    }, [hoda, registerShaderLogic]);
 
     return null
 }
