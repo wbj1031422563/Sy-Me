@@ -47,10 +47,12 @@ import {
 } from "../core/scene/SceneExtensionLayer.jsx";
 import MachinePanel from "./MachinePanel.jsx";
 import HarvesterAnimationDriver from "./HarvesterAnimationDriver.jsx";
+import ModelClipAnimationDriver from "./ModelClipAnimationDriver.jsx";
 import ModelMotionDriver from "./ModelMotionDriver.jsx";
 import MotionDiagnostics from "./MotionDiagnostics.jsx";
 import SceneParticles from "./SceneParticles.jsx";
 import RgbColorGrade from "./RgbColorGrade.jsx";
+import { describeAnimationClips } from "./animation-clips.js";
 import "./scene-viewer.less";
 
 /* ---------------- 模型 ---------------- */
@@ -107,6 +109,14 @@ function applyMaterialPreset(baseMaterial, preset) {
 function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect, motionPreview }) {
   const gltf = useGLTF(entry.url, dracoPath);
   const scene3 = useMemo(() => gltf.scene.clone(true), [gltf]);
+  const clipPreview = motionPreview || entry.clipAnimation
+    ? {
+      ...(motionPreview || {}),
+      clipId: motionPreview?.clipId || entry.clipAnimation?.clipId,
+      clipRate: motionPreview?.clipRate ?? entry.clipAnimation?.rate ?? 1,
+      clipPlaying: motionPreview?.clipPlaying ?? entry.clipAnimation?.playing ?? false,
+    }
+    : null;
   const groupRef = useRef(null);
   const meshMaterials = useMemo(() => {
     const meshes = [];
@@ -130,8 +140,12 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
     const motionTrackIds = (entry.motionTracks || [])
       .filter((track) => scene3.getObjectByName(track.node))
       .map((track) => track.id);
-    onInspect(entry.id, { ...inspectModel(scene3), motionTrackIds }, entry.url);
-  }, [scene3, entry.id, entry.motionTracks, entry.url, onInspect]);
+    onInspect(entry.id, {
+      ...inspectModel(scene3),
+      motionTrackIds,
+      animationNames: describeAnimationClips(gltf.animations || []),
+    }, entry.url);
+  }, [gltf.animations, scene3, entry.id, entry.motionTracks, entry.url, onInspect]);
 
   // 进场渐显（gamemcu 式的分块出现）：缩放从 1% 弹到目标值
   useEffect(() => {
@@ -206,6 +220,13 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
       visible={visible}
     >
       <primitive object={scene3} />
+      {gltf.animations?.length > 0 && (
+        <ModelClipAnimationDriver
+          root={scene3}
+          animations={gltf.animations}
+          preview={clipPreview}
+        />
+      )}
       {entry.motionTracks?.length > 0 && (
         <>
           <ModelMotionDriver root={scene3} definitions={entry.motionTracks} preview={motionPreview} />

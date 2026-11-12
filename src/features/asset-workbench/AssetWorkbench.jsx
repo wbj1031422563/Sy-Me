@@ -8,6 +8,7 @@ import {
 import { WORKSPACE_HEADER_MOTION, WORKSPACE_KNIFE_SHOT } from "../../scenes/presets/header-motion.js";
 import { inspectAssetFile } from "./asset-inspector.js";
 import { createMotionCapabilitiesFromDefinitions } from "./motion-analysis.js";
+import ClipMotionPanel from "./ClipMotionPanel.jsx";
 import MotionCapabilityPanel from "./MotionCapabilityPanel.jsx";
 import PartMotionPanel from "./PartMotionPanel.jsx";
 import RenderTuningPanel from "./RenderTuningPanel.jsx";
@@ -125,7 +126,14 @@ export default function AssetWorkbench() {
   });
   const [report, setReport] = useState(null);
   const [motionPreview, setMotionPreview] = useState({
-    playing: false, diagnostics: false, rates: {}, directions: {}, resetVersion: 0,
+    playing: false,
+    clipPlaying: false,
+    clipRate: 1,
+    clipId: null,
+    diagnostics: false,
+    rates: {},
+    directions: {},
+    resetVersion: 0,
   });
   const [motionInspection, setMotionInspection] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -141,7 +149,12 @@ export default function AssetWorkbench() {
   const handleModelInspect = useCallback((id, info, url) => {
     setMotionInspection({ id, url, trackIds: info.motionTrackIds });
     setReport((previous) => previous
-      ? { ...previous, nodeNames: info.nodeNames?.length ? info.nodeNames : previous.nodeNames }
+      ? {
+        ...previous,
+        nodeNames: info.nodeNames?.length ? info.nodeNames : previous.nodeNames,
+        clipNames: info.animationNames?.length ? info.animationNames : previous.clipNames,
+        animations: info.animationNames?.length ?? previous.animations,
+      }
       : previous);
   }, []);
   const activeModel = scene.models.find((model) => model.id === selectedModelId) || scene.models[0];
@@ -153,7 +166,14 @@ export default function AssetWorkbench() {
 
   const resetPreviewForModel = () => {
     setMotionPreview((previous) => ({
-      playing: false, diagnostics: false, rates: {}, directions: {}, resetVersion: previous.resetVersion + 1,
+      playing: false,
+      clipPlaying: false,
+      clipRate: 1,
+      clipId: null,
+      diagnostics: false,
+      rates: {},
+      directions: {},
+      resetVersion: previous.resetVersion + 1,
     }));
     setMotionInspection(null);
   };
@@ -179,18 +199,31 @@ export default function AssetWorkbench() {
 
   const exportScene = () => {
     const defaultVariant = runtimeRef.current?.getState().variantId ?? scene.defaultVariant;
-    const models = scene.models.map((model) => model.motionTracks?.length > 0
-      ? {
-        ...model,
-        motionTracks: model.motionTracks.map((track) => ({
-          ...track,
-          rate: motionPreview.rates[track.id] ?? track.rate,
-          ...(track.kind === "rotation" && {
-            direction: motionPreview.directions[track.id] ?? track.direction ?? 1,
-          }),
-        })),
+    const models = scene.models.map((model) => {
+      let nextModel = model.motionTracks?.length > 0
+        ? {
+          ...model,
+          motionTracks: model.motionTracks.map((track) => ({
+            ...track,
+            rate: motionPreview.rates[track.id] ?? track.rate,
+            ...(track.kind === "rotation" && {
+              direction: motionPreview.directions[track.id] ?? track.direction ?? 1,
+            }),
+          })),
+        }
+        : model;
+      if (model.id === activeModel?.id && motionPreview.clipId) {
+        nextModel = {
+          ...nextModel,
+          clipAnimation: {
+            clipId: motionPreview.clipId,
+            rate: motionPreview.clipRate ?? 1,
+            playing: false,
+          },
+        };
       }
-      : model);
+      return nextModel;
+    });
     downloadScene({ ...scene, models, defaultVariant }, assetManifest);
   };
 
@@ -292,6 +325,7 @@ export default function AssetWorkbench() {
       nodes: 121,
       nodeNames: WORKSPACE_HEADER_MOTION.map((track) => track.node),
       animations: 0,
+      clipNames: [],
       vertices: null,
       faces: null,
       notes: ["工作区割台模型已接入当前场景，正在等待渲染器完成几何体体检。"],
@@ -366,7 +400,10 @@ export default function AssetWorkbench() {
         scene={scene}
         onRuntimeReady={handleRuntimeReady}
         onModelInspect={handleModelInspect}
-        motionPreview={activeMotionModel ? { ...motionPreview, modelId: activeMotionModel.id } : null}
+        motionPreview={(() => {
+          const previewModel = activeMotionModel || activeModel;
+          return previewModel ? { ...motionPreview, modelId: previewModel.id } : null;
+        })()}
       />
 
       <aside className="asset-workbench-panel">
@@ -432,6 +469,15 @@ export default function AssetWorkbench() {
             onSetDefinitions={setMotionDefinitions}
             diagnostics={motionPreview.diagnostics}
             onToggleDiagnostics={() => setMotionPreview((state) => ({ ...state, diagnostics: !state.diagnostics }))}
+          />
+        )}
+
+        {report && (report.animations > 0 || report.clipNames?.length > 0) && (
+          <ClipMotionPanel
+            clips={report.clipNames}
+            clipCount={report.animations}
+            preview={motionPreview}
+            onChange={setMotionPreview}
           />
         )}
 

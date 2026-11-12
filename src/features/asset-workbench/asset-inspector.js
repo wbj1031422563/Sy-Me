@@ -34,6 +34,7 @@ function emptyReport(file, format) {
     nodes: null,
     nodeNames: [],
     animations: null,
+    clipNames: [],
     motion: null,
     notes: [],
   };
@@ -45,6 +46,11 @@ function parseGltfJson(json, report) {
   report.nodes = json.nodes?.length ?? 0;
   report.nodeNames = (json.nodes || []).map((node) => node.name).filter(Boolean);
   report.animations = json.animations?.length ?? 0;
+  report.clipNames = (json.animations || []).map((animation, index) => ({
+    id: `clip-${index}-${animation.name || "animation"}`,
+    label: animation.name || `动画片段 ${index + 1}`,
+    duration: null,
+  }));
   report.motion = analyzeMotionCapabilities(json);
   const hasExternalDependencies = [...(json.buffers || []), ...(json.images || [])]
     .some((item) => item.uri && !item.uri.startsWith("data:"));
