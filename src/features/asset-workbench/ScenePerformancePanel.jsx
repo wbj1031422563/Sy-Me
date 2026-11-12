@@ -2,7 +2,7 @@ function formatValue(value) {
   return Number.isFinite(value) ? value.toLocaleString("zh-CN") : "—";
 }
 
-export default function ScenePerformancePanel({ stats }) {
+export default function ScenePerformancePanel({ stats, onOptimize, onRestoreQuality }) {
   const items = [
     ["FPS", stats?.fps, "帧/秒"],
     ["Draw Call", stats?.calls, "次/帧"],
@@ -34,6 +34,14 @@ export default function ScenePerformancePanel({ stats }) {
       <p className="asset-workbench-hint">
         建议：FPS 低于 45 时，优先使用“性能优先”并关闭阴影、后期或粒子。
       </p>
+      <div className="asset-performance-actions">
+        <button type="button" className="asset-secondary-button" onClick={onOptimize}>
+          一键性能优化
+        </button>
+        <button type="button" className="asset-secondary-button" onClick={onRestoreQuality}>
+          恢复高质量
+        </button>
+      </div>
     </section>
   );
 }

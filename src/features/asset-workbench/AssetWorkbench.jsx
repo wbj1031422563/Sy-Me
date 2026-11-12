@@ -17,6 +17,7 @@ import "./asset-workbench.less";
 
 const DEMO_MODEL_URL = "/model/汽车.glb";
 const WORKSPACE_HEADER_MODEL_URL = "/model/text_model001.glb";
+const LOCAL_SCENE_STORAGE_KEY = "sy-me.asset-workbench.scene.v1";
 
 const LOCAL_MODEL_PRESETS = [
   {
@@ -146,6 +147,7 @@ export default function AssetWorkbench() {
   const [motionInspection, setMotionInspection] = useState(null);
   const [busy, setBusy] = useState(false);
   const [performance, setPerformance] = useState(null);
+  const [localSceneSavedAt, setLocalSceneSavedAt] = useState(null);
   const [message, setMessage] = useState("请选择模型文件开始预处理。");
   const sceneRef = useRef(scene);
   const historyRef = useRef({ past: [], future: [] });
@@ -157,6 +159,14 @@ export default function AssetWorkbench() {
   const backgroundUrlRef = useRef(null);
   const captureRef = useRef(null);
   const runtimeRef = useRef(null);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LOCAL_SCENE_STORAGE_KEY) || "null");
+      setLocalSceneSavedAt(saved?.savedAt || null);
+    } catch {
+      setLocalSceneSavedAt(null);
+    }
+  }, []);
   useEffect(() => {
     sceneRef.current = scene;
   }, [scene]);
@@ -327,6 +337,90 @@ export default function AssetWorkbench() {
     link.download = `${scene.id || "harvester-scene"}-view.png`;
     link.click();
     setMessage("已导出当前渲染画面 PNG。");
+  };
+
+  const optimizePerformance = () => {
+    updateScene((previous) => ({
+      ...previous,
+      renderer: {
+        ...previous.renderer,
+        dpr: [1, 1],
+        shadows: false,
+      },
+      effects: {
+        ...previous.effects,
+        enabled: false,
+        multisampling: 0,
+        bloom: { ...previous.effects?.bloom, enabled: false },
+        vignette: { ...previous.effects?.vignette, enabled: false },
+        noise: { ...previous.effects?.noise, enabled: false },
+      },
+      particles: { ...previous.particles, enabled: false },
+    }));
+    setMessage("已应用性能优先配置：关闭阴影、后期和粒子，并降低 DPR。");
+  };
+
+  const restoreQuality = () => {
+    updateScene((previous) => ({
+      ...previous,
+      renderer: {
+        ...previous.renderer,
+        dpr: [1, 1.5],
+        shadows: true,
+        toneMapping: previous.renderer?.toneMapping || "ACESFilmic",
+      },
+      effects: {
+        ...previous.effects,
+        enabled: true,
+        multisampling: previous.effects?.multisampling ?? 2,
+        bloom: { ...previous.effects?.bloom, enabled: true },
+        vignette: { ...previous.effects?.vignette, enabled: true },
+        noise: { ...previous.effects?.noise, enabled: true },
+      },
+    }));
+    setMessage("已恢复高质量渲染配置。");
+  };
+
+  const saveLocalScene = () => {
+    const savedAt = new Date().toISOString();
+    try {
+      localStorage.setItem(LOCAL_SCENE_STORAGE_KEY, JSON.stringify({
+        scene,
+        assetManifest,
+        theme,
+        backgroundPreset,
+        savedAt,
+      }));
+      setLocalSceneSavedAt(savedAt);
+      setMessage("当前视觉方案已保存到浏览器本地。");
+    } catch (error) {
+      setMessage(`本地方案保存失败：${error.message}`);
+    }
+  };
+
+  const restoreLocalScene = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LOCAL_SCENE_STORAGE_KEY) || "null");
+      if (!saved?.scene || !Array.isArray(saved.scene.models) || saved.scene.models.length === 0) {
+        throw new Error("没有可恢复的有效场景");
+      }
+      replaceScene(saved.scene);
+      setTheme(saved.theme || "studio");
+      setBackgroundPreset(saved.backgroundPreset || "field");
+      setSelectedModelId(saved.scene.models[0].id);
+      setAssetManifest(saved.assetManifest || { model: null, background: null });
+      setReport(null);
+      resetPreviewForModel();
+      setMessage("已恢复浏览器本地视觉方案。");
+    } catch (error) {
+      setMessage(`本地方案恢复失败：${error.message}`);
+    }
+  };
+
+  const clearLocalScene = () => {
+    localStorage.removeItem(LOCAL_SCENE_STORAGE_KEY);
+    setLocalSceneSavedAt(null);
+    setMessage("已清除浏览器本地视觉方案。");
   };
 
   const updateScene = (update) => {
@@ -671,6 +765,25 @@ export default function AssetWorkbench() {
               ↷ 重做
             </button>
           </div>
+          <div className="asset-action-subgroup">
+            <span className="asset-tuning-label">本地视觉方案</span>
+            <div className="asset-action-grid">
+              <button type="button" className="asset-secondary-button" onClick={saveLocalScene}>
+                保存方案
+              </button>
+              <button type="button" className="asset-secondary-button" disabled={!localSceneSavedAt} onClick={restoreLocalScene}>
+                恢复方案
+              </button>
+              <button type="button" className="asset-secondary-button" disabled={!localSceneSavedAt} onClick={clearLocalScene}>
+                清除方案
+              </button>
+            </div>
+            <p className="asset-workbench-hint">
+              {localSceneSavedAt
+                ? `最近保存：${new Date(localSceneSavedAt).toLocaleString("zh-CN")}`
+                : "尚未保存本地方案；模型文件本身仍需单独保留。"}
+            </p>
+          </div>
           <div className="asset-workbench-status" role="status">
             <span>模型<strong>{activeModel?.label || "未加载"}</strong></span>
             <span>动作<strong>{hasBoundMotion ? `${boundTrackIds.length} 个已绑定` : "未绑定"}</strong></span>
@@ -693,7 +806,11 @@ export default function AssetWorkbench() {
           </div>
         </section>
 
-        <ScenePerformancePanel stats={performance} />
+        <ScenePerformancePanel
+          stats={performance}
+          onOptimize={optimizePerformance}
+          onRestoreQuality={restoreQuality}
+        />
 
         <section>
           <h3>模型预处理</h3>

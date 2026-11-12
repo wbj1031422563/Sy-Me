@@ -39,6 +39,22 @@ with sync_playwright() as playwright:
     with page.expect_download(timeout=15000) as download_info:
         page.locator(".asset-action-center button").filter(has_text="导出当前画面").click(force=True)
     assert download_info.value.suggested_filename.endswith(".png")
+    page.get_by_role("button", name="一键性能优化", exact=True).click(force=True)
+    page.wait_for_function(
+        "document.querySelector('.asset-workbench-message')?.textContent.includes('性能优先配置')",
+        timeout=5000,
+    )
+    page.get_by_role("button", name="恢复高质量", exact=True).click(force=True)
+    page.wait_for_function(
+        "document.querySelector('.asset-workbench-message')?.textContent.includes('恢复高质量')",
+        timeout=5000,
+    )
+    local_actions = page.locator(".asset-action-subgroup").filter(has_text="本地视觉方案")
+    local_actions.get_by_role("button", name="保存方案", exact=True).click(force=True)
+    restore_local = local_actions.get_by_role("button", name="恢复方案", exact=True)
+    assert restore_local.is_enabled()
+    local_actions.get_by_role("button", name="清除方案", exact=True).click(force=True)
+    assert restore_local.is_disabled()
 
     page.get_by_role("button", name="性能优先").click()
     page.get_by_role("button", name="技术光点").click()
