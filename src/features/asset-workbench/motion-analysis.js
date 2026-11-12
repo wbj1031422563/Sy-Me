@@ -36,7 +36,7 @@ function inferAxis(name = "", path = "") {
 
 function inferAxisSource(name = "", path = "") {
   const normalized = normalizeName(name);
-  if (/(?:绕|旋转|转轴)?[xyz]|横向|左右|横轴|竖向|上下|竖轴|纵向|前后|纵轴/.test(normalized)) return "节点命名";
+  if (/(?:绕|旋转|转轴)?[xyz]|横向|左右|横轴|竖向|上下|竖轴|纵向|前后|纵轴/.test(normalized)) return "节点命名（待确认）";
   if (path === "translation") return "平行移动默认轴";
   return "默认 Y 轴";
 }

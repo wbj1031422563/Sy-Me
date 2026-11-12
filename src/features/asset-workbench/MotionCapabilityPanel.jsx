@@ -126,6 +126,14 @@ export default function MotionCapabilityPanel({
               {candidates.map((candidate) => {
                 const key = definitionKey(candidate);
                 const isSelected = selected.has(key);
+                const activeDefinition = definitions.find((definition) => definitionKey(definition) === key);
+                const displayAxis = activeDefinition?.axis || candidate.axis;
+                const displayAxisSource = activeDefinition
+                  ? activeDefinition.axisSource || "当前动作绑定"
+                  : candidate.axisSource;
+                const displayPivotHint = activeDefinition?.pivot
+                  ? "已配置轴心"
+                  : activeDefinition?.pivotHint || candidate.pivotHint;
                 const isBound = boundTrackIds?.includes(candidate.id)
                   || definitions.some((definition) => definitionKey(definition) === key && boundTrackIds?.includes(definition.id));
                 return (
@@ -138,11 +146,11 @@ export default function MotionCapabilityPanel({
                     <span className="asset-motion-candidate-main">
                       <strong>{candidate.label}</strong>
                       <small>
-                        {candidate.motionTypeLabel || candidate.kindLabel} · {axisLabel(candidate.axis)} · {confidenceLabel(candidate.confidence)}
+                        {activeDefinition?.motionTypeLabel || candidate.motionTypeLabel || candidate.kindLabel} · {axisLabel(displayAxis)} · {confidenceLabel(candidate.confidence)}
                         {isBound ? " · 已绑定" : ""}
                       </small>
-                      <em>{candidate.reason}；{candidate.axisSource || "默认轴向"}</em>
-                      <em>{candidate.pivotHint}</em>
+                      <em>{candidate.reason}；{displayAxisSource || "默认轴向"}</em>
+                      <em>{displayPivotHint}</em>
                     </span>
                   </label>
                 );
