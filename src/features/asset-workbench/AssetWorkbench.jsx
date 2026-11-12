@@ -125,7 +125,7 @@ export default function AssetWorkbench() {
   });
   const [report, setReport] = useState(null);
   const [motionPreview, setMotionPreview] = useState({
-    playing: false, rates: {}, directions: {}, resetVersion: 0,
+    playing: false, diagnostics: false, rates: {}, directions: {}, resetVersion: 0,
   });
   const [motionInspection, setMotionInspection] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -153,7 +153,7 @@ export default function AssetWorkbench() {
 
   const resetPreviewForModel = () => {
     setMotionPreview((previous) => ({
-      playing: false, rates: {}, directions: {}, resetVersion: previous.resetVersion + 1,
+      playing: false, diagnostics: false, rates: {}, directions: {}, resetVersion: previous.resetVersion + 1,
     }));
     setMotionInspection(null);
   };
@@ -430,6 +430,8 @@ export default function AssetWorkbench() {
             definitions={activeModel?.motionTracks || []}
             boundTrackIds={boundTrackIds}
             onSetDefinitions={setMotionDefinitions}
+            diagnostics={motionPreview.diagnostics}
+            onToggleDiagnostics={() => setMotionPreview((state) => ({ ...state, diagnostics: !state.diagnostics }))}
           />
         )}
 

@@ -47,8 +47,11 @@ with sync_playwright() as playwright:
     page.get_by_text("probe-motion.glb", exact=True).wait_for(timeout=30000)
     assert page.locator("section.asset-motion-capabilities").count() > 0
     assert page.locator(".asset-motion-candidate").count() == 2
-    page.locator("section.asset-motion-capabilities > button").first.click(force=True)
+    page.locator(".asset-motion-capability-actions button").first.click(force=True)
     assert page.locator("section.asset-part-motion").count() > 0
+    diagnostics_button = page.locator(".asset-motion-capability-actions button").nth(1)
+    diagnostics_button.click(force=True)
+    assert diagnostics_button.inner_text() == "隐藏诊断轴"
     page.locator(".asset-part-motion .asset-primary-button").first.click(force=True)
     assert page.locator(".asset-part-motion .asset-primary-button").first.inner_text() == "暂停动作"
 

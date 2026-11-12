@@ -48,6 +48,7 @@ import {
 import MachinePanel from "./MachinePanel.jsx";
 import HarvesterAnimationDriver from "./HarvesterAnimationDriver.jsx";
 import ModelMotionDriver from "./ModelMotionDriver.jsx";
+import MotionDiagnostics from "./MotionDiagnostics.jsx";
 import SceneParticles from "./SceneParticles.jsx";
 import RgbColorGrade from "./RgbColorGrade.jsx";
 import "./scene-viewer.less";
@@ -206,7 +207,15 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
     >
       <primitive object={scene3} />
       {entry.motionTracks?.length > 0 && (
-        <ModelMotionDriver root={scene3} definitions={entry.motionTracks} preview={motionPreview} />
+        <>
+          <ModelMotionDriver root={scene3} definitions={entry.motionTracks} preview={motionPreview} />
+          <MotionDiagnostics
+            root={scene3}
+            containerRef={groupRef}
+            definitions={entry.motionTracks}
+            visible={motionPreview?.diagnostics}
+          />
+        </>
       )}
     </group>
   );

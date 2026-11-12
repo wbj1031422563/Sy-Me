@@ -370,6 +370,19 @@
   }
 }
 
+.asset-motion-capability-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+
+  .asset-secondary-button {
+    margin-top: 0;
+    min-width: 0;
+
+    &:only-child { grid-column: 1 / -1; }
+  }
+}
+
 .asset-motion-manual-title,
 .asset-tuning-label {
   color: #b9d0c7;

@@ -35,6 +35,8 @@ export default function MotionCapabilityPanel({
   definitions = [],
   boundTrackIds,
   onSetDefinitions,
+  diagnostics,
+  onToggleDiagnostics,
 }) {
   const [manualNode, setManualNode] = useState("");
   const [manualKind, setManualKind] = useState("rotation");
@@ -159,10 +161,17 @@ export default function MotionCapabilityPanel({
           ) : (
             <p className="asset-workbench-hint">没有自动识别到明显的旋转或往复节点，可以使用下方的手动定义。</p>
           )}
-          {candidates.length > 0 && (
-            <button type="button" className="asset-secondary-button" onClick={applySuggestions}>
-              采用自动建议
-            </button>
+          {(candidates.length > 0 || definitions.length > 0) && (
+            <div className="asset-motion-capability-actions">
+              {candidates.length > 0 && (
+                <button type="button" className="asset-secondary-button" onClick={applySuggestions}>
+                  采用自动建议
+                </button>
+              )}
+              <button type="button" className={`asset-secondary-button ${diagnostics ? "is-active" : ""}`} onClick={onToggleDiagnostics} disabled={!definitions.length}>
+                {diagnostics ? "隐藏诊断轴" : "显示诊断轴"}
+              </button>
+            </div>
           )}
         </>
       ) : (
