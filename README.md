@@ -122,5 +122,8 @@ npm run validate:scenes
 - 曝光、环境光、主光/补光/轮廓光的颜色与强度；
 - 背景纯色、Bloom、暗角、颗粒噪声和实时阴影；
 - 关闭粒子、田间尘埃、收获金尘、技术光点四档粒子氛围，并可调粒子数量。
+- 色彩分级：色调（°）、饱和度、亮度、对比度，以及 RGB Gain（增益）、RGB Lift（黑位）、RGB Gamma（曲线）；支持原始色彩、暖金色调、冷峻技术、夜间蓝调预设。
 
-这些参数会随「导出当前场景配置」写入 `renderer`、`environment`、`effects` 和 `particles`，后续可以直接由接口或模型管理后台生成同样的视觉方案。高面数模型优先使用“性能优先”检查动作绑定，再按需要打开阴影、后期和粒子。
+这些参数会随「导出当前场景配置」写入 `renderer`、`environment`、`effects`、`colorGrade` 和 `particles`，后续可以直接由接口或模型管理后台生成同样的视觉方案。高面数模型优先使用“性能优先”检查动作绑定，再按需要打开阴影、后期、色彩分级和粒子。
+
+`colorGrade.hue` 使用角度，`saturation` / `brightness` / `contrast` 使用 -1 到 1，RGB 数组顺序固定为 `[R, G, B]`。Gain 默认 `[1, 1, 1]`，Lift 默认 `[0, 0, 0]`，Gamma 默认 `[1, 1, 1]`。

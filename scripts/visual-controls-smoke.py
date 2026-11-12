@@ -34,6 +34,10 @@ with sync_playwright() as playwright:
 
     page.get_by_role("button", name="性能优先").click()
     page.get_by_role("button", name="技术光点").click()
+    assert page.locator(".asset-color-grade").count() == 1
+    assert page.locator(".asset-rgb-channel-group").count() == 3
+    page.locator(".asset-color-grade .asset-theme-list button").nth(1).click(force=True)
+    assert page.locator(".asset-color-grade .asset-tuning-control output").first.inner_text() == "-8°"
 
     page.locator('input[type="file"]').first.set_input_files({
         "name": "probe-motion.glb",

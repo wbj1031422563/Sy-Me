@@ -30,7 +30,14 @@ import {
 } from "@react-three/drei";
 import * as THREE from "three";
 import TWEEN from "@tweenjs/tween.js";
-import { Bloom, EffectComposer, Noise, Vignette } from "@react-three/postprocessing";
+import {
+  Bloom,
+  BrightnessContrast,
+  EffectComposer,
+  HueSaturation,
+  Noise,
+  Vignette,
+} from "@react-three/postprocessing";
 import { mergeById, inspectModel, PREFIX } from "./conventions.js";
 import { normalizeScene } from "../core/scene/scene-normalize.js";
 import { createSceneRuntime, useSceneRuntime } from "../core/scene/scene-runtime.js";
@@ -42,6 +49,7 @@ import MachinePanel from "./MachinePanel.jsx";
 import HarvesterAnimationDriver from "./HarvesterAnimationDriver.jsx";
 import ModelMotionDriver from "./ModelMotionDriver.jsx";
 import SceneParticles from "./SceneParticles.jsx";
+import RgbColorGrade from "./RgbColorGrade.jsx";
 import "./scene-viewer.less";
 
 /* ---------------- 模型 ---------------- */
@@ -238,8 +246,26 @@ function SceneGround({ config }) {
 
 function SceneEffects({ config }) {
   if (!config?.enabled) return null;
+  const colorGrade = config.colorGrade || {};
   return (
     <EffectComposer multisampling={config.multisampling ?? 2}>
+      {colorGrade.enabled !== false && (
+        <>
+          <HueSaturation
+            hue={THREE.MathUtils.degToRad(colorGrade.hue ?? 0)}
+            saturation={colorGrade.saturation ?? 0}
+          />
+          <BrightnessContrast
+            brightness={colorGrade.brightness ?? 0}
+            contrast={colorGrade.contrast ?? 0}
+          />
+          <RgbColorGrade
+            gain={colorGrade.rgbGain}
+            lift={colorGrade.rgbLift}
+            gamma={colorGrade.rgbGamma}
+          />
+        </>
+      )}
       {config.bloom?.enabled && (
         <Bloom
           luminanceThreshold={config.bloom.threshold ?? 0.75}
@@ -476,7 +502,7 @@ function SceneContent({
         />
       )}
 
-      <SceneEffects config={scene.effects} />
+      <SceneEffects config={{ ...(scene.effects || {}), colorGrade: scene.colorGrade }} />
 
       {hotspots.map((spot) => (
         <Hotspot

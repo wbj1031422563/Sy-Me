@@ -43,6 +43,16 @@ export function normalizeScene(input = {}) {
       exposure: source.renderer?.exposure ?? 1,
       shadows: source.renderer?.shadows ?? true,
     },
+    colorGrade: {
+      enabled: source.colorGrade?.enabled ?? true,
+      hue: source.colorGrade?.hue ?? 0,
+      saturation: source.colorGrade?.saturation ?? 0,
+      brightness: source.colorGrade?.brightness ?? 0,
+      contrast: source.colorGrade?.contrast ?? 0,
+      rgbGain: source.colorGrade?.rgbGain || [1, 1, 1],
+      rgbLift: source.colorGrade?.rgbLift || [0, 0, 0],
+      rgbGamma: source.colorGrade?.rgbGamma || [1, 1, 1],
+    },
     particles: {
       enabled: source.particles?.enabled ?? false,
       preset: source.particles?.preset || "dust",

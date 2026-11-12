@@ -57,6 +57,29 @@ const QUALITY_PRESETS = [
   },
 ];
 
+const COLOR_GRADE_PRESETS = [
+  {
+    id: "neutral",
+    label: "原始色彩",
+    config: { enabled: true, hue: 0, saturation: 0, brightness: 0, contrast: 0, rgbGain: [1, 1, 1], rgbLift: [0, 0, 0], rgbGamma: [1, 1, 1] },
+  },
+  {
+    id: "warm",
+    label: "暖金色调",
+    config: { enabled: true, hue: -8, saturation: 0.08, brightness: 0.02, contrast: 0.08, rgbGain: [1.06, 1, 0.92], rgbLift: [0.015, 0, -0.01], rgbGamma: [0.98, 1, 1.06] },
+  },
+  {
+    id: "technical",
+    label: "冷峻技术",
+    config: { enabled: true, hue: 12, saturation: 0.12, brightness: 0, contrast: 0.14, rgbGain: [0.92, 1.02, 1.12], rgbLift: [-0.01, 0.005, 0.02], rgbGamma: [1.05, 1, 0.96] },
+  },
+  {
+    id: "night",
+    label: "夜间蓝调",
+    config: { enabled: true, hue: 20, saturation: -0.02, brightness: -0.04, contrast: 0.18, rgbGain: [0.82, 0.92, 1.12], rgbLift: [-0.015, 0, 0.018], rgbGamma: [1.08, 1.02, 0.94] },
+  },
+];
+
 function updateSection(onChange, section, values) {
   onChange((previous) => ({
     ...previous,
@@ -74,6 +97,57 @@ function updateLight(onChange, id, key, value) {
   }));
 }
 
+function updateColorGrade(onChange, values) {
+  onChange((previous) => ({
+    ...previous,
+    effects: {
+      ...previous.effects,
+      enabled: values.enabled === false ? previous.effects?.enabled : true,
+    },
+    colorGrade: {
+      enabled: true,
+      hue: 0,
+      saturation: 0,
+      brightness: 0,
+      contrast: 0,
+      rgbGain: [1, 1, 1],
+      rgbLift: [0, 0, 0],
+      rgbGamma: [1, 1, 1],
+      ...previous.colorGrade,
+      ...values,
+    },
+  }));
+}
+
+function ChannelControl({ label, values, min, max, step, onChange }) {
+  return (
+    <div className="asset-rgb-channel-group">
+      <span className="asset-rgb-channel-label">{label}</span>
+      <div className="asset-rgb-channel-list">
+        {[
+          ["R", 0],
+          ["G", 1],
+          ["B", 2],
+        ].map(([channel, index]) => (
+          <NumberControl
+            key={channel}
+            label={channel}
+            value={values[index]}
+            min={min}
+            max={max}
+            step={step}
+            onChange={(value) => {
+              const next = [...values];
+              next[index] = value;
+              onChange(next);
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function NumberControl({ label, value, min, max, step, onChange, suffix }) {
   return (
     <label className="asset-tuning-control">
@@ -88,6 +162,17 @@ export default function RenderTuningPanel({ scene, onChange }) {
   const effects = scene.effects || {};
   const renderer = scene.renderer || {};
   const particles = scene.particles || {};
+  const colorGrade = {
+    enabled: true,
+    hue: 0,
+    saturation: 0,
+    brightness: 0,
+    contrast: 0,
+    rgbGain: [1, 1, 1],
+    rgbLift: [0, 0, 0],
+    rgbGamma: [1, 1, 1],
+    ...scene.colorGrade,
+  };
   const particlePreset = particles.enabled ? particles.preset || "custom" : "none";
 
   const applyQuality = (preset) => {
@@ -156,6 +241,26 @@ export default function RenderTuningPanel({ scene, onChange }) {
             </div>
           );
         })}
+      </div>
+
+      <div className="asset-tuning-group asset-color-grade">
+        <span className="asset-tuning-label">色彩分级</span>
+        <div className="asset-theme-list">
+          {COLOR_GRADE_PRESETS.map((preset) => (
+            <button key={preset.id} type="button" onClick={() => updateColorGrade(onChange, preset.config)}>{preset.label}</button>
+          ))}
+        </div>
+        <NumberControl label="色调" value={colorGrade.hue} min={-180} max={180} step={1} suffix="°" onChange={(value) => updateColorGrade(onChange, { hue: value })} />
+        <NumberControl label="饱和度" value={colorGrade.saturation} min={-1} max={1} step={0.01} onChange={(value) => updateColorGrade(onChange, { saturation: value })} />
+        <NumberControl label="亮度" value={colorGrade.brightness} min={-1} max={1} step={0.01} onChange={(value) => updateColorGrade(onChange, { brightness: value })} />
+        <NumberControl label="对比度" value={colorGrade.contrast} min={-1} max={1} step={0.01} onChange={(value) => updateColorGrade(onChange, { contrast: value })} />
+        <ChannelControl label="RGB Gain 增益" values={colorGrade.rgbGain} min={0.5} max={1.5} step={0.01} onChange={(value) => updateColorGrade(onChange, { rgbGain: value })} />
+        <ChannelControl label="RGB Lift 黑位" values={colorGrade.rgbLift} min={-0.2} max={0.2} step={0.01} onChange={(value) => updateColorGrade(onChange, { rgbLift: value })} />
+        <ChannelControl label="RGB Gamma 曲线" values={colorGrade.rgbGamma} min={0.5} max={1.5} step={0.01} onChange={(value) => updateColorGrade(onChange, { rgbGamma: value })} />
+        <label className="asset-tuning-checkbox">
+          <input type="checkbox" checked={colorGrade.enabled !== false} onChange={(event) => updateColorGrade(onChange, { enabled: event.target.checked })} />
+          <span>启用色彩分级</span>
+        </label>
       </div>
 
       <div className="asset-tuning-group">
