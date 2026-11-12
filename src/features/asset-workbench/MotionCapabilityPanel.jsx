@@ -24,6 +24,12 @@ function confidenceLabel(value) {
   return "待确认";
 }
 
+function axisLabel(axis = []) {
+  const labels = ["X", "Y", "Z"];
+  const index = axis.findIndex((value) => Math.abs(value) > 0.5);
+  return index >= 0 ? `${labels[index]} 轴` : "未确定轴向";
+}
+
 export default function MotionCapabilityPanel({
   report,
   definitions = [],
@@ -36,6 +42,11 @@ export default function MotionCapabilityPanel({
   const [manualRate, setManualRate] = useState(24);
   const motion = report?.motion;
   const candidates = motion?.candidates || [];
+  const summary = motion?.summary || {
+    rotation: candidates.filter((candidate) => candidate.motionType === "rotation" || candidate.kind === "rotation").length,
+    parallel: candidates.filter((candidate) => candidate.motionType === "parallel" || candidate.kind !== "rotation").length,
+    needsPivot: candidates.filter((candidate) => candidate.kind === "rotation" && !candidate.pivot).length,
+  };
   const selected = useMemo(
     () => new Set(definitions.map(definitionKey)),
     [definitions]
@@ -68,7 +79,11 @@ export default function MotionCapabilityPanel({
       label: `自定义 · ${node}`,
       node,
       kind: manualKind,
+      motionType: manualKind === "rotation" ? "rotation" : "parallel",
+      motionTypeLabel: manualKind === "rotation" ? "旋转" : "平行往复",
       axis,
+      axisSource: "手动选择",
+      pivotHint: manualKind === "rotation" ? "请确认节点原点或补充轴心" : "无需轴心，沿轴向往复",
       direction: 1,
       rate: Number(manualRate) || (manualKind === "rotation" ? 24 : 2),
       maxRate: manualKind === "rotation" ? 90 : 12,
@@ -101,9 +116,11 @@ export default function MotionCapabilityPanel({
         <>
           <div className="asset-capability-stats">
             <span>动画片段 <strong>{motion.clipCount}</strong></span>
-            <span>变换通道 <strong>{motion.channelCount}</strong></span>
-            <span>候选部件 <strong>{candidates.length}</strong></span>
+            <span>旋转候选 <strong>{summary.rotation}</strong></span>
+            <span>平行候选 <strong>{summary.parallel}</strong></span>
+            <span>需轴心确认 <strong>{summary.needsPivot}</strong></span>
           </div>
+          <p className="asset-capability-note">变换通道 {motion.channelCount} · 候选部件 {candidates.length} · 识别优先级：元数据 → 动画通道 → 节点命名</p>
           {candidates.length > 0 ? (
             <div className="asset-motion-candidates">
               {candidates.map((candidate) => {
@@ -121,10 +138,11 @@ export default function MotionCapabilityPanel({
                     <span className="asset-motion-candidate-main">
                       <strong>{candidate.label}</strong>
                       <small>
-                        {candidate.kindLabel} · {confidenceLabel(candidate.confidence)}
+                        {candidate.motionTypeLabel || candidate.kindLabel} · {axisLabel(candidate.axis)} · {confidenceLabel(candidate.confidence)}
                         {isBound ? " · 已绑定" : ""}
                       </small>
-                      <em>{candidate.reason}</em>
+                      <em>{candidate.reason}；{candidate.axisSource || "默认轴向"}</em>
+                      <em>{candidate.pivotHint}</em>
                     </span>
                   </label>
                 );
@@ -158,7 +176,7 @@ export default function MotionCapabilityPanel({
         <div className="asset-motion-manual-grid">
           <select value={manualKind} onChange={(event) => setManualKind(event.target.value)} aria-label="动作类型">
             <option value="rotation">旋转</option>
-            <option value="reciprocation">往复</option>
+            <option value="reciprocation">平行往复</option>
           </select>
           <select value={manualAxis} onChange={(event) => setManualAxis(event.target.value)} aria-label="动作轴向">
             {AXIS_OPTIONS.map((axis) => <option key={axis.value} value={axis.value}>{axis.label}</option>)}

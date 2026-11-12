@@ -1,6 +1,8 @@
 const NAME_RULES = [
   {
     kind: "rotation",
+    motionType: "rotation",
+    motionTypeLabel: "旋转",
     tokens: [
       "拨禾轮", "搅龙", "滚筒", "旋转", "转轴", "轮", "链轮", "皮带轮",
       "reel", "auger", "rotor", "roller", "wheel", "pulley", "gear", "shaft",
@@ -9,9 +11,11 @@ const NAME_RULES = [
   },
   {
     kind: "reciprocation",
+    motionType: "parallel",
+    motionTypeLabel: "平行往复",
     tokens: [
-      "动刀", "切刀", "往复", "摆动", "振动", "筛", "刀片", "割刀",
-      "knife", "blade", "cutter", "recip", "shaker", "sieve",
+      "动刀", "切刀", "往复", "摆动", "振动", "筛", "刀片", "割刀", "输送带", "传送带", "滑台",
+      "knife", "blade", "cutter", "recip", "shaker", "sieve", "conveyor", "belt", "slider", "linear",
     ],
     label: "往复部件",
   },
@@ -21,11 +25,20 @@ function normalizeName(value = "") {
   return value.toLowerCase().replace(/[\s_\-./]+/g, "");
 }
 
-function inferAxis(name = "") {
+function inferAxis(name = "", path = "") {
   const normalized = normalizeName(name);
   if (/(?:绕|旋转|转轴)?x|横向|左右|横轴/.test(normalized)) return [1, 0, 0];
+  if (/(?:绕|旋转|转轴)?y|竖向|上下|竖轴/.test(normalized)) return [0, 1, 0];
   if (/(?:绕|旋转|转轴)?z|纵向|前后|纵轴/.test(normalized)) return [0, 0, 1];
+  if (path === "translation" && /(?:刀|blade|knife|cutter)/.test(normalized)) return [0, 1, 0];
   return [0, 1, 0];
+}
+
+function inferAxisSource(name = "", path = "") {
+  const normalized = normalizeName(name);
+  if (/(?:绕|旋转|转轴)?[xyz]|横向|左右|横轴|竖向|上下|竖轴|纵向|前后|纵轴/.test(normalized)) return "节点命名";
+  if (path === "translation") return "平行移动默认轴";
+  return "默认 Y 轴";
 }
 
 function findRule(name = "") {
@@ -40,13 +53,18 @@ function candidateId(index, nodeName, kind) {
 
 function createCandidate(nodeName, index, kind, source, reason, confidence, path, overrides = {}) {
   const rotating = kind === "rotation";
+  const motionType = overrides.motionType || (rotating ? "rotation" : "parallel");
   return {
     id: candidateId(index, nodeName, kind),
     label: nodeName,
     node: nodeName,
     kind,
-    kindLabel: rotating ? "旋转" : "往复",
-    axis: inferAxis(nodeName),
+    kindLabel: rotating ? "旋转" : "平行往复",
+    motionType,
+    motionTypeLabel: overrides.motionTypeLabel || (motionType === "rotation" ? "旋转" : "平行往复"),
+    axis: inferAxis(nodeName, path),
+    axisSource: inferAxisSource(nodeName, path),
+    pivotHint: rotating ? "建议使用几何中心或轴心" : "无需轴心，沿轴向往复",
     direction: 1,
     rate: rotating ? 24 : 2,
     maxRate: rotating ? 90 : 12,
@@ -129,7 +147,10 @@ export function analyzeMotionCapabilities(json = {}) {
         confidence: 1,
         reason: "节点 extras.motion 动作元数据",
         overrides: {
-          ...(Array.isArray(metadata.axis) ? { axis: metadata.axis } : {}),
+          ...(Array.isArray(metadata.axis) ? { axis: metadata.axis, axisSource: metadata.axisSource || "节点元数据" } : {}),
+          ...(metadata.pivot ? { pivot: metadata.pivot, pivotSource: "节点元数据" } : {}),
+          ...(metadata.motionType ? { motionType: metadata.motionType } : {}),
+          ...(metadata.motionTypeLabel ? { motionTypeLabel: metadata.motionTypeLabel } : {}),
           ...(Number.isFinite(metadata.rate) ? { rate: metadata.rate } : {}),
           ...(Number.isFinite(metadata.maxRate) ? { maxRate: metadata.maxRate } : {}),
           ...(Number.isFinite(metadata.stroke) ? { stroke: metadata.stroke } : {}),
@@ -152,6 +173,12 @@ export function analyzeMotionCapabilities(json = {}) {
     return a.label.localeCompare(b.label, "zh-CN");
   });
 
+  const summary = {
+    rotation: candidates.filter((candidate) => candidate.motionType === "rotation").length,
+    parallel: candidates.filter((candidate) => candidate.motionType === "parallel").length,
+    needsPivot: candidates.filter((candidate) => candidate.motionType === "rotation" && !candidate.pivot).length,
+  };
+
   return {
     clipCount: animations.length,
     channelCount,
@@ -160,6 +187,7 @@ export function analyzeMotionCapabilities(json = {}) {
         .map((channel) => channel.target?.node)
         .filter((index) => index != null))
     ).size,
+    summary,
     candidates,
     ready: candidates.length > 0,
   };
@@ -171,13 +199,22 @@ export function createMotionCapabilitiesFromDefinitions(definitions = []) {
     source: definition.source || "preset",
     reason: definition.reason || "已配置动作定义",
     confidence: definition.confidence ?? 1,
-    kindLabel: definition.kind === "rotation" ? "旋转" : "往复",
+    kindLabel: definition.kind === "rotation" ? "旋转" : "平行往复",
+    motionType: definition.motionType || (definition.kind === "rotation" ? "rotation" : "parallel"),
+    motionTypeLabel: definition.motionTypeLabel || (definition.kind === "rotation" ? "旋转" : "平行往复"),
+    axisSource: definition.axisSource || "预设定义",
+    pivotHint: definition.pivotHint || (definition.kind === "rotation" ? "已配置轴心" : "无需轴心，沿轴向往复"),
     id: definition.id || `preset-${index}`,
   }));
   return {
     clipCount: 0,
     channelCount: 0,
     animatedNodeCount: 0,
+    summary: {
+      rotation: candidates.filter((candidate) => candidate.motionType === "rotation").length,
+      parallel: candidates.filter((candidate) => candidate.motionType === "parallel").length,
+      needsPivot: candidates.filter((candidate) => candidate.motionType === "rotation" && !candidate.pivot).length,
+    },
     candidates,
     ready: candidates.length > 0,
   };
