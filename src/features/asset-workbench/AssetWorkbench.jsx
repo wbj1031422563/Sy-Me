@@ -60,6 +60,13 @@ const THEME_LABELS = {
   technical: "技术演示",
 };
 
+const MOTION_PRESETS = [
+  { id: "idle", label: "待机", playing: false, rotationRate: 0, parallelRate: 0, direction: 1 },
+  { id: "harvest", label: "收割作业", playing: true, rotationRate: 24, parallelRate: 2, direction: 1 },
+  { id: "inspection", label: "低速检查", playing: false, rotationRate: 6, parallelRate: 0.5, direction: 1 },
+  { id: "reverse", label: "反向演示", playing: true, rotationRate: 18, parallelRate: 1.5, direction: -1 },
+];
+
 function setKnifeView(scene, enabled) {
   const shots = scene.shots.filter((shot) => shot.id !== WORKSPACE_KNIFE_SHOT.id);
   return {
@@ -138,12 +145,18 @@ export default function AssetWorkbench() {
   const [motionInspection, setMotionInspection] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("请选择模型文件开始预处理。");
+  const sceneRef = useRef(scene);
+  const historyRef = useRef({ past: [], future: [] });
+  const [, setHistoryVersion] = useState(0);
   const modelInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
   const sceneInputRef = useRef(null);
   const modelUrlRef = useRef(null);
   const backgroundUrlRef = useRef(null);
   const runtimeRef = useRef(null);
+  useEffect(() => {
+    sceneRef.current = scene;
+  }, [scene]);
   const handleRuntimeReady = useCallback((runtime) => {
     runtimeRef.current = runtime;
   }, []);
@@ -179,6 +192,54 @@ export default function AssetWorkbench() {
     setMotionInspection(null);
   };
 
+  const commitScene = (update) => {
+    const previous = sceneRef.current;
+    const next = typeof update === "function" ? update(previous) : update;
+    if (!next || next === previous) return;
+    historyRef.current = {
+      past: [...historyRef.current.past, previous].slice(-30),
+      future: [],
+    };
+    sceneRef.current = next;
+    setScene(next);
+    setHistoryVersion((value) => value + 1);
+  };
+
+  const replaceScene = (next) => {
+    sceneRef.current = next;
+    historyRef.current = { past: [], future: [] };
+    setScene(next);
+    setHistoryVersion((value) => value + 1);
+  };
+
+  const undoScene = () => {
+    const { past, future } = historyRef.current;
+    const previous = past[past.length - 1];
+    if (!previous) return;
+    historyRef.current = {
+      past: past.slice(0, -1),
+      future: [sceneRef.current, ...future].slice(0, 30),
+    };
+    sceneRef.current = previous;
+    setScene(previous);
+    setHistoryVersion((value) => value + 1);
+    setMessage("已撤销上一项场景修改。");
+  };
+
+  const redoScene = () => {
+    const { past, future } = historyRef.current;
+    const next = future[0];
+    if (!next) return;
+    historyRef.current = {
+      past: [...past, sceneRef.current].slice(-30),
+      future: future.slice(1),
+    };
+    sceneRef.current = next;
+    setScene(next);
+    setHistoryVersion((value) => value + 1);
+    setMessage("已重做上一项场景修改。");
+  };
+
   const handleSceneFile = async (file) => {
     if (!file) return;
     setBusy(true);
@@ -189,7 +250,7 @@ export default function AssetWorkbench() {
       }
       const nextTheme = THEME_LABELS[imported.theme] ? imported.theme : "studio";
       const nextBackground = BACKGROUND_PRESETS.find((preset) => preset.files === imported.environment?.files);
-      setScene(imported);
+      replaceScene(imported);
       setTheme(nextTheme);
       setBackgroundPreset(nextBackground?.id || (imported.environment?.files ? "custom" : "field"));
       setSelectedModelId(imported.models[0].id);
@@ -209,7 +270,7 @@ export default function AssetWorkbench() {
     if (backgroundUrlRef.current) URL.revokeObjectURL(backgroundUrlRef.current);
     modelUrlRef.current = null;
     backgroundUrlRef.current = null;
-    setScene(createDefaultScene());
+    replaceScene(createDefaultScene());
     setTheme("studio");
     setBackgroundPreset("field");
     setSelectedModelId("harvester");
@@ -222,6 +283,8 @@ export default function AssetWorkbench() {
   const hasBoundMotion = Boolean(boundTrackIds?.length);
   const hasClipMotion = Boolean(report?.animations || motionPreview.clipId);
   const hasMotionControls = hasBoundMotion || hasClipMotion;
+  const canUndo = historyRef.current.past.length > 0;
+  const canRedo = historyRef.current.future.length > 0;
 
   const playAllMotion = () => {
     setMotionPreview((state) => ({
@@ -249,10 +312,47 @@ export default function AssetWorkbench() {
 
   const updateScene = (update) => {
     const selectedVariant = runtimeRef.current?.getState().variantId;
-    setScene((previous) => ({
+    commitScene((previous) => ({
       ...update(previous),
       defaultVariant: selectedVariant ?? previous.defaultVariant,
     }));
+  };
+
+  const applyMotionPreset = (preset) => {
+    const tracks = activeMotionModel?.motionTracks || [];
+    const rates = Object.fromEntries(tracks.map((track) => [
+      track.id,
+      track.kind === "rotation" ? preset.rotationRate : preset.parallelRate,
+    ]));
+    const directions = Object.fromEntries(
+      tracks
+        .filter((track) => track.kind === "rotation")
+        .map((track) => [track.id, preset.direction])
+    );
+    setMotionPreview((state) => ({
+      ...state,
+      playing: preset.playing && hasBoundMotion,
+      clipPlaying: preset.playing && hasClipMotion,
+      rates: { ...state.rates, ...rates },
+      directions: { ...state.directions, ...directions },
+      resetVersion: state.resetVersion + 1,
+    }));
+    if (activeMotionModel) {
+      updateScene((previous) => ({
+        ...previous,
+        models: previous.models.map((model) => model.id === activeMotionModel.id
+          ? {
+            ...model,
+            motionTracks: model.motionTracks.map((track) => ({
+              ...track,
+              rate: rates[track.id] ?? track.rate,
+              ...(track.kind === "rotation" && { direction: preset.direction }),
+            })),
+          }
+          : model),
+      }));
+    }
+    setMessage(`已应用“${preset.label}”动作方案。`);
   };
 
   const setMotionDefinitions = (definitions) => {
@@ -539,10 +639,33 @@ export default function AssetWorkbench() {
               恢复完整默认
             </button>
           </div>
+          <div className="asset-action-grid asset-history-actions">
+            <button type="button" className="asset-secondary-button" disabled={!canUndo} onClick={undoScene}>
+              ↶ 撤销
+            </button>
+            <button type="button" className="asset-secondary-button" disabled={!canRedo} onClick={redoScene}>
+              ↷ 重做
+            </button>
+          </div>
           <div className="asset-workbench-status" role="status">
             <span>模型<strong>{activeModel?.label || "未加载"}</strong></span>
             <span>动作<strong>{hasBoundMotion ? `${boundTrackIds.length} 个已绑定` : "未绑定"}</strong></span>
             <span>片段<strong>{report?.animations || 0}</strong></span>
+          </div>
+          <div className="asset-action-subgroup">
+            <span className="asset-tuning-label">动作方案</span>
+            <div className="asset-theme-list">
+              {MOTION_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  disabled={!hasMotionControls}
+                  onClick={() => applyMotionPreset(preset)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 

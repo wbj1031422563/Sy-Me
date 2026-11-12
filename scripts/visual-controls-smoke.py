@@ -38,6 +38,12 @@ with sync_playwright() as playwright:
     assert page.locator(".asset-rgb-channel-group").count() == 3
     page.locator(".asset-color-grade .asset-theme-list button").nth(1).click(force=True)
     assert page.locator(".asset-color-grade .asset-tuning-control output").first.inner_text() == "-8°"
+    undo_button = page.locator(".asset-history-actions button").first
+    assert undo_button.is_enabled()
+    undo_button.click(force=True)
+    redo_button = page.locator(".asset-history-actions button").nth(1)
+    assert redo_button.is_enabled()
+    redo_button.click(force=True)
 
     page.locator('input[type="file"][accept*=".glb"]').set_input_files({
         "name": "probe-motion.glb",
@@ -49,6 +55,8 @@ with sync_playwright() as playwright:
     assert page.locator(".asset-motion-candidate").count() == 2
     page.locator(".asset-motion-capability-actions button").first.click(force=True)
     assert page.locator("section.asset-part-motion").count() > 0
+    page.locator(".asset-action-subgroup button").filter(has_text="收割作业").click(force=True)
+    assert page.locator(".asset-part-motion .asset-primary-button").first.inner_text() == "暂停动作"
     global_play = page.locator(".asset-action-center button").filter(has_text="播放全部")
     global_play.click(force=True)
     assert page.locator(".asset-part-motion .asset-primary-button").first.inner_text() == "暂停动作"
