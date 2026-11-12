@@ -51,6 +51,7 @@ import ModelClipAnimationDriver from "./ModelClipAnimationDriver.jsx";
 import ModelMotionDriver from "./ModelMotionDriver.jsx";
 import MotionDiagnostics from "./MotionDiagnostics.jsx";
 import SceneParticles from "./SceneParticles.jsx";
+import ScenePerformanceProbe from "./ScenePerformanceProbe.jsx";
 import RgbColorGrade from "./RgbColorGrade.jsx";
 import { describeAnimationClips } from "./animation-clips.js";
 import "./scene-viewer.less";
@@ -629,7 +630,14 @@ function ModelPanel({ models, modelsInfo, visibility, onToggleVisible, onFocus }
 
 /* ---------------- 外壳：UI + Canvas ---------------- */
 
-export default function SceneViewer({ scene, onRuntimeReady, onModelInspect, motionPreview }) {
+export default function SceneViewer({
+  scene,
+  onRuntimeReady,
+  onModelInspect,
+  motionPreview,
+  onPerformance,
+  onCaptureReady,
+}) {
   const normalizedScene = useMemo(() => normalizeScene(scene), [scene]);
   const runtime = useMemo(
     () => createSceneRuntime(normalizedScene),
@@ -655,6 +663,7 @@ export default function SceneViewer({ scene, onRuntimeReady, onModelInspect, mot
 
   const modelRefs = useRef(new Map());
   const controlsRef = useRef(null);
+  const rendererRef = useRef(null);
 
   const handleInspect = useCallback((id, info, url) => {
     runtime.dispatch({ type: "model/inspected", payload: { id, info } });
@@ -728,9 +737,11 @@ export default function SceneViewer({ scene, onRuntimeReady, onModelInspect, mot
   const activeShot = shotId?.startsWith("__focus_") ? focusShot.current : shot;
   const renderer = normalizedScene.renderer;
   const handleRendererCreated = useCallback(({ gl }) => {
+    rendererRef.current = gl;
     gl.toneMapping = getToneMapping(renderer.toneMapping);
     gl.toneMappingExposure = renderer.exposure;
-  }, [renderer.exposure, renderer.toneMapping]);
+    onCaptureReady?.(() => rendererRef.current?.domElement.toDataURL("image/png"));
+  }, [onCaptureReady, renderer.exposure, renderer.toneMapping]);
 
   return (
     <div className="scene-viewer">
@@ -742,10 +753,11 @@ export default function SceneViewer({ scene, onRuntimeReady, onModelInspect, mot
           near: normalizedScene.camera?.near ?? 0.1,
           far: normalizedScene.camera?.far ?? 200,
         }}
-        gl={{ antialias: true, outputColorSpace: THREE.SRGBColorSpace }}
+        gl={{ antialias: true, outputColorSpace: THREE.SRGBColorSpace, preserveDrawingBuffer: true }}
         onCreated={handleRendererCreated}
         shadows={renderer.shadows}
       >
+        <ScenePerformanceProbe onUpdate={onPerformance} />
         <SceneContent
           scene={normalizedScene}
           models={models}

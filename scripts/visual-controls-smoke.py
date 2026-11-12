@@ -31,6 +31,14 @@ with sync_playwright() as playwright:
     page.goto("http://127.0.0.1:4173/tools/asset-workbench")
     page.wait_for_selector(".asset-workbench-panel", timeout=60000)
     page.wait_for_selector(".asset-render-tuning", timeout=60000)
+    page.wait_for_selector(".asset-performance-panel", timeout=60000)
+    page.wait_for_function(
+        "document.querySelector('.asset-performance-grid strong')?.textContent !== '—'",
+        timeout=10000,
+    )
+    with page.expect_download(timeout=15000) as download_info:
+        page.locator(".asset-action-center button").filter(has_text="导出当前画面").click(force=True)
+    assert download_info.value.suggested_filename.endswith(".png")
 
     page.get_by_role("button", name="性能优先").click()
     page.get_by_role("button", name="技术光点").click()

@@ -12,6 +12,7 @@ import ClipMotionPanel from "./ClipMotionPanel.jsx";
 import MotionCapabilityPanel from "./MotionCapabilityPanel.jsx";
 import PartMotionPanel from "./PartMotionPanel.jsx";
 import RenderTuningPanel from "./RenderTuningPanel.jsx";
+import ScenePerformancePanel from "./ScenePerformancePanel.jsx";
 import "./asset-workbench.less";
 
 const DEMO_MODEL_URL = "/model/汽车.glb";
@@ -144,6 +145,7 @@ export default function AssetWorkbench() {
   });
   const [motionInspection, setMotionInspection] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [performance, setPerformance] = useState(null);
   const [message, setMessage] = useState("请选择模型文件开始预处理。");
   const sceneRef = useRef(scene);
   const historyRef = useRef({ past: [], future: [] });
@@ -153,12 +155,16 @@ export default function AssetWorkbench() {
   const sceneInputRef = useRef(null);
   const modelUrlRef = useRef(null);
   const backgroundUrlRef = useRef(null);
+  const captureRef = useRef(null);
   const runtimeRef = useRef(null);
   useEffect(() => {
     sceneRef.current = scene;
   }, [scene]);
   const handleRuntimeReady = useCallback((runtime) => {
     runtimeRef.current = runtime;
+  }, []);
+  const handleCaptureReady = useCallback((capture) => {
+    captureRef.current = capture;
   }, []);
   const handleModelInspect = useCallback((id, info, url) => {
     setMotionInspection({ id, url, trackIds: info.motionTrackIds });
@@ -308,6 +314,19 @@ export default function AssetWorkbench() {
       resetVersion: state.resetVersion + 1,
     }));
     setMessage("全部动作已复位。");
+  };
+
+  const captureScene = () => {
+    const dataUrl = captureRef.current?.();
+    if (!dataUrl) {
+      setMessage("渲染器还未准备好，暂时无法导出画面。");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `${scene.id || "harvester-scene"}-view.png`;
+    link.click();
+    setMessage("已导出当前渲染画面 PNG。");
   };
 
   const updateScene = (update) => {
@@ -569,6 +588,8 @@ export default function AssetWorkbench() {
         scene={scene}
         onRuntimeReady={handleRuntimeReady}
         onModelInspect={handleModelInspect}
+        onPerformance={setPerformance}
+        onCaptureReady={handleCaptureReady}
         motionPreview={(() => {
           const previewModel = activeMotionModel || activeModel;
           return previewModel ? { ...motionPreview, modelId: previewModel.id } : null;
@@ -638,6 +659,9 @@ export default function AssetWorkbench() {
             <button type="button" className="asset-secondary-button" disabled={busy} onClick={resetWorkspace}>
               恢复完整默认
             </button>
+            <button type="button" className="asset-secondary-button" disabled={busy} onClick={captureScene}>
+              导出当前画面
+            </button>
           </div>
           <div className="asset-action-grid asset-history-actions">
             <button type="button" className="asset-secondary-button" disabled={!canUndo} onClick={undoScene}>
@@ -668,6 +692,8 @@ export default function AssetWorkbench() {
             </div>
           </div>
         </section>
+
+        <ScenePerformancePanel stats={performance} />
 
         <section>
           <h3>模型预处理</h3>

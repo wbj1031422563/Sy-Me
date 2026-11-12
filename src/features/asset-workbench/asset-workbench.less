@@ -109,6 +109,43 @@
   }
 }
 
+.asset-performance-panel {
+  .asset-performance-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 10px;
+  }
+
+  .asset-performance-grid span {
+    min-width: 0;
+    padding: 6px 3px;
+    overflow: hidden;
+    border-radius: 6px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.045);
+    color: #718781;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .asset-performance-grid strong {
+    display: block;
+    margin-top: 2px;
+    color: #d7e7e1;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .asset-performance-grid small {
+    display: block;
+    margin-top: 1px;
+    color: #718781;
+    font-size: 7px;
+  }
+}
+
 .asset-workbench-hint,
 .asset-workbench-message,
 .asset-report p {
