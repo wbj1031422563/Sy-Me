@@ -38,7 +38,7 @@ import {
   Noise,
   Vignette,
 } from "@react-three/postprocessing";
-import { mergeById, inspectModel, PREFIX } from "./conventions.js";
+import { buildNodeHierarchy, mergeById, inspectModel, PREFIX } from "./conventions.js";
 import { normalizeScene } from "../core/scene/scene-normalize.js";
 import { createSceneRuntime, useSceneRuntime } from "../core/scene/scene-runtime.js";
 import {
@@ -107,7 +107,54 @@ function applyMaterialPreset(baseMaterial, preset) {
   return material;
 }
 
-function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect, motionPreview }) {
+function NodeSelectionHelpers({ root, parentRef, selectedNodeIds }) {
+  const helpersRef = useRef([]);
+
+  useEffect(() => {
+    const parent = parentRef.current?.parent;
+    if (!parent || selectedNodeIds.length === 0) return undefined;
+    const selected = new Set(selectedNodeIds);
+    const helpers = [];
+    root.traverse((node) => {
+      if (!selected.has(node.userData?.__editorNodeKey)) return;
+      const helper = new THREE.BoxHelper(node, 0x78e1ae);
+      helper.renderOrder = 999;
+      helper.material.depthTest = false;
+      helper.material.transparent = true;
+      helper.material.opacity = 0.9;
+      parent.add(helper);
+      helpers.push(helper);
+    });
+    helpersRef.current = helpers;
+    return () => {
+      helpers.forEach((helper) => {
+        parent.remove(helper);
+        helper.geometry.dispose();
+        helper.material.dispose();
+      });
+      helpersRef.current = [];
+    };
+  }, [root, parentRef, selectedNodeIds]);
+
+  useFrame(() => {
+    helpersRef.current.forEach((helper) => helper.update());
+  });
+
+  return null;
+}
+
+function ViewerModel({
+  entry,
+  dracoPath,
+  variant,
+  visible,
+  modelRefCb,
+  onInspect,
+  motionPreview,
+  selectedNodeIds = [],
+  onNodeSelect,
+  children,
+}) {
   const gltf = useGLTF(entry.url, dracoPath);
   const scene3 = useMemo(() => gltf.scene.clone(true), [gltf]);
   const clipPreview = motionPreview || entry.clipAnimation
@@ -126,6 +173,64 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
     });
     return meshes;
   }, [scene3]);
+
+  useEffect(() => {
+    buildNodeHierarchy(scene3, { annotate: true });
+  }, [scene3]);
+
+  useEffect(() => {
+    const overrides = entry.nodeVisibility || {};
+    scene3.traverse((node) => {
+      if (node.userData.__editorDefaultVisible == null) {
+        node.userData.__editorDefaultVisible = node.visible;
+      }
+      const key = node.userData.__editorNodeKey;
+      node.visible = Object.prototype.hasOwnProperty.call(overrides, key)
+        ? overrides[key] !== false
+        : node.userData.__editorDefaultVisible;
+    });
+  }, [scene3, entry.nodeVisibility]);
+
+  useEffect(() => {
+    buildNodeHierarchy(scene3, { annotate: true });
+    const deltas = entry.nodeTransformDeltas || {};
+    scene3.traverse((node) => {
+      if (!node.userData.__editorBaseTransform) {
+        node.userData.__editorBaseTransform = {
+          position: node.position.clone(),
+          rotation: node.rotation.clone(),
+          scale: node.scale.clone(),
+        };
+      }
+      const base = node.userData.__editorBaseTransform;
+      const delta = deltas[node.userData.__editorNodeKey];
+      if (!delta) {
+        node.position.copy(base.position);
+        node.rotation.copy(base.rotation);
+        node.scale.copy(base.scale);
+        return;
+      }
+      const position = delta.position || [0, 0, 0];
+      const rotation = delta.rotation || [0, 0, 0];
+      const scale = delta.scale ?? 1;
+      node.position.set(
+        base.position.x + (position[0] || 0),
+        base.position.y + (position[1] || 0),
+        base.position.z + (position[2] || 0),
+      );
+      node.rotation.set(
+        base.rotation.x + (rotation[0] || 0),
+        base.rotation.y + (rotation[1] || 0),
+        base.rotation.z + (rotation[2] || 0),
+        base.rotation.order,
+      );
+      node.scale.set(
+        base.scale.x * scale,
+        base.scale.y * scale,
+        base.scale.z * scale,
+      );
+    });
+  }, [scene3, entry.nodeTransformDeltas]);
 
   useEffect(() => {
     if (!entry.variantTarget && !entry.material) return;
@@ -227,7 +332,14 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
       rotation={entry.rotation || [0, 0, 0]}
       visible={visible}
     >
-      <primitive object={scene3} />
+      <primitive
+        object={scene3}
+        onClick={(event) => {
+          event.stopPropagation();
+          const nodeId = event.object?.userData?.__editorNodeKey;
+          if (nodeId) onNodeSelect?.(entry.id, nodeId, { multi: Boolean(event.shiftKey) });
+        }}
+      />
       {gltf.animations?.length > 0 && (
         <ModelClipAnimationDriver
           root={scene3}
@@ -246,6 +358,12 @@ function ViewerModel({ entry, dracoPath, variant, visible, modelRefCb, onInspect
           />
         </>
       )}
+      {children}
+      <NodeSelectionHelpers
+        root={scene3}
+        parentRef={groupRef}
+        selectedNodeIds={selectedNodeIds}
+      />
     </group>
   );
 }
@@ -453,10 +571,43 @@ function SceneContent({
   runtime,
   machine,
   motionPreview,
+  selectedNodeIds,
+  onNodeSelect,
 }) {
   const env = scene.environment || {};
   const controlsCfg = scene.controls || {};
   const defaultModelId = models[0]?.id;
+  const modelById = new Map(models.map((model) => [model.id, model]));
+  const childrenById = new Map();
+  models.forEach((model) => {
+    if (!model.parentId || !modelById.has(model.parentId)) return;
+    const childrenForParent = childrenById.get(model.parentId) || [];
+    childrenForParent.push(model);
+    childrenById.set(model.parentId, childrenForParent);
+  });
+
+  const renderModel = (entry) => (
+    <Suspense key={entry.id} fallback={null}>
+      <ViewerModel
+        entry={entry}
+        dracoPath={scene.dracoDecoderPath || "/draco/"}
+        variant={variant}
+        visible={visibility[entry.id] !== false}
+        modelRefCb={(id, g) => {
+          if (g) modelRefs.current.set(id, g);
+          else modelRefs.current.delete(id);
+        }}
+        onInspect={onInspect}
+        motionPreview={motionPreview?.modelId === entry.id ? motionPreview : null}
+        selectedNodeIds={selectedNodeIds?.[entry.id] || []}
+        onNodeSelect={onNodeSelect}
+      >
+        {(childrenById.get(entry.id) || []).map(renderModel)}
+      </ViewerModel>
+    </Suspense>
+  );
+
+  const rootModels = models.filter((model) => !model.parentId || !modelById.has(model.parentId));
 
   return (
     <>
@@ -505,22 +656,7 @@ function SceneContent({
       <SceneGround config={scene.ground} />
       <SceneParticles config={scene.particles} />
 
-      {models.map((entry) => (
-        <Suspense key={entry.id} fallback={null}>
-          <ViewerModel
-            entry={entry}
-            dracoPath={scene.dracoDecoderPath || "/draco/"}
-            variant={variant}
-            visible={visibility[entry.id] !== false}
-            modelRefCb={(id, g) => {
-              if (g) modelRefs.current.set(id, g);
-              else modelRefs.current.delete(id);
-            }}
-            onInspect={onInspect}
-            motionPreview={motionPreview?.modelId === entry.id ? motionPreview : null}
-          />
-        </Suspense>
-      ))}
+      {rootModels.map(renderModel)}
 
       {scene.machine?.enabled && models[0] && !models[0].motionTracks?.length && (
         <HarvesterAnimationDriver
@@ -644,6 +780,9 @@ export default function SceneViewer({
   motionPreview,
   onPerformance,
   onCaptureReady,
+  selectedNodeIds = {},
+  onNodeSelect,
+  onSceneApiReady,
 }) {
   const normalizedScene = useMemo(() => normalizeScene(scene), [scene]);
   const runtime = useMemo(
@@ -671,6 +810,51 @@ export default function SceneViewer({
   const modelRefs = useRef(new Map());
   const controlsRef = useRef(null);
   const rendererRef = useRef(null);
+
+  const sceneApi = useMemo(() => ({
+    alignSocket({ childId, childSocketId, parentId, parentSocketId }) {
+      const childGroup = modelRefs.current.get(childId);
+      const parentGroup = modelRefs.current.get(parentId);
+      if (!childGroup || !parentGroup) return null;
+      let childSocket = null;
+      let parentSocket = null;
+      childGroup.traverse((node) => {
+        if (!childSocket && node.userData?.__editorSocketId === childSocketId) childSocket = node;
+      });
+      parentGroup.traverse((node) => {
+        if (!parentSocket && node.userData?.__editorSocketId === parentSocketId) parentSocket = node;
+      });
+      if (!childSocket || !parentSocket) return null;
+
+      childGroup.updateMatrixWorld(true);
+      parentGroup.updateMatrixWorld(true);
+      const childSocketLocal = new THREE.Matrix4()
+        .copy(childGroup.matrixWorld)
+        .invert()
+        .multiply(childSocket.matrixWorld);
+      const desiredChildWorld = new THREE.Matrix4()
+        .copy(parentSocket.matrixWorld)
+        .multiply(new THREE.Matrix4().copy(childSocketLocal).invert());
+      const parentWorldInverse = new THREE.Matrix4()
+        .copy(childGroup.parent?.matrixWorld || new THREE.Matrix4())
+        .invert();
+      const desiredChildLocal = parentWorldInverse.multiply(desiredChildWorld);
+      const position = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      desiredChildLocal.decompose(position, quaternion, scale);
+      const rotation = new THREE.Euler().setFromQuaternion(quaternion, "XYZ");
+      return {
+        position: position.toArray(),
+        rotation: [rotation.x, rotation.y, rotation.z],
+        scale: Math.max(Math.abs(scale.x), 0.001),
+      };
+    },
+  }), []);
+
+  useEffect(() => {
+    onSceneApiReady?.(sceneApi);
+  }, [onSceneApiReady, sceneApi]);
 
   const handleInspect = useCallback((id, info, url) => {
     runtime.dispatch({ type: "model/inspected", payload: { id, info } });
@@ -785,6 +969,8 @@ export default function SceneViewer({
           runtime={runtime}
           machine={machine}
           motionPreview={motionPreview}
+          selectedNodeIds={selectedNodeIds}
+          onNodeSelect={onNodeSelect}
         />
       </Canvas>
       <Loader />

@@ -19,9 +19,13 @@ export function normalizeScene(input = {}) {
     models: rawModels.map((model, index) => ({
       ...model,
       id: model.id || `model-${index + 1}`,
+      assetId: model.assetId || model.id || `model-${index + 1}`,
       position: model.position || [0, 0, 0],
       rotation: model.rotation || [0, 0, 0],
       scale: model.scale ?? 1,
+      nodeTransformDeltas: model.nodeTransformDeltas || undefined,
+      parentId: model.parentId || null,
+      assemblyId: model.assemblyId || null,
       // 没有显式指定时，保持旧版“第一个模型作为变体目标”的行为。
       variantTarget: model.variantTarget ?? index === 0,
     })),

@@ -1,8 +1,10 @@
+import { getOptimizationAdvice, getOptimizationPlan } from "./scene-optimization.js";
+
 function formatValue(value) {
   return Number.isFinite(value) ? value.toLocaleString("zh-CN") : "—";
 }
 
-export default function ScenePerformancePanel({ stats, onOptimize, onRestoreQuality }) {
+export default function ScenePerformancePanel({ stats, scene, onOptimize, onAutoOptimize, onRestoreQuality }) {
   const items = [
     ["FPS", stats?.fps, "帧/秒"],
     ["Draw Call", stats?.calls, "次/帧"],
@@ -10,13 +12,15 @@ export default function ScenePerformancePanel({ stats, onOptimize, onRestoreQual
     ["几何体", stats?.geometries, "个"],
     ["纹理", stats?.textures, "张"],
   ];
+  const plan = getOptimizationPlan(stats, scene);
+  const advice = getOptimizationAdvice(stats, scene);
 
   return (
-    <section className="asset-performance-panel" aria-label="实时性能监控">
+    <section className="asset-performance-panel" aria-label="场景优化与实时性能监控">
       <div className="asset-capability-heading">
         <div>
-          <h3>实时性能监控</h3>
-          <p>用于判断模型面数、后期和粒子是否需要降级。</p>
+          <h3>场景优化 / 实时性能</h3>
+          <p>根据当前模型、渲染开关和实时负载给出可执行建议。</p>
         </div>
         <span className={stats?.fps >= 45 ? "asset-capability-state is-ready" : "asset-capability-state"}>
           {stats ? "实时" : "采集中"}
@@ -31,12 +35,19 @@ export default function ScenePerformancePanel({ stats, onOptimize, onRestoreQual
           </span>
         ))}
       </div>
-      <p className="asset-workbench-hint">
-        建议：FPS 低于 45 时，优先使用“性能优先”并关闭阴影、后期或粒子。
-      </p>
+      <div className={`asset-optimization-plan is-${plan.id}`}>
+        <strong>{plan.label}</strong>
+        <span>{plan.description}</span>
+      </div>
+      <ul className="asset-performance-advice-list">
+        {advice.map((item) => <li key={item}>{item}</li>)}
+      </ul>
       <div className="asset-performance-actions">
+        <button type="button" className="asset-primary-button" onClick={onAutoOptimize} disabled={plan.id === "none"}>
+          应用推荐
+        </button>
         <button type="button" className="asset-secondary-button" onClick={onOptimize}>
-          一键性能优化
+          激进优化
         </button>
         <button type="button" className="asset-secondary-button" onClick={onRestoreQuality}>
           恢复高质量

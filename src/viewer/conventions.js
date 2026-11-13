@@ -23,6 +23,85 @@ export const PREFIX = {
   VARIANT_SLOT: "VAR_",
 };
 
+function getSocketId(node) {
+  const explicitId = node.userData?.socketId || node.userData?.mountId;
+  if (explicitId) return String(explicitId);
+  const name = node.name || "";
+  for (const prefix of ["SOCKET_", "MOUNT_", "ANCHOR_"]) {
+    if (name.startsWith(prefix)) return name.slice(prefix.length) || name;
+  }
+  return null;
+}
+
+function getNodeLabel(node) {
+  return node.name?.trim() || node.type || "节点";
+}
+
+/**
+ * 建立可供工作台使用的稳定节点路径，并可选地写回到 Object3D.userData。
+ * 名称可能重复，因此路径同时包含同名兄弟节点的序号。
+ */
+export function buildNodeHierarchy(root, { annotate = false } = {}) {
+  const nodes = [];
+
+  const visit = (node, parentId = null, depth = 0, siblingIndex = 0) => {
+    const label = getNodeLabel(node);
+    const id = parentId ? `${parentId}/${label}[${siblingIndex}]` : "root";
+    if (annotate) {
+      node.userData = {
+        ...(node.userData || {}),
+        __editorNodeKey: id,
+      };
+    }
+
+    const item = {
+      id,
+      name: node.name?.trim() || (parentId ? label : "根节点"),
+      type: node.type || "Object3D",
+      depth,
+      parentId,
+      isMesh: Boolean(node.isMesh),
+      isSkinnedMesh: Boolean(node.isSkinnedMesh),
+      childCount: node.children?.length || 0,
+      visible: node.visible !== false,
+    };
+    nodes.push(item);
+
+    const siblingCounts = new Map();
+    for (const child of node.children || []) {
+      const childLabel = getNodeLabel(child);
+      const index = siblingCounts.get(childLabel) || 0;
+      siblingCounts.set(childLabel, index + 1);
+      visit(child, id, depth + 1, index);
+    }
+  };
+
+  if (root) visit(root);
+  return nodes;
+}
+
+export function parseSockets(root) {
+  const sockets = [];
+  if (!root) return sockets;
+  root.updateMatrixWorld(true);
+  root.traverse((node) => {
+    const id = getSocketId(node);
+    if (!id) return;
+    node.userData = {
+      ...(node.userData || {}),
+      __editorSocketId: id,
+    };
+    sockets.push({
+      id,
+      label: node.userData?.label || node.name || id,
+      nodeId: node.userData?.__editorNodeKey || null,
+      position: node.getWorldPosition(new THREE.Vector3()).toArray(),
+      quaternion: node.getWorldQuaternion(new THREE.Quaternion()).toArray(),
+    });
+  });
+  return sockets;
+}
+
 /**
  * 解析 gltf 场景，提取命名约定信息
  * @param {THREE.Object3D} root gltf.scene（或克隆体）
@@ -127,6 +206,8 @@ export function inspectModel(root) {
     triangleCount: Math.round(triangleCount),
     materialNames: [...materialNames],
     nodeNames,
+    nodeHierarchy: buildNodeHierarchy(root, { annotate: true }),
+    sockets: parseSockets(root),
     bbox: { size: size.toArray(), center: center.toArray() },
     ...parseConventions(root),
   };

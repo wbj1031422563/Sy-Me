@@ -1,0 +1,226 @@
+export const PARTICLE_PRESETS = [
+  {
+    id: "none",
+    label: "关闭粒子",
+    config: { enabled: false },
+  },
+  {
+    id: "dust",
+    label: "田间尘埃",
+    config: {
+      enabled: true,
+      preset: "dust",
+      count: 110,
+      size: 1.05,
+      speed: 0.14,
+      opacity: 0.24,
+      color: "#d6bb83",
+      scale: [18, 5, 12],
+      position: [0, 1.1, 0],
+      noise: 1,
+    },
+  },
+  {
+    id: "harvest",
+    label: "收获金尘",
+    config: {
+      enabled: true,
+      preset: "harvest",
+      count: 150,
+      size: 1.35,
+      speed: 0.22,
+      opacity: 0.34,
+      color: "#ffd36a",
+      scale: [15, 4.5, 10],
+      position: [0, 1.8, 0],
+      noise: 1.2,
+    },
+  },
+  {
+    id: "technical",
+    label: "技术光点",
+    config: {
+      enabled: true,
+      preset: "technical",
+      count: 80,
+      size: 1.5,
+      speed: 0.32,
+      opacity: 0.42,
+      color: "#6de7ff",
+      scale: [16, 6, 12],
+      position: [0, 2.5, 0],
+      noise: 0.8,
+    },
+  },
+];
+
+export const QUALITY_PRESETS = [
+  {
+    id: "cinematic",
+    label: "电影高光",
+    config: {
+      renderer: { dpr: [1, 1.5], toneMapping: "ACESFilmic", exposure: 1.15, shadows: true },
+      effects: {
+        enabled: true,
+        multisampling: 2,
+        bloom: { enabled: true, threshold: 0.72, intensity: 1.2, radius: 0.72 },
+        vignette: { enabled: true, offset: 0.24, darkness: 0.56 },
+        noise: { enabled: true, opacity: 0.018 },
+      },
+    },
+  },
+  {
+    id: "soft",
+    label: "柔和展示",
+    config: {
+      renderer: { dpr: [1, 1.25], toneMapping: "ACESFilmic", exposure: 1.05, shadows: true },
+      effects: {
+        enabled: true,
+        multisampling: 2,
+        bloom: { enabled: true, threshold: 0.86, intensity: 0.68, radius: 0.62 },
+        vignette: { enabled: true, offset: 0.2, darkness: 0.34 },
+        noise: { enabled: false, opacity: 0 },
+      },
+    },
+  },
+  {
+    id: "performance",
+    label: "性能优先",
+    config: {
+      renderer: { dpr: [1, 1], toneMapping: "ACESFilmic", exposure: 1, shadows: false },
+      effects: {
+        enabled: false,
+        multisampling: 0,
+        bloom: { enabled: false },
+        vignette: { enabled: false },
+        noise: { enabled: false },
+      },
+    },
+  },
+];
+
+export const COLOR_GRADE_PRESETS = [
+  {
+    id: "neutral",
+    label: "原始色彩",
+    config: {
+      enabled: true,
+      hue: 0,
+      saturation: 0,
+      brightness: 0,
+      contrast: 0,
+      rgbGain: [1, 1, 1],
+      rgbLift: [0, 0, 0],
+      rgbGamma: [1, 1, 1],
+    },
+  },
+  {
+    id: "warm",
+    label: "暖金色调",
+    config: {
+      enabled: true,
+      hue: -8,
+      saturation: 0.08,
+      brightness: 0.02,
+      contrast: 0.08,
+      rgbGain: [1.06, 1, 0.92],
+      rgbLift: [0.015, 0, -0.01],
+      rgbGamma: [0.98, 1, 1.06],
+    },
+  },
+  {
+    id: "technical",
+    label: "冷峻技术",
+    config: {
+      enabled: true,
+      hue: 12,
+      saturation: 0.12,
+      brightness: 0,
+      contrast: 0.14,
+      rgbGain: [0.92, 1.02, 1.12],
+      rgbLift: [-0.01, 0.005, 0.02],
+      rgbGamma: [1.05, 1, 0.96],
+    },
+  },
+  {
+    id: "night",
+    label: "夜间蓝调",
+    config: {
+      enabled: true,
+      hue: 20,
+      saturation: -0.02,
+      brightness: -0.04,
+      contrast: 0.18,
+      rgbGain: [0.82, 0.92, 1.12],
+      rgbLift: [-0.015, 0, 0.018],
+      rgbGamma: [1.08, 1.02, 0.94],
+    },
+  },
+];
+
+export const VISUAL_PRESETS = [
+  {
+    id: "cinematic-gold",
+    label: "电影金色",
+    description: "暖光、金尘、高光材质，适合主视觉展示。",
+    theme: "studio",
+    background: "field",
+    quality: "cinematic",
+    particles: "harvest",
+    colorGrade: "warm",
+    variant: "harvest-yellow",
+    shot: "hero",
+  },
+  {
+    id: "field-operation",
+    label: "白天田间",
+    description: "自然环境光、田间尘埃和绿色材质，适合作业演示。",
+    theme: "field",
+    background: "field",
+    quality: "soft",
+    particles: "dust",
+    colorGrade: "neutral",
+    variant: "field-green",
+    shot: "side",
+  },
+  {
+    id: "night-operation",
+    label: "夜间作业",
+    description: "冷蓝环境、暖色轮廓光和夜间蓝调，突出灯光层次。",
+    theme: "night",
+    background: "night",
+    quality: "cinematic",
+    particles: "none",
+    colorGrade: "night",
+    variant: "graphite",
+    shot: "front",
+  },
+  {
+    id: "technical-inspection",
+    label: "技术检查",
+    description: "技术环境、光点粒子和俯视镜头，适合检查结构与动作。",
+    theme: "technical",
+    background: "technical",
+    quality: "soft",
+    particles: "technical",
+    colorGrade: "technical",
+    variant: "graphite",
+    shot: "top",
+  },
+  {
+    id: "performance-first",
+    label: "性能优先",
+    description: "关闭高成本效果，保留清晰模型和基础灯光。",
+    theme: "studio",
+    background: "studio",
+    quality: "performance",
+    particles: "none",
+    colorGrade: "neutral",
+    variant: "original",
+    shot: "hero",
+  },
+];
+
+export function findPreset(presets, id) {
+  return presets.find((preset) => preset.id === id) || presets[0];
+}

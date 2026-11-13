@@ -14,11 +14,30 @@ import MaterialOverridePanel from "./MaterialOverridePanel.jsx";
 import PartMotionPanel from "./PartMotionPanel.jsx";
 import RenderTuningPanel from "./RenderTuningPanel.jsx";
 import ScenePerformancePanel from "./ScenePerformancePanel.jsx";
+import VisualPresetPanel from "./VisualPresetPanel.jsx";
+import VisualPresetLibraryPanel from "./VisualPresetLibraryPanel.jsx";
+import CameraPresetPanel from "./CameraPresetPanel.jsx";
+import ModelTransformPanel from "./ModelTransformPanel.jsx";
+import ModelNodeTransformPanel from "./ModelNodeTransformPanel.jsx";
+import ModelAssemblyPanel from "./ModelAssemblyPanel.jsx";
+import AssemblyPresetPanel from "./AssemblyPresetPanel.jsx";
+import ModelHierarchyPanel from "./ModelHierarchyPanel.jsx";
+import BatchModelLoadPanel from "./BatchModelLoadPanel.jsx";
+import { applyOptimizationPlan, getOptimizationPlan } from "./scene-optimization.js";
+import {
+  COLOR_GRADE_PRESETS,
+  PARTICLE_PRESETS,
+  QUALITY_PRESETS,
+  VISUAL_PRESETS,
+  findPreset,
+} from "./visual-presets.js";
 import "./asset-workbench.less";
 
 const DEMO_MODEL_URL = "/model/汽车.glb";
 const WORKSPACE_HEADER_MODEL_URL = "/model/text_model001.glb";
 const LOCAL_SCENE_STORAGE_KEY = "sy-me.asset-workbench.scene.v1";
+const VISUAL_LIBRARY_STORAGE_KEY = "sy-me.asset-workbench.visual-library.v1";
+const VISUAL_LIBRARY_FILE_VERSION = 1;
 
 const LOCAL_MODEL_PRESETS = [
   {
@@ -70,6 +89,24 @@ const MOTION_PRESETS = [
   { id: "reverse", label: "反向演示", playing: true, rotationRate: 18, parallelRate: 1.5, direction: -1 },
 ];
 
+function normalizeAssetManifest(manifest = {}) {
+  const legacyModel = manifest.model;
+  const models = manifest.models || (legacyModel?.slotId
+    ? { [legacyModel.slotId]: legacyModel }
+    : {});
+  return {
+    model: legacyModel || null,
+    models,
+    background: manifest.background || null,
+  };
+}
+
+function resolveCameraShotId(scene, preferredId) {
+  const shots = Array.isArray(scene?.shots) ? scene.shots : [];
+  if (preferredId && shots.some((shot) => shot.id === preferredId)) return preferredId;
+  return scene?.camera?.defaultShot || shots[0]?.id || "hero";
+}
+
 function setKnifeView(scene, enabled) {
   const shots = scene.shots.filter((shot) => shot.id !== WORKSPACE_KNIFE_SHOT.id);
   return {
@@ -80,11 +117,23 @@ function setKnifeView(scene, enabled) {
 }
 
 function createDefaultScene() {
-  return createHarvesterScene({
+  const scene = createHarvesterScene({
     modelUrl: DEMO_MODEL_URL,
     modelLabel: "示例模型（可替换）",
     title: "收获机视觉工作台",
   });
+  return {
+    ...scene,
+    visualPreset: "custom",
+    models: scene.models.map((model) => ({
+      ...model,
+      assetId: model.id,
+      parentId: null,
+      assemblyId: null,
+      assetFormat: "glb",
+      assetSource: "demo",
+    })),
+  };
 }
 
 function downloadScene(scene, assetManifest) {
@@ -92,18 +141,18 @@ function downloadScene(scene, assetManifest) {
     ...scene,
     models: scene.models?.map((model) => ({ ...model })),
   };
-  const localModel = assetManifest.model;
+  const localModels = assetManifest.models || (assetManifest.model?.slotId
+    ? { [assetManifest.model.slotId]: assetManifest.model }
+    : {});
   const localBackground = assetManifest.background;
-  if (localModel) {
+  exportScene.models = exportScene.models.map((model) => {
+    const localModel = localModels[model.id];
+    if (!localModel) return model;
     const modelUrl = localModel.source === "workspace"
       ? `/model/${localModel.fileName}`
       : `./assets/${localModel.fileName}`;
-    exportScene.models = exportScene.models.map((model) =>
-      model.id === localModel.slotId
-        ? { ...model, url: modelUrl }
-        : model
-    );
-  }
+    return { ...model, url: modelUrl };
+  });
   if (localBackground) {
     exportScene.environment = {
       ...exportScene.environment,
@@ -126,15 +175,22 @@ export default function AssetWorkbench() {
   const [scene, setScene] = useState(createDefaultScene);
   const [theme, setTheme] = useState("studio");
   const [backgroundPreset, setBackgroundPreset] = useState("field");
+  const [visualPresetId, setVisualPresetId] = useState("custom");
+  const [cameraShotId, setCameraShotId] = useState("hero");
   const [modelAccept, setModelAccept] = useState(
     ".glb,.gltf,.fbx,.obj,.stl,.ply,.dae"
   );
   const [selectedModelId, setSelectedModelId] = useState("harvester");
   const [assetManifest, setAssetManifest] = useState({
     model: null,
+    models: {},
     background: null,
   });
-  const [report, setReport] = useState(null);
+  const [reports, setReports] = useState({});
+  const [modelHierarchies, setModelHierarchies] = useState({});
+  const [modelSockets, setModelSockets] = useState({});
+  const [selectedNodeIds, setSelectedNodeIds] = useState({});
+  const [batchQueue, setBatchQueue] = useState([]);
   const [motionPreview, setMotionPreview] = useState({
     playing: false,
     clipPlaying: false,
@@ -149,23 +205,45 @@ export default function AssetWorkbench() {
   const [busy, setBusy] = useState(false);
   const [performance, setPerformance] = useState(null);
   const [localSceneSavedAt, setLocalSceneSavedAt] = useState(null);
+  const [visualLibrary, setVisualLibrary] = useState([]);
   const [message, setMessage] = useState("请选择模型文件开始预处理。");
   const sceneRef = useRef(scene);
   const historyRef = useRef({ past: [], future: [] });
   const [, setHistoryVersion] = useState(0);
   const modelInputRef = useRef(null);
+  const batchModelInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
   const sceneInputRef = useRef(null);
-  const modelUrlRef = useRef(null);
+  const modelUrlsRef = useRef(new Map());
   const backgroundUrlRef = useRef(null);
   const captureRef = useRef(null);
   const runtimeRef = useRef(null);
+  const sceneApiRef = useRef(null);
+
+  const releaseModelUrl = (modelId) => {
+    const url = modelUrlsRef.current.get(modelId);
+    if (url) URL.revokeObjectURL(url);
+    modelUrlsRef.current.delete(modelId);
+  };
+
+  const releaseAllModelUrls = () => {
+    modelUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    modelUrlsRef.current.clear();
+  };
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(LOCAL_SCENE_STORAGE_KEY) || "null");
       setLocalSceneSavedAt(saved?.savedAt || null);
     } catch {
       setLocalSceneSavedAt(null);
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(VISUAL_LIBRARY_STORAGE_KEY) || "[]");
+      setVisualLibrary(Array.isArray(saved) ? saved : []);
+    } catch {
+      setVisualLibrary([]);
     }
   }, []);
   useEffect(() => {
@@ -177,20 +255,39 @@ export default function AssetWorkbench() {
   const handleCaptureReady = useCallback((capture) => {
     captureRef.current = capture;
   }, []);
+  const handleSceneApiReady = useCallback((api) => {
+    sceneApiRef.current = api;
+  }, []);
   const handleModelInspect = useCallback((id, info, url) => {
     setMotionInspection({ id, url, trackIds: info.motionTrackIds });
-    setReport((previous) => previous
-      ? {
+    setModelHierarchies((previous) => ({
+      ...previous,
+      [id]: info.nodeHierarchy || [],
+    }));
+    setModelSockets((previous) => ({
+      ...previous,
+      [id]: info.sockets || [],
+    }));
+    setReports((previous) => {
+      const report = previous[id];
+      if (!report) return previous;
+      return {
         ...previous,
-        nodeNames: info.nodeNames?.length ? info.nodeNames : previous.nodeNames,
-        materialNames: info.materialNames?.length ? info.materialNames : previous.materialNames,
-        clipNames: info.animationNames?.length ? info.animationNames : previous.clipNames,
-        animations: info.animationNames?.length ?? previous.animations,
-      }
-      : previous);
+        [id]: {
+          ...report,
+          nodeNames: info.nodeNames?.length ? info.nodeNames : report.nodeNames,
+          materialNames: info.materialNames?.length ? info.materialNames : report.materialNames,
+          nodeHierarchy: info.nodeHierarchy?.length ? info.nodeHierarchy : report.nodeHierarchy,
+          sockets: info.sockets?.length ? info.sockets : report.sockets,
+          clipNames: info.animationNames?.length ? info.animationNames : report.clipNames,
+          animations: info.animationNames?.length ?? report.animations,
+        },
+      };
+    });
   }, []);
   const activeModel = scene.models.find((model) => model.id === selectedModelId) || scene.models[0];
-  const activeMotionModel = scene.models.find((model) => model.motionTracks?.length > 0);
+  const report = reports[selectedModelId] || null;
+  const activeMotionModel = activeModel?.motionTracks?.length > 0 ? activeModel : null;
   const boundTrackIds =
     motionInspection?.id === activeMotionModel?.id && motionInspection?.url === activeMotionModel?.url
       ? motionInspection?.trackIds
@@ -271,9 +368,16 @@ export default function AssetWorkbench() {
       replaceScene(imported);
       setTheme(nextTheme);
       setBackgroundPreset(nextBackground?.id || (imported.environment?.files ? "custom" : "field"));
+      setVisualPresetId(VISUAL_PRESETS.some((preset) => preset.id === imported.visualPreset)
+        ? imported.visualPreset
+        : "custom");
+      setCameraShotId(imported.camera?.defaultShot || imported.shots?.[0]?.id || "hero");
       setSelectedModelId(imported.models[0].id);
-      setAssetManifest(imported.assetManifest || { model: null, background: null });
-      setReport(null);
+      setAssetManifest(normalizeAssetManifest(imported.assetManifest));
+      setReports({});
+      setModelHierarchies({});
+      setModelSockets({});
+      setSelectedNodeIds({});
       resetPreviewForModel();
       setMessage(`${file.name} 已导入，场景参数与动作绑定已恢复。`);
     } catch (error) {
@@ -284,16 +388,20 @@ export default function AssetWorkbench() {
   };
 
   const resetWorkspace = () => {
-    if (modelUrlRef.current) URL.revokeObjectURL(modelUrlRef.current);
+    releaseAllModelUrls();
     if (backgroundUrlRef.current) URL.revokeObjectURL(backgroundUrlRef.current);
-    modelUrlRef.current = null;
     backgroundUrlRef.current = null;
     replaceScene(createDefaultScene());
     setTheme("studio");
     setBackgroundPreset("field");
+    setVisualPresetId("custom");
+    setCameraShotId("hero");
     setSelectedModelId("harvester");
-    setAssetManifest({ model: null, background: null });
-    setReport(null);
+    setAssetManifest({ model: null, models: {}, background: null });
+    setReports({});
+    setModelHierarchies({});
+    setModelSockets({});
+    setSelectedNodeIds({});
     resetPreviewForModel();
     setMessage("已恢复完整工作台默认配置。");
   };
@@ -342,7 +450,8 @@ export default function AssetWorkbench() {
   };
 
   const optimizePerformance = () => {
-    updateScene((previous) => ({
+    setVisualPresetId("custom");
+    updateVisualScene((previous) => ({
       ...previous,
       renderer: {
         ...previous.renderer,
@@ -363,7 +472,8 @@ export default function AssetWorkbench() {
   };
 
   const restoreQuality = () => {
-    updateScene((previous) => ({
+    setVisualPresetId("custom");
+    updateVisualScene((previous) => ({
       ...previous,
       renderer: {
         ...previous.renderer,
@@ -383,6 +493,16 @@ export default function AssetWorkbench() {
     setMessage("已恢复高质量渲染配置。");
   };
 
+  const autoOptimizeScene = () => {
+    const plan = getOptimizationPlan(performance, scene);
+    if (plan.id === "none") {
+      setMessage("当前场景负载正常，暂不需要自动降级。");
+      return;
+    }
+    updateVisualScene((previous) => applyOptimizationPlan(previous, plan));
+    setMessage(`已应用“${plan.label}”：${plan.description}`);
+  };
+
   const saveLocalScene = () => {
     const savedAt = new Date().toISOString();
     try {
@@ -391,6 +511,8 @@ export default function AssetWorkbench() {
         assetManifest,
         theme,
         backgroundPreset,
+        visualPresetId,
+        cameraShotId,
         savedAt,
       }));
       setLocalSceneSavedAt(savedAt);
@@ -406,12 +528,21 @@ export default function AssetWorkbench() {
       if (!saved?.scene || !Array.isArray(saved.scene.models) || saved.scene.models.length === 0) {
         throw new Error("没有可恢复的有效场景");
       }
-      replaceScene(saved.scene);
       setTheme(saved.theme || "studio");
       setBackgroundPreset(saved.backgroundPreset || "field");
+      setVisualPresetId(saved.visualPresetId || saved.scene.visualPreset || "custom");
+      const nextShotId = resolveCameraShotId(saved.scene, saved.cameraShotId);
+      replaceScene({
+        ...saved.scene,
+        camera: { ...saved.scene.camera, defaultShot: nextShotId },
+      });
+      setCameraShotId(nextShotId);
       setSelectedModelId(saved.scene.models[0].id);
-      setAssetManifest(saved.assetManifest || { model: null, background: null });
-      setReport(null);
+      setAssetManifest(normalizeAssetManifest(saved.assetManifest));
+      setReports({});
+      setModelHierarchies({});
+      setModelSockets({});
+      setSelectedNodeIds({});
       resetPreviewForModel();
       setMessage("已恢复浏览器本地视觉方案。");
     } catch (error) {
@@ -425,12 +556,258 @@ export default function AssetWorkbench() {
     setMessage("已清除浏览器本地视觉方案。");
   };
 
+  const saveVisualLibraryPreset = (name) => {
+    const savedAt = new Date().toISOString();
+    const entry = {
+      id: `visual-${Date.now()}`,
+      name,
+      savedAt,
+      scene: JSON.parse(JSON.stringify({ ...scene, visualPreset: visualPresetId })),
+      assetManifest: JSON.parse(JSON.stringify(assetManifest)),
+      theme,
+      backgroundPreset,
+      visualPresetId,
+      cameraShotId,
+      selectedModelId,
+    };
+    const nextLibrary = [entry, ...visualLibrary].slice(0, 20);
+    try {
+      localStorage.setItem(VISUAL_LIBRARY_STORAGE_KEY, JSON.stringify(nextLibrary));
+      setVisualLibrary(nextLibrary);
+      setMessage(`已将当前方案保存为“${name}”。`);
+    } catch (error) {
+      setMessage(`视觉方案保存失败：${error.message}`);
+    }
+  };
+
+  const exportVisualLibrary = () => {
+    if (visualLibrary.length === 0) {
+      setMessage("视觉方案库为空，先保存至少一套方案再导出。");
+      return;
+    }
+    const payload = {
+      version: VISUAL_LIBRARY_FILE_VERSION,
+      exportedAt: new Date().toISOString(),
+      entries: visualLibrary,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "sy-me-visual-library.json";
+    link.click();
+    URL.revokeObjectURL(url);
+    setMessage(`已导出 ${visualLibrary.length} 套视觉方案。`);
+  };
+
+  const importVisualLibrary = async (file) => {
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text());
+      const candidates = Array.isArray(payload) ? payload : payload?.entries;
+      if (!Array.isArray(candidates)) throw new Error("文件缺少 entries 方案列表");
+      const importedAt = new Date().toISOString();
+      const imported = candidates
+        .filter((entry) => entry
+          && typeof entry.name === "string"
+          && entry.name.trim()
+          && entry.scene
+          && Array.isArray(entry.scene.models)
+          && entry.scene.models.length > 0)
+        .slice(0, 20)
+        .map((entry, index) => ({
+          ...entry,
+          id: `visual-import-${Date.now()}-${index}`,
+          name: entry.name.trim().slice(0, 80),
+          savedAt: entry.savedAt || importedAt,
+        }));
+      if (imported.length === 0) throw new Error("没有包含有效模型的视觉方案");
+      const nextLibrary = [...imported, ...visualLibrary].slice(0, 20);
+      localStorage.setItem(VISUAL_LIBRARY_STORAGE_KEY, JSON.stringify(nextLibrary));
+      setVisualLibrary(nextLibrary);
+      setMessage(`已导入 ${imported.length} 套视觉方案，已合并到当前方案库。`);
+    } catch (error) {
+      setMessage(`视觉方案导入失败：${error.message}`);
+    }
+  };
+
+  const applyVisualLibraryPreset = (entry) => {
+    if (!entry?.scene || !Array.isArray(entry.scene.models) || entry.scene.models.length === 0) {
+      setMessage("该方案缺少有效场景模型，无法应用。");
+      return;
+    }
+    const nextShotId = resolveCameraShotId(entry.scene, entry.cameraShotId);
+    const nextScene = {
+      ...entry.scene,
+      camera: { ...entry.scene.camera, defaultShot: nextShotId },
+    };
+    replaceScene(nextScene);
+    setTheme(entry.theme || entry.scene.theme || "studio");
+    setBackgroundPreset(entry.backgroundPreset || "field");
+    setVisualPresetId(entry.visualPresetId || entry.scene.visualPreset || "custom");
+    setCameraShotId(nextShotId);
+    setSelectedModelId(entry.selectedModelId || entry.scene.models[0].id);
+    setAssetManifest(normalizeAssetManifest(entry.assetManifest));
+    setReports({});
+    setModelHierarchies({});
+    setModelSockets({});
+    setSelectedNodeIds({});
+    resetPreviewForModel();
+    runtimeRef.current?.dispatch({
+      type: "variant/set",
+      payload: { id: nextScene.defaultVariant || "original" },
+    });
+    runtimeRef.current?.dispatch({
+      type: "shot/set",
+      payload: { id: nextShotId },
+    });
+    setMessage(`已应用视觉方案“${entry.name}”。`);
+  };
+
+  const deleteVisualLibraryPreset = (entryId) => {
+    const nextLibrary = visualLibrary.filter((entry) => entry.id !== entryId);
+    try {
+      localStorage.setItem(VISUAL_LIBRARY_STORAGE_KEY, JSON.stringify(nextLibrary));
+      setVisualLibrary(nextLibrary);
+      setMessage("已删除视觉方案库中的方案。");
+    } catch (error) {
+      setMessage(`视觉方案删除失败：${error.message}`);
+    }
+  };
+
   const updateScene = (update) => {
     const selectedVariant = runtimeRef.current?.getState().variantId;
     commitScene((previous) => ({
       ...update(previous),
       defaultVariant: selectedVariant ?? previous.defaultVariant,
     }));
+  };
+
+  const updateVisualScene = (update) => {
+    setVisualPresetId("custom");
+    updateScene((previous) => ({
+      ...update(previous),
+      visualPreset: "custom",
+    }));
+  };
+
+  const applyVisualPreset = (preset) => {
+    const quality = findPreset(QUALITY_PRESETS, preset.quality);
+    const particles = findPreset(PARTICLE_PRESETS, preset.particles);
+    const colorGrade = findPreset(COLOR_GRADE_PRESETS, preset.colorGrade);
+    const background = BACKGROUND_PRESETS.find((item) => item.id === preset.background);
+
+    commitScene((previous) => {
+      const themed = createHarvesterThemeScene(previous, preset.theme);
+      const qualityEffects = quality.config.effects || {};
+      return {
+        ...themed,
+        visualPreset: preset.id,
+        defaultVariant: preset.variant,
+        renderer: { ...themed.renderer, ...quality.config.renderer },
+        environment: {
+          ...themed.environment,
+          ...(background ? { files: background.files } : {}),
+        },
+        camera: { ...themed.camera, defaultShot: preset.shot },
+        effects: {
+          ...themed.effects,
+          ...qualityEffects,
+          bloom: { ...themed.effects?.bloom, ...qualityEffects.bloom },
+          vignette: { ...themed.effects?.vignette, ...qualityEffects.vignette },
+          noise: { ...themed.effects?.noise, ...qualityEffects.noise },
+        },
+        particles: { ...themed.particles, ...particles.config },
+        colorGrade: { ...themed.colorGrade, ...colorGrade.config },
+      };
+    });
+    setTheme(preset.theme);
+    setBackgroundPreset(preset.background);
+    setVisualPresetId(preset.id);
+    setCameraShotId(preset.shot);
+    runtimeRef.current?.dispatch({ type: "variant/set", payload: { id: preset.variant } });
+    runtimeRef.current?.dispatch({ type: "shot/set", payload: { id: preset.shot } });
+    setMessage(`已应用“${preset.label}”视觉方案：${preset.description}`);
+  };
+
+  const selectCameraShot = (shotId) => {
+    setCameraShotId(shotId);
+    updateVisualScene((previous) => ({
+      ...previous,
+      camera: { ...previous.camera, defaultShot: shotId },
+    }));
+    runtimeRef.current?.dispatch({ type: "shot/set", payload: { id: shotId } });
+  };
+
+  const updateCameraShot = (shotId, patch) => {
+    setCameraShotId(shotId);
+    updateVisualScene((previous) => ({
+      ...previous,
+      camera: { ...previous.camera, defaultShot: shotId },
+      shots: previous.shots.map((shot) => shot.id === shotId ? { ...shot, ...patch } : shot),
+    }));
+    runtimeRef.current?.dispatch({ type: "shot/set", payload: { id: shotId } });
+  };
+
+  const addCameraShot = (reference) => {
+    const existingIds = new Set(scene.shots.map((shot) => shot.id));
+    let index = scene.shots.length + 1;
+    let id = `custom-shot-${index}`;
+    while (existingIds.has(id)) {
+      index += 1;
+      id = `custom-shot-${index}`;
+    }
+    const nextShot = {
+      id,
+      label: `自定义镜头 ${index}`,
+      position: [...(reference.position || [8, 4, 10])],
+      target: [...(reference.target || [0, 1, 0])],
+      durationMs: reference.durationMs ?? 1200,
+    };
+    updateVisualScene((previous) => ({
+      ...previous,
+      camera: { ...previous.camera, defaultShot: id },
+      shots: [...previous.shots, nextShot],
+    }));
+    setCameraShotId(id);
+    runtimeRef.current?.dispatch({ type: "shot/set", payload: { id } });
+    setMessage(`已新增“${nextShot.label}”，可以继续编辑位置和观察目标。`);
+  };
+
+  const removeCameraShot = (shotId) => {
+    if (scene.shots.length <= 1) {
+      setMessage("至少保留一个镜头预设。");
+      return;
+    }
+    const remaining = scene.shots.filter((shot) => shot.id !== shotId);
+    const nextShotId = remaining[0].id;
+    updateVisualScene((previous) => ({
+      ...previous,
+      camera: { ...previous.camera, defaultShot: nextShotId },
+      shots: previous.shots.filter((shot) => shot.id !== shotId),
+    }));
+    setCameraShotId(nextShotId);
+    runtimeRef.current?.dispatch({ type: "shot/set", payload: { id: nextShotId } });
+    setMessage("已移除镜头预设。");
+  };
+
+  const updateActiveModelTransform = (patch) => {
+    updateVisualScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => model.id === activeModel?.id
+        ? { ...model, ...patch }
+        : model),
+    }));
+  };
+
+  const resetActiveModelTransform = () => {
+    updateActiveModelTransform({
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: 1,
+      autoFrame: false,
+    });
+    setMessage("已重置当前模型变换。");
   };
 
   const applyMotionPreset = (preset) => {
@@ -528,7 +905,7 @@ export default function AssetWorkbench() {
   };
 
   useEffect(() => () => {
-    if (modelUrlRef.current) URL.revokeObjectURL(modelUrlRef.current);
+    releaseAllModelUrls();
     if (backgroundUrlRef.current) URL.revokeObjectURL(backgroundUrlRef.current);
   }, []);
 
@@ -538,7 +915,7 @@ export default function AssetWorkbench() {
     if (!file) return;
     setBusy(true);
     const nextReport = await inspectAssetFile(file);
-    setReport(nextReport);
+    setReports((previous) => ({ ...previous, [selectedModelId]: nextReport }));
 
     if (!nextReport.previewSupported) {
       setMessage(`${file.name} 已完成格式检查，但当前建议先转换为 GLB。`);
@@ -546,9 +923,9 @@ export default function AssetWorkbench() {
       return;
     }
 
-    if (modelUrlRef.current) URL.revokeObjectURL(modelUrlRef.current);
+    releaseModelUrl(selectedModelId);
     const objectUrl = URL.createObjectURL(file);
-    modelUrlRef.current = objectUrl;
+    modelUrlsRef.current.set(selectedModelId, objectUrl);
     const matchingPreset = LOCAL_MODEL_PRESETS.find((preset) =>
       preset.fileName.toLowerCase() === file.name.toLowerCase()
       && preset.motionTracks?.every((track) => nextReport.nodeNames.includes(track.node))
@@ -563,22 +940,126 @@ export default function AssetWorkbench() {
             ...model,
             url: objectUrl,
             label: file.name.replace(/\.(glb|gltf)$/i, ""),
+            assetFormat: nextReport.format,
+            assetSource: "local",
             autoFrame: true,
+            nodeVisibility: undefined,
+            nodeTransformDeltas: undefined,
             motionTracks: matchingPreset?.motionTracks,
           }
           : model
       ),
     }));
-    setAssetManifest((previous) => ({
-      ...previous,
-      model: {
+    const modelManifest = {
         fileName: file.name,
         format: nextReport.format,
         slotId: selectedModelId,
-      },
+        source: "local",
+      };
+    setAssetManifest((previous) => ({
+      ...previous,
+      model: modelManifest,
+      models: { ...(previous.models || {}), [selectedModelId]: modelManifest },
     }));
     setMessage(`${file.name} 已检查并替换到当前场景。`);
     setBusy(false);
+  };
+
+  const handleBatchModelFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
+    const queueItems = files.map((file, index) => ({
+      id: `batch-${Date.now()}-${index}`,
+      name: file.name,
+      status: "pending",
+      message: "",
+    }));
+    setBatchQueue(queueItems);
+    setBusy(true);
+
+    const loadedModels = [];
+    const loadedReports = {};
+    const loadedManifests = {};
+    const existingIds = new Set(sceneRef.current.models.map((model) => model.id));
+    let modelIndex = sceneRef.current.models.length + 1;
+
+    const updateQueueItem = (id, patch) => {
+      setBatchQueue((previous) => previous.map((item) => item.id === id ? { ...item, ...patch } : item));
+    };
+
+    try {
+      for (const [index, file] of files.entries()) {
+        const queueItem = queueItems[index];
+        updateQueueItem(queueItem.id, { status: "processing", message: "读取模型元数据" });
+        try {
+          const nextReport = await inspectAssetFile(file);
+          if (!nextReport.previewSupported) {
+            updateQueueItem(queueItem.id, { status: "skipped", message: "建议转换为单文件 GLB" });
+            continue;
+          }
+
+          let modelId = `model-${modelIndex}`;
+          while (existingIds.has(modelId)) {
+            modelIndex += 1;
+            modelId = `model-${modelIndex}`;
+          }
+          existingIds.add(modelId);
+          modelIndex += 1;
+          const objectUrl = URL.createObjectURL(file);
+          modelUrlsRef.current.set(modelId, objectUrl);
+          const model = {
+            id: modelId,
+            assetId: modelId,
+            label: file.name.replace(/\.(glb|gltf)$/i, ""),
+            url: objectUrl,
+            position: [loadedModels.length * 2.2, 0, 0],
+            rotation: [0, 0, 0],
+            scale: 1,
+            visible: true,
+            variantTarget: false,
+            parentId: null,
+            assemblyId: null,
+            assetFormat: nextReport.format,
+            assetSource: "local",
+            autoFrame: true,
+            nodeVisibility: undefined,
+            nodeTransformDeltas: undefined,
+          };
+          const manifest = {
+            fileName: file.name,
+            format: nextReport.format,
+            slotId: modelId,
+            source: "local",
+          };
+          loadedModels.push(model);
+          loadedReports[modelId] = nextReport;
+          loadedManifests[modelId] = manifest;
+          updateQueueItem(queueItem.id, { status: "loaded", message: "已创建模型槽位" });
+        } catch (error) {
+          updateQueueItem(queueItem.id, { status: "failed", message: error.message });
+        }
+      }
+
+      if (loadedModels.length > 0) {
+        updateScene((previous) => ({
+          ...previous,
+          models: [...previous.models, ...loadedModels],
+        }));
+        setReports((previous) => ({ ...previous, ...loadedReports }));
+        setAssetManifest((previous) => ({
+          ...previous,
+          model: loadedManifests[loadedModels[loadedModels.length - 1].id] || previous.model,
+          models: { ...(previous.models || {}), ...loadedManifests },
+        }));
+        setSelectedModelId(loadedModels[loadedModels.length - 1].id);
+        setSelectedNodeIds({});
+        setMessage(`批量加载完成：新增 ${loadedModels.length} 个模型槽位。`);
+      } else {
+        setMessage("批量预处理完成，但没有可直接预览的模型。");
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const loadLocalModel = async (preset) => {
@@ -595,27 +1076,38 @@ export default function AssetWorkbench() {
     } finally {
       setBusy(false);
     }
-    if (modelUrlRef.current) URL.revokeObjectURL(modelUrlRef.current);
-    modelUrlRef.current = null;
+    releaseModelUrl(selectedModelId);
     resetPreviewForModel();
     updateScene((previous) => ({
       ...setKnifeView(previous, Boolean(preset.motionTracks?.length)),
       models: previous.models.map((model, index) =>
         (model.id === selectedModelId || (!selectedModelId && index === 0))
-          ? { ...model, url: preset.url, label: preset.label, autoFrame: true, motionTracks: preset.motionTracks }
+          ? {
+            ...model,
+            url: preset.url,
+            label: preset.label,
+            assetFormat: "glb",
+            assetSource: "workspace",
+            autoFrame: true,
+            nodeVisibility: undefined,
+            nodeTransformDeltas: undefined,
+            motionTracks: preset.motionTracks,
+          }
           : model
       ),
     }));
-    setAssetManifest((previous) => ({
-      ...previous,
-      model: {
+    const modelManifest = {
         fileName: preset.fileName,
         format: "glb",
         slotId: selectedModelId,
         source: "workspace",
-      },
+      };
+    setAssetManifest((previous) => ({
+      ...previous,
+      model: modelManifest,
+      models: { ...(previous.models || {}), [selectedModelId]: modelManifest },
     }));
-    setReport({
+    setReports((previous) => ({ ...previous, [selectedModelId]: {
       fileName: preset.fileName,
       format: "glb",
       size: "637.25 MB",
@@ -631,7 +1123,7 @@ export default function AssetWorkbench() {
       faces: null,
       notes: ["工作区割台模型已接入当前场景，正在等待渲染器完成几何体体检。"],
       motion: createMotionCapabilitiesFromDefinitions(preset.motionTracks),
-    });
+    } }));
     setMessage(`${preset.fileName} 已加载到当前场景。`);
   };
 
@@ -646,11 +1138,12 @@ export default function AssetWorkbench() {
     const objectUrl = URL.createObjectURL(file);
     backgroundUrlRef.current = objectUrl;
     setBackgroundPreset("custom");
+    setVisualPresetId("custom");
     setAssetManifest((previous) => ({
       ...previous,
       background: { fileName: file.name, format },
     }));
-    updateScene((previous) => ({
+    updateVisualScene((previous) => ({
       ...previous,
       environment: { ...previous.environment, files: objectUrl },
     }));
@@ -660,7 +1153,7 @@ export default function AssetWorkbench() {
   const handleThemeChange = (nextTheme) => {
     setTheme(nextTheme);
     setBackgroundPreset(nextTheme);
-    updateScene((previous) => createHarvesterThemeScene(previous, nextTheme));
+    updateVisualScene((previous) => createHarvesterThemeScene(previous, nextTheme));
     setMessage(`已切换到“${THEME_LABELS[nextTheme]}”视觉主题。`);
   };
 
@@ -668,31 +1161,361 @@ export default function AssetWorkbench() {
     if (backgroundUrlRef.current) URL.revokeObjectURL(backgroundUrlRef.current);
     backgroundUrlRef.current = null;
     setBackgroundPreset(preset.id);
+    setVisualPresetId("custom");
     setAssetManifest((previous) => ({ ...previous, background: null }));
-    updateScene((previous) => ({
+    updateVisualScene((previous) => ({
       ...previous,
       environment: { ...previous.environment, files: preset.files },
     }));
     setMessage(`已选择“${preset.label}”作为环境背景。`);
   };
 
-  const resetModel = () => {
-    if (modelUrlRef.current) URL.revokeObjectURL(modelUrlRef.current);
-    modelUrlRef.current = null;
+  const selectModelSlot = (modelId) => {
+    if (modelId === selectedModelId) return;
+    setSelectedModelId(modelId);
+    setSelectedNodeIds({});
     resetPreviewForModel();
+    const model = scene.models.find((entry) => entry.id === modelId);
+    setMessage(`已选中模型槽位“${model?.label || modelId}”，后续加载会替换该槽位。`);
+  };
+
+  const addModelSlot = () => {
+    const existingIds = new Set(scene.models.map((model) => model.id));
+    let index = scene.models.length + 1;
+    let id = `model-${index}`;
+    while (existingIds.has(id)) {
+      index += 1;
+      id = `model-${index}`;
+    }
+    const nextModel = {
+      id,
+      assetId: id,
+      label: `模型槽位 ${index}`,
+      url: DEMO_MODEL_URL,
+      position: [scene.models.length * 1.8, 0, 0],
+      rotation: [0, 0, 0],
+      scale: 1,
+      visible: true,
+      variantTarget: false,
+      parentId: null,
+      assemblyId: null,
+      assetFormat: "glb",
+      assetSource: "demo",
+    };
+    updateScene((previous) => ({ ...previous, models: [...previous.models, nextModel] }));
+    setSelectedModelId(id);
+    setMessage(`已新增“${nextModel.label}”，请选择文件加载到该槽位。`);
+  };
+
+  const removeModelSlot = (modelId) => {
+    if (scene.models.length <= 1) {
+      setMessage("至少保留一个模型槽位。可先新增槽位，再移除当前模型。");
+      return;
+    }
+    const remaining = scene.models.filter((model) => model.id !== modelId);
+    const nextSelectedId = selectedModelId === modelId ? remaining[0].id : selectedModelId;
+    releaseModelUrl(modelId);
     updateScene((previous) => ({
-      ...setKnifeView(previous, false),
-      models: previous.models.map((model) => ({
-        ...model,
-        url: DEMO_MODEL_URL,
-        label: "示例模型（可替换）",
-        autoFrame: false,
-        motionTracks: undefined,
-      })),
+      ...previous,
+      models: previous.models
+        .filter((model) => model.id !== modelId)
+        .map((model) => model.parentId === modelId
+          ? { ...model, parentId: null, assemblyId: null }
+          : model),
     }));
-    setAssetManifest((previous) => ({ ...previous, model: null }));
-    setReport(null);
-    setMessage("已恢复示例模型。\n");
+    setReports((previous) => {
+      const next = { ...previous };
+      delete next[modelId];
+      return next;
+    });
+    setModelHierarchies((previous) => {
+      const next = { ...previous };
+      delete next[modelId];
+      return next;
+    });
+    setModelSockets((previous) => {
+      const next = { ...previous };
+      delete next[modelId];
+      return next;
+    });
+    setSelectedNodeIds((previous) => {
+      const next = { ...previous };
+      delete next[modelId];
+      return next;
+    });
+    setAssetManifest((previous) => {
+      const models = { ...(previous.models || {}) };
+      delete models[modelId];
+      return {
+        ...previous,
+        model: models[nextSelectedId] || null,
+        models,
+      };
+    });
+    setSelectedModelId(nextSelectedId);
+    resetPreviewForModel();
+    setMessage("已移除模型槽位。导出场景时将不再包含该模型。");
+  };
+
+  const toggleModelSlotVisibility = (modelId) => {
+    updateScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => model.id === modelId
+        ? { ...model, visible: model.visible === false }
+        : model),
+    }));
+  };
+
+  const setModelParent = (modelId, parentId) => {
+    if (modelId === parentId) {
+      setMessage("模型不能将自己设置为父模型。");
+      return;
+    }
+    const modelsById = new Map(sceneRef.current.models.map((model) => [model.id, model]));
+    let cursor = parentId;
+    while (cursor) {
+      if (cursor === modelId) {
+        setMessage("不能将当前模型挂到自己的子模型下。");
+        return;
+      }
+      cursor = modelsById.get(cursor)?.parentId || null;
+    }
+    const parent = parentId ? modelsById.get(parentId) : null;
+    const assemblyId = parentId ? (parent?.assemblyId || parent?.id || null) : null;
+    updateScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => model.id === modelId
+        ? { ...model, parentId: parentId || null, assemblyId }
+        : model),
+    }));
+    setMessage(parentId ? "已建立模型父子装配关系。" : "已解除当前模型的父级关系。");
+  };
+
+  const applyAssemblyPreset = (entry) => {
+    if (!entry?.models?.length) {
+      setMessage("该装配方案没有有效的部件配置，无法应用。");
+      return;
+    }
+    const currentModels = sceneRef.current.models;
+    const usedCurrentIds = new Set();
+    const targetIds = new Map();
+    const findMatch = (snapshot) => {
+      const exact = currentModels.find((model) => model.id === snapshot.id && !usedCurrentIds.has(model.id));
+      if (exact) return exact;
+      const byAssetId = currentModels.find((model) =>
+        (model.assetId || model.id) === snapshot.assetId && !usedCurrentIds.has(model.id)
+      );
+      if (byAssetId) return byAssetId;
+      return currentModels.find((model) =>
+        (model.label || model.id) === snapshot.label && !usedCurrentIds.has(model.id)
+      );
+    };
+
+    entry.models.forEach((snapshot) => {
+      const target = findMatch(snapshot);
+      if (target) {
+        usedCurrentIds.add(target.id);
+        targetIds.set(snapshot.id, target.id);
+      }
+    });
+
+    if (targetIds.size === 0) {
+      setMessage("当前模型槽位与该装配方案没有可匹配的部件。");
+      return;
+    }
+
+    updateVisualScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => {
+        const snapshot = entry.models.find((item) => targetIds.get(item.id) === model.id);
+        if (!snapshot) return model;
+        const parentId = snapshot.parentId ? targetIds.get(snapshot.parentId) || null : null;
+        const assemblyId = snapshot.assemblyId ? targetIds.get(snapshot.assemblyId) || null : null;
+        return {
+          ...model,
+          parentId,
+          assemblyId,
+          position: [...(snapshot.position || [0, 0, 0])],
+          rotation: [...(snapshot.rotation || [0, 0, 0])],
+          scale: snapshot.scale ?? 1,
+          visible: snapshot.visible !== false,
+        };
+      }),
+    }));
+    setSelectedNodeIds({});
+    setMessage(`已应用装配方案“${entry.name}”，匹配 ${targetIds.size}/${entry.models.length} 个部件。`);
+  };
+
+  const alignModelSockets = (request) => {
+    const transform = sceneApiRef.current?.alignSocket?.(request);
+    if (!transform) {
+      setMessage("当前模型尚未完成加载，或找不到对应挂载点。");
+      return;
+    }
+    updateVisualScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => model.id === request.childId
+        ? { ...model, ...transform, autoFrame: false }
+        : model),
+    }));
+    setMessage("已按挂载点自动对齐当前部件，并关闭自动落地偏移。");
+  };
+
+  const updateActiveNodeVisibility = (nodeId, nextHidden) => {
+    updateVisualScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => model.id === activeModel?.id
+        ? {
+          ...model,
+          nodeVisibility: {
+            ...(model.nodeVisibility || {}),
+            [nodeId]: !nextHidden,
+          },
+        }
+        : model),
+    }));
+    setMessage(nextHidden ? "已隐藏当前节点。" : "已显示当前节点。");
+  };
+
+  const selectModelNode = (modelId, nodeId, { multi = false } = {}) => {
+    setSelectedModelId(modelId);
+    setSelectedNodeIds((previous) => {
+      const current = previous[modelId] || [];
+      const next = multi
+        ? current.includes(nodeId)
+          ? current.filter((id) => id !== nodeId)
+          : [...current, nodeId]
+        : [nodeId];
+      return multi ? { ...previous, [modelId]: next } : { [modelId]: next };
+    });
+    const node = modelHierarchies[modelId]?.find((item) => item.id === nodeId);
+    setMessage(`${multi ? "已更新多选" : "已选择"}节点“${node?.name || nodeId}”。`);
+  };
+
+  const isolateActiveNode = (nodeId) => {
+    const nodes = modelHierarchies[activeModel?.id] || [];
+    const nextVisibility = Object.fromEntries(nodes.map((node) => [
+      node.id,
+      node.id === nodeId
+        || node.id.startsWith(`${nodeId}/`)
+        || nodeId.startsWith(`${node.id}/`),
+    ]));
+    updateVisualScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => model.id === activeModel?.id
+        ? { ...model, nodeVisibility: nextVisibility }
+        : model),
+    }));
+    setMessage("已隔离当前节点及其父子链。点击“恢复全部节点”可撤销。");
+  };
+
+  const resetActiveNodeVisibility = () => {
+    updateVisualScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => model.id === activeModel?.id
+        ? { ...model, nodeVisibility: undefined }
+        : model),
+    }));
+    setMessage("已恢复当前模型的全部节点显示。");
+  };
+
+  const applyActiveNodeTransformDelta = (delta) => {
+    const modelId = activeModel?.id;
+    const selected = selectedNodeIds[modelId] || [];
+    if (!modelId || selected.length === 0) return;
+    updateVisualScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => {
+        if (model.id !== modelId) return model;
+        const nextDeltas = { ...(model.nodeTransformDeltas || {}) };
+        selected.forEach((nodeId) => {
+          const current = nextDeltas[nodeId] || {
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+            scale: 1,
+          };
+          nextDeltas[nodeId] = {
+            position: [0, 1, 2].map((index) =>
+              (current.position?.[index] || 0) + (delta.position?.[index] || 0)),
+            rotation: [0, 1, 2].map((index) =>
+              (current.rotation?.[index] || 0) + (delta.rotation?.[index] || 0)),
+            scale: Math.max(0.01, (current.scale ?? 1) * (delta.scale ?? 1)),
+          };
+        });
+        return { ...model, nodeTransformDeltas: nextDeltas };
+      }),
+    }));
+    setMessage(`已对 ${selected.length} 个节点应用批量变换。`);
+  };
+
+  const resetActiveNodeTransforms = () => {
+    const modelId = activeModel?.id;
+    const selected = selectedNodeIds[modelId] || [];
+    if (!modelId || selected.length === 0) return;
+    updateVisualScene((previous) => ({
+      ...previous,
+      models: previous.models.map((model) => {
+        if (model.id !== modelId) return model;
+        const nextDeltas = { ...(model.nodeTransformDeltas || {}) };
+        selected.forEach((nodeId) => delete nextDeltas[nodeId]);
+        return {
+          ...model,
+          nodeTransformDeltas: Object.keys(nextDeltas).length > 0 ? nextDeltas : undefined,
+        };
+      }),
+    }));
+    setMessage(`已恢复 ${selected.length} 个选中节点的局部变换。`);
+  };
+
+  const resetModel = () => {
+    releaseModelUrl(selectedModelId);
+    resetPreviewForModel();
+    updateScene((previous) => {
+      const models = previous.models.map((model) => model.id === selectedModelId
+        ? {
+          ...model,
+          url: DEMO_MODEL_URL,
+          label: "示例模型（可替换）",
+          assetFormat: "glb",
+          assetSource: "demo",
+          autoFrame: false,
+          nodeVisibility: undefined,
+          nodeTransformDeltas: undefined,
+          motionTracks: undefined,
+        }
+        : model);
+      return setKnifeView({ ...previous, models }, models.some((model) => model.motionTracks?.length > 0));
+    });
+    setAssetManifest((previous) => {
+      const models = { ...(previous.models || {}) };
+      delete models[selectedModelId];
+      return {
+        ...previous,
+        model: Object.values(models)[0] || null,
+        models,
+      };
+    });
+    setReports((previous) => {
+      const next = { ...previous };
+      delete next[selectedModelId];
+      return next;
+    });
+    setModelHierarchies((previous) => {
+      const next = { ...previous };
+      delete next[selectedModelId];
+      return next;
+    });
+    setModelSockets((previous) => {
+      const next = { ...previous };
+      delete next[selectedModelId];
+      return next;
+    });
+    setSelectedNodeIds((previous) => {
+      const next = { ...previous };
+      delete next[selectedModelId];
+      return next;
+    });
+    setMessage(`已将当前槽位“${activeModel?.label || selectedModelId}”恢复为示例模型。`);
   };
 
   return (
@@ -703,6 +1526,9 @@ export default function AssetWorkbench() {
         onModelInspect={handleModelInspect}
         onPerformance={setPerformance}
         onCaptureReady={handleCaptureReady}
+        onSceneApiReady={handleSceneApiReady}
+        selectedNodeIds={selectedNodeIds}
+        onNodeSelect={selectModelNode}
         motionPreview={(() => {
           const previewModel = activeMotionModel || activeModel;
           return previewModel ? { ...motionPreview, modelId: previewModel.id } : null;
@@ -827,13 +1653,97 @@ export default function AssetWorkbench() {
 
         <ScenePerformancePanel
           stats={performance}
+          scene={scene}
           onOptimize={optimizePerformance}
           onRestoreQuality={restoreQuality}
+          onAutoOptimize={autoOptimizeScene}
+        />
+
+        <section className="asset-model-slots">
+          <h3>模型资产管理</h3>
+          <p className="asset-workbench-hint">先选择模型槽位，再加载或替换文件；支持单模型、多模型和不同格式混合。</p>
+          <div className="asset-model-slot-list">
+            {scene.models.map((model) => {
+              const format = model.assetFormat || model.url?.split(".").pop() || "model";
+              const isSelected = model.id === selectedModelId;
+              return (
+                <div key={model.id} className={`asset-model-slot ${isSelected ? "is-selected" : ""}`}>
+                  <button
+                    type="button"
+                    className="asset-model-slot-select"
+                    onClick={() => selectModelSlot(model.id)}
+                  >
+                    <strong>{model.label || model.id}</strong>
+                    <small>{format.toUpperCase()} · {model.visible === false ? "已隐藏" : "可见"}{isSelected ? " · 当前" : ""}</small>
+                  </button>
+                  <div className="asset-model-slot-actions">
+                    <button
+                      type="button"
+                      title={model.visible === false ? "显示模型" : "隐藏模型"}
+                      aria-label={`${model.visible === false ? "显示" : "隐藏"}${model.label || model.id}`}
+                      onClick={() => toggleModelSlotVisibility(model.id)}
+                    >
+                      {model.visible === false ? "显示" : "隐藏"}
+                    </button>
+                    <button
+                      type="button"
+                      title="移除模型槽位"
+                      aria-label={`移除${model.label || model.id}`}
+                      disabled={scene.models.length <= 1}
+                      onClick={() => removeModelSlot(model.id)}
+                    >
+                      移除
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" className="asset-secondary-button" onClick={addModelSlot} disabled={busy}>
+            ＋ 新增模型槽位
+          </button>
+        </section>
+
+        <ModelAssemblyPanel
+          models={scene.models}
+          selectedModelId={selectedModelId}
+          modelSockets={modelSockets}
+          onSelectModel={selectModelSlot}
+          onParentChange={setModelParent}
+          onAlignSockets={alignModelSockets}
+        />
+
+        <AssemblyPresetPanel
+          models={scene.models}
+          onApply={applyAssemblyPreset}
+          onMessage={setMessage}
+        />
+
+        <ModelTransformPanel
+          model={activeModel}
+          onUpdate={updateActiveModelTransform}
+          onReset={resetActiveModelTransform}
+        />
+
+        <ModelHierarchyPanel
+          model={activeModel}
+          nodes={modelHierarchies[activeModel?.id] || report?.nodeHierarchy || []}
+          selectedNodeIds={selectedNodeIds[activeModel?.id] || []}
+          onSelectNode={(nodeId, options) => selectModelNode(activeModel.id, nodeId, options)}
+          onToggleVisibility={updateActiveNodeVisibility}
+          onIsolate={isolateActiveNode}
+          onReset={resetActiveNodeVisibility}
+        />
+
+        <ModelNodeTransformPanel
+          selectedCount={selectedNodeIds[activeModel?.id]?.length || 0}
+          onApplyDelta={applyActiveNodeTransformDelta}
+          onReset={resetActiveNodeTransforms}
         />
 
         <section>
-          <h3>模型预处理</h3>
-          <p className="asset-workbench-hint">先按格式选择入口，再检查网格、材质、动画和可预览性。</p>
+          <h3>文件预处理与加载</h3>
+          <p className="asset-workbench-hint">当前加载目标：{activeModel?.label || "未选择模型槽位"}。先按格式选择入口，再检查网格、材质、动画和可预览性。</p>
           <input
             ref={modelInputRef}
             type="file"
@@ -841,6 +1751,17 @@ export default function AssetWorkbench() {
             hidden
             onChange={(event) => {
               handleModelFile(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
+          <input
+            ref={batchModelInputRef}
+            type="file"
+            accept=".glb,.gltf"
+            multiple
+            hidden
+            onChange={(event) => {
+              handleBatchModelFiles(event.target.files);
               event.target.value = "";
             }}
           />
@@ -859,6 +1780,14 @@ export default function AssetWorkbench() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="asset-secondary-button"
+            disabled={busy}
+            onClick={() => batchModelInputRef.current?.click()}
+          >
+            批量选择 GLB / GLTF
+          </button>
           <div className="asset-local-model-list">
             {LOCAL_MODEL_PRESETS.map((preset) => (
               <button key={preset.id} className="asset-local-model-button" disabled={busy} onClick={() => loadLocalModel(preset)}>
@@ -867,14 +1796,11 @@ export default function AssetWorkbench() {
               </button>
             ))}
           </div>
-          {scene.models.length > 1 && (
-            <label className="asset-select-label">
-              替换模型槽位
-              <select value={selectedModelId} onChange={(event) => setSelectedModelId(event.target.value)}>
-                {scene.models.map((model) => <option key={model.id} value={model.id}>{model.label || model.id}</option>)}
-              </select>
-            </label>
-          )}
+          <BatchModelLoadPanel
+            items={batchQueue}
+            busy={busy}
+            onClear={() => setBatchQueue([])}
+          />
           <button className="asset-secondary-button" disabled={busy} onClick={resetModel}>
             恢复示例模型
           </button>
@@ -981,7 +1907,31 @@ export default function AssetWorkbench() {
           </button>
         </section>
 
-        <RenderTuningPanel scene={scene} onChange={updateScene} />
+        <VisualPresetPanel
+          presets={VISUAL_PRESETS}
+          activePresetId={visualPresetId}
+          onApply={applyVisualPreset}
+        />
+
+        <VisualPresetLibraryPanel
+          entries={visualLibrary}
+          onSave={saveVisualLibraryPreset}
+          onApply={applyVisualLibraryPreset}
+          onDelete={deleteVisualLibraryPreset}
+          onExport={exportVisualLibrary}
+          onImport={importVisualLibrary}
+        />
+
+        <CameraPresetPanel
+          shots={scene.shots}
+          selectedShotId={cameraShotId}
+          onSelect={selectCameraShot}
+          onUpdate={updateCameraShot}
+          onAdd={addCameraShot}
+          onRemove={removeCameraShot}
+        />
+
+        <RenderTuningPanel scene={scene} onChange={updateVisualScene} />
 
         <button className="asset-export-button" onClick={exportScene}>
           导出当前场景配置

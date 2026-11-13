@@ -33,6 +33,8 @@ function emptyReport(file, format) {
     materials: null,
     nodes: null,
     nodeNames: [],
+    nodeHierarchy: [],
+    sockets: [],
     materialNames: [],
     animations: null,
     clipNames: [],
