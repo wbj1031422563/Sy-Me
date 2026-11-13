@@ -2,6 +2,14 @@
 1. 运行 `npm install`
 2. 运行 `npm run dev`
 
+如果要直接进入收获机资产工作台，可以运行：
+
+```bash
+npm run dev:workbench
+```
+
+系统首页也已加入「进入资产工作台」快捷入口和项目卡片，访问 `/` 后无需手动记忆工作台路径。
+
 ---
 
 # 汽车展厅项目（主要在example/maxwell-car 目录下）

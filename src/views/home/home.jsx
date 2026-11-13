@@ -21,6 +21,14 @@ function Home() {
       <div className="home">
         <div className="peraon-info-conatiner">
           <h1>我的博客</h1>
+          <button
+            type="button"
+            className="home-tool-entry"
+            onClick={() => goRouter("/tools/asset-workbench")}
+          >
+            <span>进入资产工作台</span>
+            <small>Asset Lab · 多模型视觉配置</small>
+          </button>
         </div>
         <div className="project-list">
           {/* {new Array(10).map((item, index) => (
@@ -73,6 +81,28 @@ function Home() {
             </div>
             <p className="project-item-name">猴头展厅（SceneViewer）</p>
             <p className="project-item-time">2026-11-02</p>
+          </div>
+          <div className="project-list-item">
+            <div
+              className="image-container"
+              onClick={() => {
+                goRouter("/tools/asset-workbench");
+              }}
+            >
+              <img className="pre-img" src="/img/banner2.jpg" alt="资产工作台预览" />
+              <div className="mask">
+                <span>打开资产工作台</span>
+              </div>
+            </div>
+            <p className="project-item-name">收获机资产工作台</p>
+            <p className="project-item-time">2026-11-13 · 多模型视觉配置</p>
+            <button
+              type="button"
+              className="project-item-action"
+              onClick={() => goRouter("/tools/asset-workbench")}
+            >
+              打开工作台 →
+            </button>
           </div>
           <div className="project-list-item">
             <img className="pre-img" src="/img/banner1.jpg" />
