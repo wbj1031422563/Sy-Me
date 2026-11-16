@@ -1,4 +1,7 @@
 {
+  "version": 2,
+  "schemaVersion": 2,
+  "schema": { "id": "sy-me.scene", "version": 2 },
   "id": "houtou",
   "title": "猴头 · 苏珊娜",
   "dracoDecoderPath": "/draco/",

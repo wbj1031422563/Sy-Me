@@ -11,6 +11,16 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --page-bg: #08100f;
+  --page-surface: #0d1a18;
+  --page-surface-strong: #12231f;
+  --page-text: #edf7f1;
+  --page-muted: #86a999;
+  --page-accent: #9ee4b8;
+  --page-accent-strong: #4fc483;
+  --page-border: rgba(152, 211, 178, 0.16);
+  --page-glow: rgba(53, 118, 92, 0.18);
+  --page-panel: rgba(8, 17, 20, 0.9);
 }
 
 a {
@@ -28,6 +38,8 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--page-bg);
+  color: var(--page-text);
 }
 
 h1 {

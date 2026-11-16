@@ -15,6 +15,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -40,6 +41,7 @@ import {
 } from "@react-three/postprocessing";
 import { buildNodeHierarchy, mergeById, inspectModel, PREFIX } from "./conventions.js";
 import { normalizeScene } from "../core/scene/scene-normalize.js";
+import PageThemeControl from "../features/page-theme/PageThemeControl.jsx";
 import { createSceneRuntime, useSceneRuntime } from "../core/scene/scene-runtime.js";
 import {
   SceneEffectExtensions,
@@ -181,13 +183,14 @@ function ViewerModel({
   useEffect(() => {
     const overrides = entry.nodeVisibility || {};
     scene3.traverse((node) => {
-      if (node.userData.__editorDefaultVisible == null) {
-        node.userData.__editorDefaultVisible = node.visible;
+      const userData = node.userData || (node.userData = {});
+      if (userData.__editorDefaultVisible == null) {
+        userData.__editorDefaultVisible = node.visible;
       }
-      const key = node.userData.__editorNodeKey;
+      const key = userData.__editorNodeKey;
       node.visible = Object.prototype.hasOwnProperty.call(overrides, key)
         ? overrides[key] !== false
-        : node.userData.__editorDefaultVisible;
+        : userData.__editorDefaultVisible;
     });
   }, [scene3, entry.nodeVisibility]);
 
@@ -203,7 +206,7 @@ function ViewerModel({
         };
       }
       const base = node.userData.__editorBaseTransform;
-      const delta = deltas[node.userData.__editorNodeKey];
+      const delta = deltas[node.userData?.__editorNodeKey];
       if (!delta) {
         node.position.copy(base.position);
         node.rotation.copy(base.rotation);
@@ -586,7 +589,11 @@ function SceneContent({
     childrenById.set(model.parentId, childrenForParent);
   });
 
-  const renderModel = (entry) => (
+  const renderModel = (entry, ancestry = new Set()) => {
+    if (ancestry.has(entry.id)) return null;
+    const nextAncestry = new Set(ancestry);
+    nextAncestry.add(entry.id);
+    return (
     <Suspense key={entry.id} fallback={null}>
       <ViewerModel
         entry={entry}
@@ -602,10 +609,11 @@ function SceneContent({
         selectedNodeIds={selectedNodeIds?.[entry.id] || []}
         onNodeSelect={onNodeSelect}
       >
-        {(childrenById.get(entry.id) || []).map(renderModel)}
+        {(childrenById.get(entry.id) || []).map((child) => renderModel(child, nextAncestry))}
       </ViewerModel>
     </Suspense>
-  );
+    );
+  };
 
   const rootModels = models.filter((model) => !model.parentId || !modelById.has(model.parentId));
 
@@ -656,7 +664,7 @@ function SceneContent({
       <SceneGround config={scene.ground} />
       <SceneParticles config={scene.particles} />
 
-      {rootModels.map(renderModel)}
+      {rootModels.map((entry) => renderModel(entry))}
 
       {scene.machine?.enabled && models[0] && !models[0].motionTracks?.length && (
         <HarvesterAnimationDriver
@@ -785,10 +793,12 @@ export default function SceneViewer({
   onSceneApiReady,
 }) {
   const normalizedScene = useMemo(() => normalizeScene(scene), [scene]);
-  const runtime = useMemo(
-    () => createSceneRuntime(normalizedScene),
-    [normalizedScene]
-  );
+  const runtimeRef = useRef(null);
+  if (!runtimeRef.current) runtimeRef.current = createSceneRuntime(normalizedScene);
+  const runtime = runtimeRef.current;
+  useLayoutEffect(() => {
+    runtime.syncScene?.(normalizedScene);
+  }, [runtime, normalizedScene]);
   const runtimeState = useSceneRuntime(runtime);
 
   const models = useMemo(() => {
@@ -977,7 +987,10 @@ export default function SceneViewer({
 
       <div className="scene-viewer-ui">
         <header className="scene-viewer-header">
-          <h2>{normalizedScene.title}</h2>
+          <div className="scene-viewer-header-content">
+            <h2>{normalizedScene.title}</h2>
+            <PageThemeControl className="scene-viewer-theme-control" />
+          </div>
         </header>
 
         <MachinePanel

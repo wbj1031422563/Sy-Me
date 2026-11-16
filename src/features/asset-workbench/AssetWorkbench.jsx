@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SceneViewer from "../../viewer/SceneViewer.jsx";
+import { normalizeScene, serializeScene } from "../../core/scene/scene-normalize.js";
+import { hasRenderableModelUrl, normalizeModelCollection } from "../../core/scene/scene-safety.js";
+import { migrateSceneDocument } from "../../core/scene/scene-schema.js";
 import {
   createHarvesterScene,
   createHarvesterThemeScene,
   HARVESTER_THEMES,
 } from "../../scenes/presets/harvester-preset.js";
 import { WORKSPACE_HEADER_MOTION, WORKSPACE_KNIFE_SHOT } from "../../scenes/presets/header-motion.js";
-import { inspectAssetFile } from "./asset-inspector.js";
-import { createMotionCapabilitiesFromDefinitions } from "./motion-analysis.js";
 import ClipMotionPanel from "./ClipMotionPanel.jsx";
 import MotionCapabilityPanel from "./MotionCapabilityPanel.jsx";
 import MaterialOverridePanel from "./MaterialOverridePanel.jsx";
@@ -23,7 +24,11 @@ import ModelAssemblyPanel from "./ModelAssemblyPanel.jsx";
 import AssemblyPresetPanel from "./AssemblyPresetPanel.jsx";
 import ModelHierarchyPanel from "./ModelHierarchyPanel.jsx";
 import BatchModelLoadPanel from "./BatchModelLoadPanel.jsx";
+import ToolboxSettingsPanel from "./ToolboxSettingsPanel.jsx";
+import useSceneHistory from "./useSceneHistory.js";
+import useModelLoader from "./useModelLoader.js";
 import { applyOptimizationPlan, getOptimizationPlan } from "./scene-optimization.js";
+import PageThemeControl from "../page-theme/PageThemeControl.jsx";
 import {
   COLOR_GRADE_PRESETS,
   PARTICLE_PRESETS,
@@ -37,7 +42,20 @@ const DEMO_MODEL_URL = "/model/汽车.glb";
 const WORKSPACE_HEADER_MODEL_URL = "/model/text_model001.glb";
 const LOCAL_SCENE_STORAGE_KEY = "sy-me.asset-workbench.scene.v1";
 const VISUAL_LIBRARY_STORAGE_KEY = "sy-me.asset-workbench.visual-library.v1";
+const TOOLBOX_STATE_STORAGE_KEY = "sy-me.asset-workbench.toolbox-state.v1";
+const TOOLBOX_COMPACT_STORAGE_KEY = "sy-me.asset-workbench.toolbox-compact.v1";
+const TOOLBOX_VISIBILITY_STORAGE_KEY = "sy-me.asset-workbench.toolbox-visibility.v1";
 const VISUAL_LIBRARY_FILE_VERSION = 1;
+const DEFAULT_TOOLBOX_OPEN_STATE = {
+  workflow: true,
+  motion: true,
+  visual: true,
+};
+const DEFAULT_TOOLBOX_VISIBILITY = {
+  workflow: true,
+  motion: true,
+  visual: true,
+};
 
 const LOCAL_MODEL_PRESETS = [
   {
@@ -107,6 +125,12 @@ function resolveCameraShotId(scene, preferredId) {
   return scene?.camera?.defaultShot || shots[0]?.id || "hero";
 }
 
+function resolveSelectedModelId(scene, preferredId) {
+  const models = Array.isArray(scene?.models) ? scene.models : [];
+  if (preferredId && models.some((model) => model.id === preferredId)) return preferredId;
+  return models[0]?.id || null;
+}
+
 function setKnifeView(scene, enabled) {
   const shots = scene.shots.filter((shot) => shot.id !== WORKSPACE_KNIFE_SHOT.id);
   return {
@@ -122,7 +146,7 @@ function createDefaultScene() {
     modelLabel: "示例模型（可替换）",
     title: "收获机视觉工作台",
   });
-  return {
+  return normalizeScene({
     ...scene,
     visualPreset: "custom",
     models: scene.models.map((model) => ({
@@ -133,13 +157,14 @@ function createDefaultScene() {
       assetFormat: "glb",
       assetSource: "demo",
     })),
-  };
+  });
 }
 
 function downloadScene(scene, assetManifest) {
+  const normalizedScene = serializeScene(scene);
   const exportScene = {
-    ...scene,
-    models: scene.models?.map((model) => ({ ...model })),
+    ...normalizedScene,
+    models: normalizedScene.models?.map((model) => ({ ...model })),
   };
   const localModels = assetManifest.models || (assetManifest.model?.slotId
     ? { [assetManifest.model.slotId]: assetManifest.model }
@@ -166,13 +191,22 @@ function downloadScene(scene, assetManifest) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${scene.id || "harvester-scene"}.scene.json`;
+  link.download = `${normalizedScene.id || "harvester-scene"}.scene.json`;
   link.click();
   URL.revokeObjectURL(url);
 }
 
 export default function AssetWorkbench() {
-  const [scene, setScene] = useState(createDefaultScene);
+  const {
+    scene,
+    sceneRef,
+    commitScene,
+    replaceScene,
+    undo: undoSceneHistory,
+    redo: redoSceneHistory,
+    canUndo,
+    canRedo,
+  } = useSceneHistory(createDefaultScene);
   const [theme, setTheme] = useState("studio");
   const [backgroundPreset, setBackgroundPreset] = useState("field");
   const [visualPresetId, setVisualPresetId] = useState("custom");
@@ -207,29 +241,38 @@ export default function AssetWorkbench() {
   const [localSceneSavedAt, setLocalSceneSavedAt] = useState(null);
   const [visualLibrary, setVisualLibrary] = useState([]);
   const [message, setMessage] = useState("请选择模型文件开始预处理。");
-  const sceneRef = useRef(scene);
-  const historyRef = useRef({ past: [], future: [] });
-  const [, setHistoryVersion] = useState(0);
+  const [toolboxOpenState, setToolboxOpenState] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(TOOLBOX_STATE_STORAGE_KEY) || "null");
+      return { ...DEFAULT_TOOLBOX_OPEN_STATE, ...(saved || {}) };
+    } catch {
+      return DEFAULT_TOOLBOX_OPEN_STATE;
+    }
+  });
+  const [compactToolbox, setCompactToolbox] = useState(() => {
+    try {
+      return localStorage.getItem(TOOLBOX_COMPACT_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [toolboxVisibility, setToolboxVisibility] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(TOOLBOX_VISIBILITY_STORAGE_KEY) || "null");
+      return { ...DEFAULT_TOOLBOX_VISIBILITY, ...(saved || {}) };
+    } catch {
+      return DEFAULT_TOOLBOX_VISIBILITY;
+    }
+  });
+  const [toolboxSettingsOpen, setToolboxSettingsOpen] = useState(false);
   const modelInputRef = useRef(null);
   const batchModelInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
   const sceneInputRef = useRef(null);
-  const modelUrlsRef = useRef(new Map());
   const backgroundUrlRef = useRef(null);
   const captureRef = useRef(null);
   const runtimeRef = useRef(null);
   const sceneApiRef = useRef(null);
-
-  const releaseModelUrl = (modelId) => {
-    const url = modelUrlsRef.current.get(modelId);
-    if (url) URL.revokeObjectURL(url);
-    modelUrlsRef.current.delete(modelId);
-  };
-
-  const releaseAllModelUrls = () => {
-    modelUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-    modelUrlsRef.current.clear();
-  };
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(LOCAL_SCENE_STORAGE_KEY) || "null");
@@ -247,8 +290,26 @@ export default function AssetWorkbench() {
     }
   }, []);
   useEffect(() => {
-    sceneRef.current = scene;
-  }, [scene]);
+    try {
+      localStorage.setItem(TOOLBOX_STATE_STORAGE_KEY, JSON.stringify(toolboxOpenState));
+    } catch {
+      // 工具箱状态只是偏好，存储失败不应影响工作台使用。
+    }
+  }, [toolboxOpenState]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(TOOLBOX_COMPACT_STORAGE_KEY, String(compactToolbox));
+    } catch {
+      // 工具箱紧凑模式只是偏好，存储失败不应影响工作台使用。
+    }
+  }, [compactToolbox]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(TOOLBOX_VISIBILITY_STORAGE_KEY, JSON.stringify(toolboxVisibility));
+    } catch {
+      // 工具组显示偏好保存失败时，继续使用当前内存状态。
+    }
+  }, [toolboxVisibility]);
   const handleRuntimeReady = useCallback((runtime) => {
     runtimeRef.current = runtime;
   }, []);
@@ -307,51 +368,13 @@ export default function AssetWorkbench() {
     setMotionInspection(null);
   };
 
-  const commitScene = (update) => {
-    const previous = sceneRef.current;
-    const next = typeof update === "function" ? update(previous) : update;
-    if (!next || next === previous) return;
-    historyRef.current = {
-      past: [...historyRef.current.past, previous].slice(-30),
-      future: [],
-    };
-    sceneRef.current = next;
-    setScene(next);
-    setHistoryVersion((value) => value + 1);
-  };
-
-  const replaceScene = (next) => {
-    sceneRef.current = next;
-    historyRef.current = { past: [], future: [] };
-    setScene(next);
-    setHistoryVersion((value) => value + 1);
-  };
-
   const undoScene = () => {
-    const { past, future } = historyRef.current;
-    const previous = past[past.length - 1];
-    if (!previous) return;
-    historyRef.current = {
-      past: past.slice(0, -1),
-      future: [sceneRef.current, ...future].slice(0, 30),
-    };
-    sceneRef.current = previous;
-    setScene(previous);
-    setHistoryVersion((value) => value + 1);
+    if (!undoSceneHistory()) return;
     setMessage("已撤销上一项场景修改。");
   };
 
   const redoScene = () => {
-    const { past, future } = historyRef.current;
-    const next = future[0];
-    if (!next) return;
-    historyRef.current = {
-      past: [...past, sceneRef.current].slice(-30),
-      future: future.slice(1),
-    };
-    sceneRef.current = next;
-    setScene(next);
-    setHistoryVersion((value) => value + 1);
+    if (!redoSceneHistory()) return;
     setMessage("已重做上一项场景修改。");
   };
 
@@ -360,26 +383,30 @@ export default function AssetWorkbench() {
     setBusy(true);
     try {
       const imported = JSON.parse(await file.text());
-      if (!Array.isArray(imported.models) || imported.models.length === 0) {
-        throw new Error("场景配置缺少 models 模型列表");
+      const migration = migrateSceneDocument(imported);
+      const importedScene = normalizeScene(migration.scene);
+      if (!hasRenderableModelUrl(importedScene.models)) {
+        throw new Error("场景配置缺少可预览的 models URL");
       }
-      const nextTheme = THEME_LABELS[imported.theme] ? imported.theme : "studio";
-      const nextBackground = BACKGROUND_PRESETS.find((preset) => preset.files === imported.environment?.files);
-      replaceScene(imported);
+      const nextTheme = THEME_LABELS[importedScene.theme] ? importedScene.theme : "studio";
+      const nextBackground = BACKGROUND_PRESETS.find((preset) => preset.files === importedScene.environment?.files);
+      replaceScene(importedScene);
       setTheme(nextTheme);
-      setBackgroundPreset(nextBackground?.id || (imported.environment?.files ? "custom" : "field"));
-      setVisualPresetId(VISUAL_PRESETS.some((preset) => preset.id === imported.visualPreset)
-        ? imported.visualPreset
+      setBackgroundPreset(nextBackground?.id || (importedScene.environment?.files ? "custom" : "field"));
+      setVisualPresetId(VISUAL_PRESETS.some((preset) => preset.id === importedScene.visualPreset)
+        ? importedScene.visualPreset
         : "custom");
-      setCameraShotId(imported.camera?.defaultShot || imported.shots?.[0]?.id || "hero");
-      setSelectedModelId(imported.models[0].id);
-      setAssetManifest(normalizeAssetManifest(imported.assetManifest));
+      setCameraShotId(resolveCameraShotId(importedScene, importedScene.camera?.defaultShot));
+      setSelectedModelId(resolveSelectedModelId(importedScene));
+      setAssetManifest(normalizeAssetManifest(importedScene.assetManifest));
       setReports({});
       setModelHierarchies({});
       setModelSockets({});
       setSelectedNodeIds({});
       resetPreviewForModel();
-      setMessage(`${file.name} 已导入，场景参数与动作绑定已恢复。`);
+      setMessage(migration.migrated
+        ? `${file.name} 已导入，并已从 v${migration.fromVersion} 迁移到 v${migration.toVersion}。`
+        : `${file.name} 已导入，场景参数与动作绑定已恢复。`);
     } catch (error) {
       setMessage(`场景配置导入失败：${error.message}`);
     } finally {
@@ -388,6 +415,7 @@ export default function AssetWorkbench() {
   };
 
   const resetWorkspace = () => {
+    cancelModelLoads();
     releaseAllModelUrls();
     if (backgroundUrlRef.current) URL.revokeObjectURL(backgroundUrlRef.current);
     backgroundUrlRef.current = null;
@@ -409,9 +437,6 @@ export default function AssetWorkbench() {
   const hasBoundMotion = Boolean(boundTrackIds?.length);
   const hasClipMotion = Boolean(report?.animations || motionPreview.clipId);
   const hasMotionControls = hasBoundMotion || hasClipMotion;
-  const canUndo = historyRef.current.past.length > 0;
-  const canRedo = historyRef.current.future.length > 0;
-
   const playAllMotion = () => {
     setMotionPreview((state) => ({
       ...state,
@@ -528,16 +553,20 @@ export default function AssetWorkbench() {
       if (!saved?.scene || !Array.isArray(saved.scene.models) || saved.scene.models.length === 0) {
         throw new Error("没有可恢复的有效场景");
       }
+      const restoredScene = normalizeScene(saved.scene);
+      if (!hasRenderableModelUrl(restoredScene.models)) {
+        throw new Error("本地方案缺少可预览的模型 URL");
+      }
       setTheme(saved.theme || "studio");
       setBackgroundPreset(saved.backgroundPreset || "field");
-      setVisualPresetId(saved.visualPresetId || saved.scene.visualPreset || "custom");
-      const nextShotId = resolveCameraShotId(saved.scene, saved.cameraShotId);
+      setVisualPresetId(saved.visualPresetId || restoredScene.visualPreset || "custom");
+      const nextShotId = resolveCameraShotId(restoredScene, saved.cameraShotId);
       replaceScene({
-        ...saved.scene,
-        camera: { ...saved.scene.camera, defaultShot: nextShotId },
+        ...restoredScene,
+        camera: { ...restoredScene.camera, defaultShot: nextShotId },
       });
       setCameraShotId(nextShotId);
-      setSelectedModelId(saved.scene.models[0].id);
+      setSelectedModelId(resolveSelectedModelId(restoredScene));
       setAssetManifest(normalizeAssetManifest(saved.assetManifest));
       setReports({});
       setModelHierarchies({});
@@ -620,7 +649,9 @@ export default function AssetWorkbench() {
           id: `visual-import-${Date.now()}-${index}`,
           name: entry.name.trim().slice(0, 80),
           savedAt: entry.savedAt || importedAt,
-        }));
+          scene: normalizeScene(entry.scene),
+        }))
+        .filter((entry) => hasRenderableModelUrl(entry.scene.models));
       if (imported.length === 0) throw new Error("没有包含有效模型的视觉方案");
       const nextLibrary = [...imported, ...visualLibrary].slice(0, 20);
       localStorage.setItem(VISUAL_LIBRARY_STORAGE_KEY, JSON.stringify(nextLibrary));
@@ -636,17 +667,22 @@ export default function AssetWorkbench() {
       setMessage("该方案缺少有效场景模型，无法应用。");
       return;
     }
-    const nextShotId = resolveCameraShotId(entry.scene, entry.cameraShotId);
+    const normalizedEntryScene = normalizeScene(entry.scene);
+    if (!hasRenderableModelUrl(normalizedEntryScene.models)) {
+      setMessage("该方案缺少可预览的模型 URL，无法应用。");
+      return;
+    }
+    const nextShotId = resolveCameraShotId(normalizedEntryScene, entry.cameraShotId);
     const nextScene = {
-      ...entry.scene,
-      camera: { ...entry.scene.camera, defaultShot: nextShotId },
+      ...normalizedEntryScene,
+      camera: { ...normalizedEntryScene.camera, defaultShot: nextShotId },
     };
     replaceScene(nextScene);
     setTheme(entry.theme || entry.scene.theme || "studio");
     setBackgroundPreset(entry.backgroundPreset || "field");
     setVisualPresetId(entry.visualPresetId || entry.scene.visualPreset || "custom");
     setCameraShotId(nextShotId);
-    setSelectedModelId(entry.selectedModelId || entry.scene.models[0].id);
+    setSelectedModelId(resolveSelectedModelId(nextScene, entry.selectedModelId));
     setAssetManifest(normalizeAssetManifest(entry.assetManifest));
     setReports({});
     setModelHierarchies({});
@@ -690,6 +726,30 @@ export default function AssetWorkbench() {
       visualPreset: "custom",
     }));
   };
+
+  const {
+    handleModelFile,
+    handleBatchModelFiles,
+    loadLocalModel,
+    releaseModelUrl,
+    releaseAllModelUrls,
+    cancelModelLoads,
+  } = useModelLoader({
+    selectedModelId,
+    sceneRef,
+    updateScene,
+    setBusy,
+    setReports,
+    setAssetManifest,
+    setSelectedModelId,
+    setSelectedNodeIds,
+    setBatchQueue,
+    setMessage,
+    resetPreviewForModel,
+    setKnifeView,
+    localModelPresets: LOCAL_MODEL_PRESETS,
+    workspaceMotion: WORKSPACE_HEADER_MOTION,
+  });
 
   const applyVisualPreset = (preset) => {
     const quality = findPreset(QUALITY_PRESETS, preset.quality);
@@ -904,228 +964,7 @@ export default function AssetWorkbench() {
     downloadScene({ ...scene, models, defaultVariant }, assetManifest);
   };
 
-  useEffect(() => () => {
-    releaseAllModelUrls();
-    if (backgroundUrlRef.current) URL.revokeObjectURL(backgroundUrlRef.current);
-  }, []);
-
   const themeOptions = useMemo(() => Object.keys(HARVESTER_THEMES), []);
-
-  const handleModelFile = async (file) => {
-    if (!file) return;
-    setBusy(true);
-    const nextReport = await inspectAssetFile(file);
-    setReports((previous) => ({ ...previous, [selectedModelId]: nextReport }));
-
-    if (!nextReport.previewSupported) {
-      setMessage(`${file.name} 已完成格式检查，但当前建议先转换为 GLB。`);
-      setBusy(false);
-      return;
-    }
-
-    releaseModelUrl(selectedModelId);
-    const objectUrl = URL.createObjectURL(file);
-    modelUrlsRef.current.set(selectedModelId, objectUrl);
-    const matchingPreset = LOCAL_MODEL_PRESETS.find((preset) =>
-      preset.fileName.toLowerCase() === file.name.toLowerCase()
-      && preset.motionTracks?.every((track) => nextReport.nodeNames.includes(track.node))
-    );
-    resetPreviewForModel();
-    updateScene((previous) => ({
-      ...setKnifeView(previous, Boolean(matchingPreset)),
-      title: "收获机视觉工作台",
-      models: previous.models.map((model, index) =>
-        (model.id === selectedModelId || (!selectedModelId && index === 0))
-          ? {
-            ...model,
-            url: objectUrl,
-            label: file.name.replace(/\.(glb|gltf)$/i, ""),
-            assetFormat: nextReport.format,
-            assetSource: "local",
-            autoFrame: true,
-            nodeVisibility: undefined,
-            nodeTransformDeltas: undefined,
-            motionTracks: matchingPreset?.motionTracks,
-          }
-          : model
-      ),
-    }));
-    const modelManifest = {
-        fileName: file.name,
-        format: nextReport.format,
-        slotId: selectedModelId,
-        source: "local",
-      };
-    setAssetManifest((previous) => ({
-      ...previous,
-      model: modelManifest,
-      models: { ...(previous.models || {}), [selectedModelId]: modelManifest },
-    }));
-    setMessage(`${file.name} 已检查并替换到当前场景。`);
-    setBusy(false);
-  };
-
-  const handleBatchModelFiles = async (fileList) => {
-    const files = Array.from(fileList || []);
-    if (files.length === 0) return;
-    const queueItems = files.map((file, index) => ({
-      id: `batch-${Date.now()}-${index}`,
-      name: file.name,
-      status: "pending",
-      message: "",
-    }));
-    setBatchQueue(queueItems);
-    setBusy(true);
-
-    const loadedModels = [];
-    const loadedReports = {};
-    const loadedManifests = {};
-    const existingIds = new Set(sceneRef.current.models.map((model) => model.id));
-    let modelIndex = sceneRef.current.models.length + 1;
-
-    const updateQueueItem = (id, patch) => {
-      setBatchQueue((previous) => previous.map((item) => item.id === id ? { ...item, ...patch } : item));
-    };
-
-    try {
-      for (const [index, file] of files.entries()) {
-        const queueItem = queueItems[index];
-        updateQueueItem(queueItem.id, { status: "processing", message: "读取模型元数据" });
-        try {
-          const nextReport = await inspectAssetFile(file);
-          if (!nextReport.previewSupported) {
-            updateQueueItem(queueItem.id, { status: "skipped", message: "建议转换为单文件 GLB" });
-            continue;
-          }
-
-          let modelId = `model-${modelIndex}`;
-          while (existingIds.has(modelId)) {
-            modelIndex += 1;
-            modelId = `model-${modelIndex}`;
-          }
-          existingIds.add(modelId);
-          modelIndex += 1;
-          const objectUrl = URL.createObjectURL(file);
-          modelUrlsRef.current.set(modelId, objectUrl);
-          const model = {
-            id: modelId,
-            assetId: modelId,
-            label: file.name.replace(/\.(glb|gltf)$/i, ""),
-            url: objectUrl,
-            position: [loadedModels.length * 2.2, 0, 0],
-            rotation: [0, 0, 0],
-            scale: 1,
-            visible: true,
-            variantTarget: false,
-            parentId: null,
-            assemblyId: null,
-            assetFormat: nextReport.format,
-            assetSource: "local",
-            autoFrame: true,
-            nodeVisibility: undefined,
-            nodeTransformDeltas: undefined,
-          };
-          const manifest = {
-            fileName: file.name,
-            format: nextReport.format,
-            slotId: modelId,
-            source: "local",
-          };
-          loadedModels.push(model);
-          loadedReports[modelId] = nextReport;
-          loadedManifests[modelId] = manifest;
-          updateQueueItem(queueItem.id, { status: "loaded", message: "已创建模型槽位" });
-        } catch (error) {
-          updateQueueItem(queueItem.id, { status: "failed", message: error.message });
-        }
-      }
-
-      if (loadedModels.length > 0) {
-        updateScene((previous) => ({
-          ...previous,
-          models: [...previous.models, ...loadedModels],
-        }));
-        setReports((previous) => ({ ...previous, ...loadedReports }));
-        setAssetManifest((previous) => ({
-          ...previous,
-          model: loadedManifests[loadedModels[loadedModels.length - 1].id] || previous.model,
-          models: { ...(previous.models || {}), ...loadedManifests },
-        }));
-        setSelectedModelId(loadedModels[loadedModels.length - 1].id);
-        setSelectedNodeIds({});
-        setMessage(`批量加载完成：新增 ${loadedModels.length} 个模型槽位。`);
-      } else {
-        setMessage("批量预处理完成，但没有可直接预览的模型。");
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const loadLocalModel = async (preset) => {
-    setBusy(true);
-    try {
-      const response = await fetch(preset.url, { method: "HEAD" });
-      if (!response.ok || response.headers.get("content-type")?.includes("text/html")) {
-        setMessage(`项目里没有 ${preset.fileName}。点击「GLB」选择本地文件，或将它放入 public/model/。`);
-        return;
-      }
-    } catch {
-      setMessage(`未能访问 ${preset.fileName}，也可以用「GLB」按钮从本机选择文件。`);
-      return;
-    } finally {
-      setBusy(false);
-    }
-    releaseModelUrl(selectedModelId);
-    resetPreviewForModel();
-    updateScene((previous) => ({
-      ...setKnifeView(previous, Boolean(preset.motionTracks?.length)),
-      models: previous.models.map((model, index) =>
-        (model.id === selectedModelId || (!selectedModelId && index === 0))
-          ? {
-            ...model,
-            url: preset.url,
-            label: preset.label,
-            assetFormat: "glb",
-            assetSource: "workspace",
-            autoFrame: true,
-            nodeVisibility: undefined,
-            nodeTransformDeltas: undefined,
-            motionTracks: preset.motionTracks,
-          }
-          : model
-      ),
-    }));
-    const modelManifest = {
-        fileName: preset.fileName,
-        format: "glb",
-        slotId: selectedModelId,
-        source: "workspace",
-      };
-    setAssetManifest((previous) => ({
-      ...previous,
-      model: modelManifest,
-      models: { ...(previous.models || {}), [selectedModelId]: modelManifest },
-    }));
-    setReports((previous) => ({ ...previous, [selectedModelId]: {
-      fileName: preset.fileName,
-      format: "glb",
-      size: "637.25 MB",
-      previewSupported: true,
-      meshes: 113,
-      materials: 37,
-      nodes: 121,
-      nodeNames: WORKSPACE_HEADER_MOTION.map((track) => track.node),
-      materialNames: [],
-      animations: 0,
-      clipNames: [],
-      vertices: null,
-      faces: null,
-      notes: ["工作区割台模型已接入当前场景，正在等待渲染器完成几何体体检。"],
-      motion: createMotionCapabilitiesFromDefinitions(preset.motionTracks),
-    } }));
-    setMessage(`${preset.fileName} 已加载到当前场景。`);
-  };
 
   const handleBackgroundFile = (file) => {
     if (!file) return;
@@ -1296,6 +1135,11 @@ export default function AssetWorkbench() {
       setMessage("该装配方案没有有效的部件配置，无法应用。");
       return;
     }
+    const presetModels = normalizeModelCollection(entry.models);
+    if (presetModels.length === 0) {
+      setMessage("该装配方案没有可用的部件配置，无法应用。");
+      return;
+    }
     const currentModels = sceneRef.current.models;
     const usedCurrentIds = new Set();
     const targetIds = new Map();
@@ -1311,7 +1155,7 @@ export default function AssetWorkbench() {
       );
     };
 
-    entry.models.forEach((snapshot) => {
+    presetModels.forEach((snapshot) => {
       const target = findMatch(snapshot);
       if (target) {
         usedCurrentIds.add(target.id);
@@ -1327,7 +1171,7 @@ export default function AssetWorkbench() {
     updateVisualScene((previous) => ({
       ...previous,
       models: previous.models.map((model) => {
-        const snapshot = entry.models.find((item) => targetIds.get(item.id) === model.id);
+        const snapshot = presetModels.find((item) => targetIds.get(item.id) === model.id);
         if (!snapshot) return model;
         const parentId = snapshot.parentId ? targetIds.get(snapshot.parentId) || null : null;
         const assemblyId = snapshot.assemblyId ? targetIds.get(snapshot.assemblyId) || null : null;
@@ -1343,7 +1187,7 @@ export default function AssetWorkbench() {
       }),
     }));
     setSelectedNodeIds({});
-    setMessage(`已应用装配方案“${entry.name}”，匹配 ${targetIds.size}/${entry.models.length} 个部件。`);
+    setMessage(`已应用装配方案“${entry.name}”，匹配 ${targetIds.size}/${presetModels.length} 个部件。`);
   };
 
   const alignModelSockets = (request) => {
@@ -1361,10 +1205,11 @@ export default function AssetWorkbench() {
     setMessage("已按挂载点自动对齐当前部件，并关闭自动落地偏移。");
   };
 
-  const updateActiveNodeVisibility = (nodeId, nextHidden) => {
+  const updateActiveNodeVisibility = (modelId, nodeId, nextHidden) => {
+    if (!modelId || !nodeId || !sceneRef.current.models.some((model) => model.id === modelId)) return;
     updateVisualScene((previous) => ({
       ...previous,
-      models: previous.models.map((model) => model.id === activeModel?.id
+      models: previous.models.map((model) => model.id === modelId
         ? {
           ...model,
           nodeVisibility: {
@@ -1392,8 +1237,9 @@ export default function AssetWorkbench() {
     setMessage(`${multi ? "已更新多选" : "已选择"}节点“${node?.name || nodeId}”。`);
   };
 
-  const isolateActiveNode = (nodeId) => {
-    const nodes = modelHierarchies[activeModel?.id] || [];
+  const isolateActiveNode = (modelId, nodeId) => {
+    if (!modelId || !nodeId) return;
+    const nodes = modelHierarchies[modelId] || [];
     const nextVisibility = Object.fromEntries(nodes.map((node) => [
       node.id,
       node.id === nodeId
@@ -1402,17 +1248,18 @@ export default function AssetWorkbench() {
     ]));
     updateVisualScene((previous) => ({
       ...previous,
-      models: previous.models.map((model) => model.id === activeModel?.id
+      models: previous.models.map((model) => model.id === modelId
         ? { ...model, nodeVisibility: nextVisibility }
         : model),
     }));
     setMessage("已隔离当前节点及其父子链。点击“恢复全部节点”可撤销。");
   };
 
-  const resetActiveNodeVisibility = () => {
+  const resetActiveNodeVisibility = (modelId) => {
+    if (!modelId) return;
     updateVisualScene((previous) => ({
       ...previous,
-      models: previous.models.map((model) => model.id === activeModel?.id
+      models: previous.models.map((model) => model.id === modelId
         ? { ...model, nodeVisibility: undefined }
         : model),
     }));
@@ -1518,6 +1365,36 @@ export default function AssetWorkbench() {
     setMessage(`已将当前槽位“${activeModel?.label || selectedModelId}”恢复为示例模型。`);
   };
 
+  const focusToolGroup = (groupId) => {
+    const groupKey = groupId.replace("asset-tool-", "");
+    setToolboxOpenState((previous) => ({ ...previous, [groupKey]: true }));
+    const group = document.getElementById(groupId);
+    if (!group) return;
+    group.open = true;
+    group.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleToolboxToggle = (groupKey, event) => {
+    const isOpen = event.currentTarget.open;
+    setToolboxOpenState((previous) => ({ ...previous, [groupKey]: isOpen }));
+  };
+
+  const updateToolboxVisibility = (groupKey, visible) => {
+    if (!visible && toolboxVisibility[groupKey]
+      && Object.values(toolboxVisibility).filter(Boolean).length === 1) {
+      setMessage("至少保留一个工具组显示。");
+      return;
+    }
+    setToolboxVisibility((previous) => ({ ...previous, [groupKey]: visible }));
+  };
+
+  const resetToolboxPreferences = () => {
+    setToolboxVisibility(DEFAULT_TOOLBOX_VISIBILITY);
+    setToolboxOpenState(DEFAULT_TOOLBOX_OPEN_STATE);
+    setCompactToolbox(false);
+    setMessage("已恢复工具箱默认显示和展开状态。");
+  };
+
   return (
     <div className="asset-workbench">
       <SceneViewer
@@ -1535,12 +1412,54 @@ export default function AssetWorkbench() {
         })()}
       />
 
-      <aside className="asset-workbench-panel">
+      <aside className={`asset-workbench-panel ${compactToolbox ? "is-compact" : ""}`}>
         <div className="asset-workbench-title">
           <span>收获机视觉工作台</span>
+          <PageThemeControl className="asset-page-theme-control" label="主题" />
           <small>Asset Lab</small>
         </div>
 
+        <nav className="asset-toolbox-nav" aria-label="工作台工具箱">
+          <span>工具箱</span>
+          <button type="button" onClick={() => focusToolGroup("asset-tool-workflow")}>工作流</button>
+          <button type="button" onClick={() => focusToolGroup("asset-tool-motion")}>动作检查</button>
+          <button type="button" onClick={() => focusToolGroup("asset-tool-visual")}>视觉镜头</button>
+          <button
+            type="button"
+            className={compactToolbox ? "is-active" : ""}
+            onClick={() => setCompactToolbox((value) => !value)}
+          >
+            {compactToolbox ? "标准模式" : "紧凑模式"}
+          </button>
+          <button
+            type="button"
+            className={toolboxSettingsOpen ? "is-active" : ""}
+            onClick={() => setToolboxSettingsOpen((value) => !value)}
+          >
+            工具设置
+          </button>
+        </nav>
+
+        {toolboxSettingsOpen && (
+          <ToolboxSettingsPanel
+            visibility={toolboxVisibility}
+            onChange={updateToolboxVisibility}
+            onReset={resetToolboxPreferences}
+          />
+        )}
+
+        {toolboxVisibility.workflow && (
+        <details
+          id="asset-tool-workflow"
+          className="asset-tool-group"
+          open={toolboxOpenState.workflow}
+          onToggle={(event) => handleToolboxToggle("workflow", event)}
+        >
+          <summary>
+            <span>工作流工具</span>
+            <small>快捷操作 · 模型 · 装配 · 节点 · 加载</small>
+          </summary>
+          <div className="asset-tool-group-content">
         <section className="asset-action-center" aria-label="工作台快捷操作">
           <h3>快捷操作</h3>
           <p className="asset-workbench-hint">把常用预览、诊断和配置管理集中到这里。</p>
@@ -1730,9 +1649,9 @@ export default function AssetWorkbench() {
           nodes={modelHierarchies[activeModel?.id] || report?.nodeHierarchy || []}
           selectedNodeIds={selectedNodeIds[activeModel?.id] || []}
           onSelectNode={(nodeId, options) => selectModelNode(activeModel.id, nodeId, options)}
-          onToggleVisibility={updateActiveNodeVisibility}
-          onIsolate={isolateActiveNode}
-          onReset={resetActiveNodeVisibility}
+          onToggleVisibility={(nodeId, nextHidden) => updateActiveNodeVisibility(activeModel?.id, nodeId, nextHidden)}
+          onIsolate={(nodeId) => isolateActiveNode(activeModel?.id, nodeId)}
+          onReset={() => resetActiveNodeVisibility(activeModel?.id)}
         />
 
         <ModelNodeTransformPanel
@@ -1805,7 +1724,22 @@ export default function AssetWorkbench() {
             恢复示例模型
           </button>
         </section>
+          </div>
+        </details>
+        )}
 
+        {toolboxVisibility.motion && (
+        <details
+          id="asset-tool-motion"
+          className="asset-tool-group"
+          open={toolboxOpenState.motion}
+          onToggle={(event) => handleToolboxToggle("motion", event)}
+        >
+          <summary>
+            <span>动作与检查</span>
+            <small>动作能力 · 动画片段 · 材质 · 体检报告</small>
+          </summary>
+          <div className="asset-tool-group-content">
         {(report || activeMotionModel) && (
           <MotionCapabilityPanel
             report={report}
@@ -1863,7 +1797,22 @@ export default function AssetWorkbench() {
             {report.notes.map((note, index) => <p key={index}>{note}</p>)}
           </section>
         )}
+          </div>
+        </details>
+        )}
 
+        {toolboxVisibility.visual && (
+        <details
+          id="asset-tool-visual"
+          className="asset-tool-group"
+          open={toolboxOpenState.visual}
+          onToggle={(event) => handleToolboxToggle("visual", event)}
+        >
+          <summary>
+            <span>视觉与镜头</span>
+            <small>主题 · 背景 · 视觉方案 · 镜头 · 渲染</small>
+          </summary>
+          <div className="asset-tool-group-content">
         <section>
           <h3>视觉主题</h3>
           <div className="asset-theme-list">
@@ -1932,10 +1881,15 @@ export default function AssetWorkbench() {
         />
 
         <RenderTuningPanel scene={scene} onChange={updateVisualScene} />
+          </div>
+        </details>
+        )}
 
-        <button className="asset-export-button" onClick={exportScene}>
-          导出当前场景配置
-        </button>
+        <div className="asset-toolbox-footer">
+          <button className="asset-export-button" onClick={exportScene}>
+            导出当前场景配置
+          </button>
+        </div>
         <div className="asset-workbench-message">{message}</div>
       </aside>
     </div>

@@ -84,7 +84,9 @@ export function createHarvesterScene({
   modelRotation = [0, 0, 0],
 } = {}) {
   return {
-    version: 1,
+    version: 2,
+    schemaVersion: 2,
+    schema: { id: "sy-me.scene", version: 2 },
     id: "harvester-showcase",
     title,
     dracoDecoderPath: "/draco/",

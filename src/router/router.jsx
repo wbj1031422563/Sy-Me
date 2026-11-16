@@ -6,6 +6,7 @@
  * @FilePath: \fmc-personal-blog\src\router\router.jsx
  * @Description:
  */
+/* eslint-disable react-refresh/only-export-components */
 
 import {
   createBrowserRouter,
@@ -14,6 +15,10 @@ import {
 } from "react-router-dom";
 import { lazy, Suspense } from "react";
 const  LoadingPage=lazy(() => import('../views/loading-page/loading-page.jsx'));
+const StudioLayout = lazy(() => import("../views/studio/StudioLayout.jsx"));
+const StudioHome = lazy(() => import("../views/studio/StudioHome.jsx"));
+const SceneLibraryPage = lazy(() => import("../views/studio/SceneLibraryPage.jsx"));
+const StudioPlaceholderPage = lazy(() => import("../views/studio/StudioPlaceholderPage.jsx"));
 const routerList=[
   {
     path:'/',
@@ -54,6 +59,13 @@ const router = createBrowserRouter(
           }></Route>
         })
       }
+      <Route path="/studio" element={<Suspense fallback={<LoadingPage />}><StudioLayout /></Suspense>}>
+        <Route index element={<Suspense fallback={<LoadingPage />}><StudioHome /></Suspense>} />
+        <Route path="scenes" element={<Suspense fallback={<LoadingPage />}><SceneLibraryPage /></Suspense>} />
+        <Route path="assets" element={<Suspense fallback={<LoadingPage />}><StudioPlaceholderPage type="assets" /></Suspense>} />
+        <Route path="operations" element={<Suspense fallback={<LoadingPage />}><StudioPlaceholderPage type="operation" /></Suspense>} />
+        <Route path="diagnostics" element={<Suspense fallback={<LoadingPage />}><StudioPlaceholderPage type="diagnostics" /></Suspense>} />
+      </Route>
     </Route>
   )
 );

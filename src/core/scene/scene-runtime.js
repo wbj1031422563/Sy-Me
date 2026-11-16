@@ -89,6 +89,7 @@ function reduceState(state, action) {
  */
 export function createSceneRuntime(scene) {
   let state = createInitialState(scene);
+  let currentScene = scene;
   const listeners = new Set();
 
   const notify = () => {
@@ -100,6 +101,45 @@ export function createSceneRuntime(scene) {
     subscribe: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    syncScene: (nextScene) => {
+      if (!nextScene || nextScene === currentScene) return;
+      const previousModels = new Map((currentScene.models || []).map((model) => [model.id, model]));
+      const nextVisibility = Object.fromEntries(
+        (nextScene.models || []).map((model) => {
+          const previousModel = previousModels.get(model.id);
+          const modelVisibilityChanged = previousModel?.visible !== model.visible;
+          return [
+            model.id,
+            modelVisibilityChanged || state.visibility[model.id] == null
+              ? model.visible !== false
+              : state.visibility[model.id],
+          ];
+        })
+      );
+      const nextShotId = nextScene.camera?.defaultShot || nextScene.shots?.[0]?.id;
+      const previousShotId = currentScene.camera?.defaultShot || currentScene.shots?.[0]?.id;
+      const nextVariantId = nextScene.defaultVariant || nextScene.materialVariants?.[0]?.id;
+      const previousVariantId = currentScene.defaultVariant || currentScene.materialVariants?.[0]?.id;
+      const shotChanged = nextShotId !== previousShotId;
+      const variantChanged = nextVariantId !== previousVariantId;
+      const validShotIds = new Set([
+        ...(nextScene.shots || []).map((shot) => shot.id),
+        ...state.parsedShots.map((shot) => shot.id),
+      ]);
+      const validVariantIds = new Set((nextScene.materialVariants || []).map((variant) => variant.id));
+      const shotId = shotChanged || !validShotIds.has(state.shotId)
+        ? nextShotId
+        : state.shotId;
+      const variantId = variantChanged || !validVariantIds.has(state.variantId)
+        ? nextVariantId
+        : state.variantId;
+      const visibilityChanged = Object.keys(nextVisibility).length !== Object.keys(state.visibility).length
+        || Object.entries(nextVisibility).some(([id, value]) => state.visibility[id] !== value);
+      currentScene = nextScene;
+      if (!visibilityChanged && shotId === state.shotId && variantId === state.variantId) return;
+      state = { ...state, visibility: nextVisibility, shotId, variantId };
+      notify();
     },
     dispatch: (action) => {
       const nextState = reduceState(state, action);

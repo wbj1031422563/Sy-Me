@@ -97,6 +97,8 @@ with sync_playwright() as playwright:
         "document.querySelector('.asset-workbench-message')?.textContent.includes('保存装配方案')",
         timeout=5000,
     )
+    assembly_presets.locator(".asset-library-entry").get_by_role("button", name="对比", exact=True).click(force=True)
+    assert assembly_presets.locator(".asset-assembly-diff").count() == 1
     assembly_presets.get_by_role("button", name="应用", exact=True).click(force=True)
     page.wait_for_function(
         "document.querySelector('.asset-workbench-message')?.textContent.includes('应用装配方案')",
@@ -104,8 +106,11 @@ with sync_playwright() as playwright:
     )
     slot_two = model_slots.nth(1)
     slot_two.locator('button[aria-label^="隐藏"]').click(force=True)
+    page.wait_for_function(
+        "Boolean(document.querySelectorAll('.asset-model-slot')[1]?.querySelector('button[aria-label^=\"显示\"]'))",
+        timeout=5000,
+    )
     show_slot = slot_two.locator('button[aria-label^="显示"]')
-    show_slot.wait_for(timeout=5000)
     assert show_slot.count() == 1
     remove_slot_two = slot_two.locator('button[aria-label^="移除"]')
     remove_slot_two.click(force=True)
@@ -131,7 +136,10 @@ with sync_playwright() as playwright:
         {"name": "batch-b.glb", "mimeType": "model/gltf-binary", "buffer": make_motion_glb()},
     ])
     batch_queue = page.locator(".asset-batch-model-queue")
-    batch_queue.wait_for(timeout=5000)
+    page.wait_for_function(
+        "Boolean(document.querySelector('.asset-batch-model-queue'))",
+        timeout=5000,
+    )
     page.wait_for_function(
         "document.querySelectorAll('.asset-batch-model-item.is-loaded').length === 2",
         timeout=15000,

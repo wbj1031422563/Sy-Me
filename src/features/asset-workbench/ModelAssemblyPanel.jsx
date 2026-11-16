@@ -14,14 +14,18 @@ export default function ModelAssemblyPanel({
   const parentSockets = modelSockets?.[parentModel?.id] || [];
   const [childSocketId, setChildSocketId] = useState("");
   const [parentSocketId, setParentSocketId] = useState("");
+  const childSocketSignature = childSockets.map((socket) => socket.id).join("|");
+  const parentSocketSignature = parentSockets.map((socket) => socket.id).join("|");
+  const firstChildSocketId = childSockets[0]?.id || "";
+  const firstParentSocketId = parentSockets[0]?.id || "";
 
   useEffect(() => {
-    setChildSocketId(childSockets[0]?.id || "");
-  }, [activeModel?.id, childSockets.map((socket) => socket.id).join("|")]);
+    setChildSocketId(firstChildSocketId);
+  }, [activeModel?.id, childSocketSignature, firstChildSocketId]);
 
   useEffect(() => {
-    setParentSocketId(parentSockets[0]?.id || "");
-  }, [parentModel?.id, parentSockets.map((socket) => socket.id).join("|")]);
+    setParentSocketId(firstParentSocketId);
+  }, [parentModel?.id, parentSocketSignature, firstParentSocketId]);
 
   if (!activeModel) return null;
 

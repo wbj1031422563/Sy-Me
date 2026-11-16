@@ -2,6 +2,25 @@
 
 这里是通用场景运行时的第一层基础设施。
 
+## 场景 Schema
+
+当前场景文档协议为 `sy-me.scene` v2。标准文档同时包含：
+
+```json
+{
+  "version": 2,
+  "schemaVersion": 2,
+  "schema": { "id": "sy-me.scene", "version": 2 }
+}
+```
+
+`normalizeScene` 会先调用 `migrateSceneDocument`，把 v1 场景中的单模型、模型对象表，
+以及旧的 `parent` / `groupId` 关系迁移为 v2 的 `models[]`、`parentId` 和 `assemblyId`。
+高于当前版本的场景会主动拒绝，避免新字段被旧工作台静默丢弃。
+
+新增场景字段时，先在 `scene-schema.js` 增加迁移，再在 `scene-normalize.js` 增加运行时默认值；
+导出统一使用 `serializeScene`，保证保存到文件和方案库的文档已经升级到当前版本。
+
 ## 场景扩展
 
 扩展组件在业务模块中注册：
@@ -54,6 +73,10 @@ sceneRegistry.registerNode("radar", RadarExtension);
   }}
 />
 ```
+
+`SceneViewer` 会复用同一个运行时实例。外部场景描述发生变化时，通过
+`runtime.syncScene(nextScene)` 同步模型显隐、镜头和材质变体，保留已体检的模型信息、
+热点和运行时交互状态，避免普通场景编辑触发整个运行时重建。
 
 目前内置命令包括：
 

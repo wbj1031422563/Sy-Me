@@ -8,6 +8,9 @@
     "dev:workbench": "vite --open /tools/asset-workbench",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "lint:workbench": "eslint src/core/scene src/features/asset-workbench src/features/page-theme src/theme src/viewer/SceneViewer.jsx --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "lint:studio": "eslint src/views/studio src/features/page-theme src/theme src/router/router.jsx src/views/home/home.jsx --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "test:scene": "node scripts/scene-schema-smoke.mjs && node scripts/scene-safety-smoke.mjs && node scripts/validate-scenes.mjs",
     "preview": "vite preview",
     "validate:scenes": "node scripts/validate-scenes.mjs"
   },

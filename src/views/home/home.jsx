@@ -9,6 +9,7 @@
 import "./home.less";
 import ReactThree from "../react-three/react-three.jsx";
 import { useNavigate } from "react-router-dom";
+import PageThemeControl from "../../features/page-theme/PageThemeControl.jsx";
 function Home() {
   let navigate = useNavigate();
 
@@ -19,15 +20,23 @@ function Home() {
   return (
     <>
       <div className="home">
+        <PageThemeControl className="home-page-theme-control" />
         <div className="peraon-info-conatiner">
           <h1>我的博客</h1>
           <button
             type="button"
             className="home-tool-entry"
+            onClick={() => goRouter("/studio")}
+          >
+            <span>进入场景工作区</span>
+            <small>Studio · 展示 / 装配 / 作业 / 诊断</small>
+          </button>
+          <button
+            type="button"
+            className="home-legacy-entry"
             onClick={() => goRouter("/tools/asset-workbench")}
           >
-            <span>进入资产工作台</span>
-            <small>Asset Lab · 多模型视觉配置</small>
+            直接打开资产工作台 →
           </button>
         </div>
         <div className="project-list">

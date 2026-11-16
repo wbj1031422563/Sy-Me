@@ -4,8 +4,15 @@
  * 这里不负责加载资源，也不负责渲染。它的作用是让 JSON、接口数据和
  * 后续编辑器生成的数据都能以同一种形态进入 SceneRuntime。
  */
+import { normalizeModelCollection } from "./scene-safety.js";
+import {
+  CURRENT_SCENE_SCHEMA_VERSION,
+  migrateSceneDocument,
+} from "./scene-schema.js";
+
 export function normalizeScene(input = {}) {
-  const source = input || {};
+  const { scene: migratedScene } = migrateSceneDocument(input);
+  const source = migratedScene || {};
   const rawModels = Array.isArray(source.models) ? source.models : [];
   const rawVariants = Array.isArray(source.materialVariants)
     ? source.materialVariants
@@ -13,19 +20,14 @@ export function normalizeScene(input = {}) {
 
   return {
     ...source,
-    version: source.version ?? 1,
+    version: CURRENT_SCENE_SCHEMA_VERSION,
+    schemaVersion: CURRENT_SCENE_SCHEMA_VERSION,
+    schema: source.schema,
     id: source.id || "scene",
     title: source.title || "未命名场景",
-    models: rawModels.map((model, index) => ({
+    models: normalizeModelCollection(rawModels).map((model, index) => ({
       ...model,
-      id: model.id || `model-${index + 1}`,
-      assetId: model.assetId || model.id || `model-${index + 1}`,
-      position: model.position || [0, 0, 0],
-      rotation: model.rotation || [0, 0, 0],
-      scale: model.scale ?? 1,
       nodeTransformDeltas: model.nodeTransformDeltas || undefined,
-      parentId: model.parentId || null,
-      assemblyId: model.assemblyId || null,
       // 没有显式指定时，保持旧版“第一个模型作为变体目标”的行为。
       variantTarget: model.variantTarget ?? index === 0,
     })),
@@ -88,5 +90,12 @@ export function normalizeScene(input = {}) {
       ...(source.parameters || {}),
     },
   };
+}
+
+/**
+ * 明确表达“导出为标准场景文档”的入口，避免调用方直接序列化旧结构。
+ */
+export function serializeScene(input = {}) {
+  return normalizeScene(input);
 }
 
