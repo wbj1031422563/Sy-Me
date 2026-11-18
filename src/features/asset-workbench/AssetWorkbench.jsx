@@ -25,6 +25,7 @@ import AssemblyPresetPanel from "./AssemblyPresetPanel.jsx";
 import ModelHierarchyPanel from "./ModelHierarchyPanel.jsx";
 import BatchModelLoadPanel from "./BatchModelLoadPanel.jsx";
 import ToolboxSettingsPanel from "./ToolboxSettingsPanel.jsx";
+import { consumeLocalAsset } from "./local-asset-session.js";
 import useSceneHistory from "./useSceneHistory.js";
 import useModelLoader from "./useModelLoader.js";
 import { applyOptimizationPlan, getOptimizationPlan } from "./scene-optimization.js";
@@ -266,6 +267,7 @@ export default function AssetWorkbench() {
   });
   const [toolboxSettingsOpen, setToolboxSettingsOpen] = useState(false);
   const modelInputRef = useRef(null);
+  const modelInputTargetRef = useRef(null);
   const batchModelInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
   const sceneInputRef = useRef(null);
@@ -273,6 +275,7 @@ export default function AssetWorkbench() {
   const captureRef = useRef(null);
   const runtimeRef = useRef(null);
   const sceneApiRef = useRef(null);
+  const handedOffAssetRef = useRef(null);
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(LOCAL_SCENE_STORAGE_KEY) || "null");
@@ -461,8 +464,8 @@ export default function AssetWorkbench() {
     setMessage("全部动作已复位。");
   };
 
-  const captureScene = () => {
-    const dataUrl = captureRef.current?.();
+  const captureScene = async () => {
+    const dataUrl = await captureRef.current?.();
     if (!dataUrl) {
       setMessage("渲染器还未准备好，暂时无法导出画面。");
       return;
@@ -729,6 +732,7 @@ export default function AssetWorkbench() {
 
   const {
     handleModelFile,
+    handleStagedModelAsset,
     handleBatchModelFiles,
     loadLocalModel,
     releaseModelUrl,
@@ -750,6 +754,30 @@ export default function AssetWorkbench() {
     localModelPresets: LOCAL_MODEL_PRESETS,
     workspaceMotion: WORKSPACE_HEADER_MOTION,
   });
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("assetToken");
+    if (!token || handedOffAssetRef.current === token) return;
+    const handoffTimer = window.setTimeout(() => {
+      handedOffAssetRef.current = token;
+      const session = consumeLocalAsset(token);
+      if (!session?.file) {
+        setMessage("资产目录中的本地文件会话已失效，请重新选择文件加载。");
+        return;
+      }
+      const targetModelId = sceneRef.current.models.some((model) => model.id === selectedModelId)
+        ? selectedModelId
+        : sceneRef.current.models[0]?.id;
+      if (!targetModelId) {
+        setMessage("当前场景没有可用的模型槽位，请先新增模型槽位。");
+        return;
+      }
+      setSelectedModelId(targetModelId);
+      setMessage(`正在从资产目录加载“${session.file.name}”…`);
+      handleStagedModelAsset(session, targetModelId);
+    }, 0);
+    return () => window.clearTimeout(handoffTimer);
+  }, [handleStagedModelAsset, sceneRef, selectedModelId]);
 
   const applyVisualPreset = (preset) => {
     const quality = findPreset(QUALITY_PRESETS, preset.quality);
@@ -1018,6 +1046,14 @@ export default function AssetWorkbench() {
     setMessage(`已选中模型槽位“${model?.label || modelId}”，后续加载会替换该槽位。`);
   };
 
+  const openLocalModelPicker = (modelId = selectedModelId, accept = ".glb,.gltf,.fbx,.obj,.stl,.ply,.dae") => {
+    if (!modelId || busy) return;
+    modelInputTargetRef.current = modelId;
+    setSelectedModelId(modelId);
+    setModelAccept(accept);
+    modelInputRef.current?.click();
+  };
+
   const addModelSlot = () => {
     const existingIds = new Set(scene.models.map((model) => model.id));
     let index = scene.models.length + 1;
@@ -1029,8 +1065,8 @@ export default function AssetWorkbench() {
     const nextModel = {
       id,
       assetId: id,
-      label: `模型槽位 ${index}`,
-      url: DEMO_MODEL_URL,
+      label: `待加载模型 ${index}`,
+      url: "",
       position: [scene.models.length * 1.8, 0, 0],
       rotation: [0, 0, 0],
       scale: 1,
@@ -1038,12 +1074,13 @@ export default function AssetWorkbench() {
       variantTarget: false,
       parentId: null,
       assemblyId: null,
-      assetFormat: "glb",
-      assetSource: "demo",
+      assetFormat: "",
+      assetSource: "pending",
     };
     updateScene((previous) => ({ ...previous, models: [...previous.models, nextModel] }));
     setSelectedModelId(id);
-    setMessage(`已新增“${nextModel.label}”，请选择文件加载到该槽位。`);
+    setMessage(`已新增“${nextModel.label}”，请选择本地 GLB / GLTF 文件。`);
+    openLocalModelPicker(id, ".glb,.gltf");
   };
 
   const removeModelSlot = (modelId) => {
@@ -1583,7 +1620,8 @@ export default function AssetWorkbench() {
           <p className="asset-workbench-hint">先选择模型槽位，再加载或替换文件；支持单模型、多模型和不同格式混合。</p>
           <div className="asset-model-slot-list">
             {scene.models.map((model) => {
-              const format = model.assetFormat || model.url?.split(".").pop() || "model";
+              const format = model.assetFormat || model.url?.split(".").pop() || "";
+              const hasModel = Boolean(model.url);
               const isSelected = model.id === selectedModelId;
               return (
                 <div key={model.id} className={`asset-model-slot ${isSelected ? "is-selected" : ""}`}>
@@ -1593,9 +1631,17 @@ export default function AssetWorkbench() {
                     onClick={() => selectModelSlot(model.id)}
                   >
                     <strong>{model.label || model.id}</strong>
-                    <small>{format.toUpperCase()} · {model.visible === false ? "已隐藏" : "可见"}{isSelected ? " · 当前" : ""}</small>
+                    <small>{hasModel ? format.toUpperCase() : "未加载"} · {model.visible === false ? "已隐藏" : "可见"}{isSelected ? " · 当前" : ""}</small>
                   </button>
                   <div className="asset-model-slot-actions">
+                    <button
+                      type="button"
+                      className="asset-model-slot-load"
+                      disabled={busy}
+                      onClick={() => openLocalModelPicker(model.id, ".glb,.gltf")}
+                    >
+                      {hasModel ? "替换" : "加载"}
+                    </button>
                     <button
                       type="button"
                       title={model.visible === false ? "显示模型" : "隐藏模型"}
@@ -1669,7 +1715,8 @@ export default function AssetWorkbench() {
             accept={modelAccept}
             hidden
             onChange={(event) => {
-              handleModelFile(event.target.files?.[0]);
+              handleModelFile(event.target.files?.[0], modelInputTargetRef.current || selectedModelId);
+              modelInputTargetRef.current = null;
               event.target.value = "";
             }}
           />
@@ -1690,14 +1737,24 @@ export default function AssetWorkbench() {
                 key={item.id}
                 className={item.id === "all" ? "is-wide" : ""}
                 onClick={() => {
-                  setModelAccept(item.accept);
-                  modelInputRef.current?.click();
+                  openLocalModelPicker(selectedModelId, item.accept);
                 }}
                 disabled={busy}
               >
                 {item.id === "all" && busy ? "正在检查…" : item.label}
               </button>
             ))}
+          </div>
+          <div className="asset-file-load-primary">
+            <button
+              type="button"
+              className="asset-primary-button"
+              disabled={busy || !selectedModelId}
+              onClick={() => openLocalModelPicker(selectedModelId, ".glb,.gltf")}
+            >
+              选择本地 GLB / GLTF
+            </button>
+            <span>当前目标：{activeModel?.label || "未选择模型槽位"}</span>
           </div>
           <button
             type="button"
@@ -1791,6 +1848,20 @@ export default function AssetWorkbench() {
               {report.vertices != null && <><span>顶点</span><strong>{report.vertices}</strong></>}
               {report.faces != null && <><span>面</span><strong>{report.faces}</strong></>}
             </div>
+            <div className={`asset-preprocess-summary is-${report.performanceLevel || "unknown"}`}>
+              <span>展示负载评估</span>
+              <strong>{report.performanceLabel || "待评估"}</strong>
+            </div>
+            {report.recommendations?.length > 0 && (
+              <ul className="asset-preprocess-recommendations">
+                {report.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}
+              </ul>
+            )}
+            {report.performanceLevel && report.performanceLevel !== "low" && (
+              <button type="button" className="asset-secondary-button asset-preprocess-action" onClick={optimizePerformance}>
+                应用性能优先预览
+              </button>
+            )}
             <p className={report.previewSupported ? "asset-status-ok" : "asset-status-warn"}>
               {report.previewSupported ? "可直接替换到当前场景" : "已完成预处理检查，需先转换为 GLB"}
             </p>

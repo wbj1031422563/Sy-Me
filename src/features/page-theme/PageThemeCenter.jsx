@@ -1,17 +1,18 @@
-import { usePageTheme } from "../../theme/page-themes.js";
+import { PAGE_THEME_COLOR_FIELDS, usePageTheme } from "../../theme/page-themes.js";
 import "./page-theme-center.less";
 
 export default function PageThemeCenter({ onClose }) {
   const {
     theme,
     themeId,
-    customAccent,
     density,
     themes,
+    customPalette,
+    hasCustomColors,
     setThemeId,
-    setCustomAccent,
+    setCustomColor,
     setDensity,
-    resetTheme,
+    resetColors,
   } = usePageTheme();
 
   return (
@@ -52,21 +53,38 @@ export default function PageThemeCenter({ onClose }) {
       </div>
 
       <div className="page-theme-customize">
-        <label htmlFor="page-theme-accent">
+        <div className="page-theme-customize-heading">
           <span>
-            <strong>自定义强调色</strong>
-            <small>用于导航、按钮、边框和状态提示</small>
+            <strong>自定义页面色调</strong>
+            <small>只影响页面 UI，不会改变模型的灯光、材质与背景。</small>
           </span>
-          <input
-            id="page-theme-accent"
-            type="color"
-            value={customAccent || theme.accent}
-            onChange={(event) => setCustomAccent(event.target.value)}
-          />
-        </label>
-        <button type="button" className="page-theme-reset" onClick={resetTheme} disabled={!customAccent}>
-          恢复当前主题默认色
-        </button>
+          <button type="button" className="page-theme-reset" onClick={resetColors} disabled={!hasCustomColors}>
+            重置
+          </button>
+        </div>
+        <div className="page-theme-color-grid">
+          {PAGE_THEME_COLOR_FIELDS.map((field) => {
+            const color = customPalette[field.key] || theme[field.key];
+            return (
+              <label key={field.key} htmlFor={`page-theme-${field.key}`} className="page-theme-color-field">
+                <span>
+                  <strong>{field.label}</strong>
+                  <small>{field.description}</small>
+                </span>
+                <span className="page-theme-color-input">
+                  <code>{color.toUpperCase()}</code>
+                  <input
+                    id={`page-theme-${field.key}`}
+                    type="color"
+                    value={color}
+                    aria-label={field.label}
+                    onChange={(event) => setCustomColor(field.key, event.target.value)}
+                  />
+                </span>
+              </label>
+            );
+          })}
+        </div>
       </div>
 
       <div className="page-theme-density" aria-label="界面密度">

@@ -12,6 +12,7 @@
  * 命名约定见 viewer/conventions.js。业务页只传 scene 描述，不写三维细节。
  */
 import {
+  Component,
   Suspense,
   useCallback,
   useEffect,
@@ -42,6 +43,8 @@ import {
 import { buildNodeHierarchy, mergeById, inspectModel, PREFIX } from "./conventions.js";
 import { normalizeScene } from "../core/scene/scene-normalize.js";
 import PageThemeControl from "../features/page-theme/PageThemeControl.jsx";
+import { inspectWebGLContext } from "./webgl-info.js";
+import { applyQualityTier, nextQualityTier, QUALITY_TIER_LABELS } from "./adaptive-quality.js";
 import { createSceneRuntime, useSceneRuntime } from "../core/scene/scene-runtime.js";
 import {
   SceneEffectExtensions,
@@ -155,6 +158,7 @@ function ViewerModel({
   motionPreview,
   selectedNodeIds = [],
   onNodeSelect,
+  materialMode,
   children,
 }) {
   const gltf = useGLTF(entry.url, dracoPath);
@@ -168,6 +172,7 @@ function ViewerModel({
     }
     : null;
   const groupRef = useRef(null);
+  const invalidate = useThree((state) => state.invalidate);
   const meshMaterials = useMemo(() => {
     const meshes = [];
     scene3.traverse((mesh) => {
@@ -211,6 +216,7 @@ function ViewerModel({
         node.position.copy(base.position);
         node.rotation.copy(base.rotation);
         node.scale.copy(base.scale);
+        node.updateMatrix();
         return;
       }
       const position = delta.position || [0, 0, 0];
@@ -232,8 +238,24 @@ function ViewerModel({
         base.scale.y * scale,
         base.scale.z * scale,
       );
+      node.updateMatrix();
     });
   }, [scene3, entry.nodeTransformDeltas]);
+
+  useEffect(() => {
+    if (gltf.animations?.length > 0 || entry.motionTracks?.length > 0) return undefined;
+    scene3.updateMatrixWorld(true);
+    scene3.traverse((node) => {
+      node.updateMatrix();
+      node.matrixAutoUpdate = false;
+    });
+    scene3.updateMatrixWorld(true);
+    return () => {
+      scene3.traverse((node) => {
+        node.matrixAutoUpdate = true;
+      });
+    };
+  }, [entry.motionTracks?.length, gltf.animations?.length, scene3, entry.nodeTransformDeltas]);
 
   useEffect(() => {
     if (!entry.variantTarget && !entry.material) return;
@@ -281,10 +303,14 @@ function ViewerModel({
     const tween = new TWEEN.Tween({ v: target * 0.01 })
       .to({ v: target }, 900)
       .easing(TWEEN.Easing.Cubic.Out)
-      .onUpdate(({ v }) => g.scale.setScalar(v))
+      .onUpdate(({ v }) => {
+        g.scale.setScalar(v);
+        invalidate();
+      })
       .start();
+    invalidate();
     return () => tween.stop();
-  }, [scene3, entry.autoFrame, entry.position, entry.scale, entry.reveal]);
+  }, [invalidate, scene3, entry.autoFrame, entry.position, entry.scale, entry.reveal]);
 
   // 材质：变体目标模型用 variant，其他模型可用 entry.material 做覆盖；都没有则保留原材质
   useEffect(() => {
@@ -323,6 +349,40 @@ function ViewerModel({
       for (const material of generated.values()) material.dispose();
     };
   }, [meshMaterials, variant, entry.variantTarget, entry.material, entry.materialOverrides]);
+
+  useEffect(() => {
+    if (materialMode !== "basic" && materialMode !== "flat") return undefined;
+    const generated = [];
+    const previousMaterials = new Map();
+    const simplify = (material) => {
+      if (!material) return material;
+      const basic = new THREE.MeshBasicMaterial({
+        alphaMap: material.alphaMap || null,
+        alphaTest: material.alphaTest ?? 0,
+        color: material.color?.clone?.() || 0xffffff,
+        // 性能降级仍保留原始贴图，避免模型在低端设备上变成无纹理轮廓。
+        map: material.map || null,
+        opacity: material.opacity ?? 1,
+        side: material.side ?? THREE.FrontSide,
+        transparent: material.transparent ?? false,
+        vertexColors: material.vertexColors ?? false,
+      });
+      basic.name = material.name || "performance-material";
+      generated.push(basic);
+      return basic;
+    };
+    meshMaterials.forEach(([mesh]) => {
+      const material = mesh.material;
+      previousMaterials.set(mesh, material);
+      mesh.material = Array.isArray(material) ? material.map(simplify) : simplify(material);
+    });
+    return () => {
+      previousMaterials.forEach((material, mesh) => {
+        mesh.material = material;
+      });
+      generated.forEach((material) => material.dispose());
+    };
+  }, [materialMode, meshMaterials]);
 
   return (
     <group
@@ -371,6 +431,75 @@ function ViewerModel({
   );
 }
 
+class ModelLoadBoundary extends Component {
+  state = { error: null };
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error) {
+    this.props.onError?.(this.props.modelId, error);
+  }
+
+  componentDidUpdate(previousProps) {
+    if (previousProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <Html center zIndexRange={[30, 0]}>
+          <div className="scene-viewer-model-error" role="status">
+            <strong>模型加载失败</strong>
+            <span>{this.props.label || this.props.modelId}</span>
+            <small>可在右侧模型管理中重试</small>
+          </div>
+        </Html>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function ModelLoadingPlaceholder({ label }) {
+  return (
+    <Html center zIndexRange={[25, 0]}>
+      <div className="scene-viewer-model-loading" role="status">
+        <span className="scene-viewer-model-loading-dot" />
+        <span>正在加载 {label || "模型"}</span>
+      </div>
+    </Html>
+  );
+}
+
+function EmptyViewerModel({ entry, visible, modelRefCb, children }) {
+  const groupRef = useRef(null);
+
+  useEffect(() => {
+    modelRefCb(entry.id, groupRef.current);
+    return () => modelRefCb(entry.id, null);
+  }, [entry.id, modelRefCb]);
+
+  return (
+    <group
+      ref={groupRef}
+      name={`model-${entry.id}`}
+      position={entry.position || [0, 0, 0]}
+      rotation={entry.rotation || [0, 0, 0]}
+      scale={entry.scale || 1}
+      visible={visible}
+    >
+      <Html center distanceFactor={6} zIndexRange={[10, 0]}>
+        <div className="scene-viewer-empty-model-label">{entry.label || "未加载模型"}</div>
+      </Html>
+      {children}
+    </group>
+  );
+}
+
 function SceneGround({ config }) {
   if (!config?.enabled) return null;
   const size = config.size ?? 40;
@@ -406,9 +535,23 @@ function SceneGround({ config }) {
 function SceneEffects({ config }) {
   if (!config?.enabled) return null;
   const colorGrade = config.colorGrade || {};
+  const rgbGain = colorGrade.rgbGain || [1, 1, 1];
+  const rgbLift = colorGrade.rgbLift || [0, 0, 0];
+  const rgbGamma = colorGrade.rgbGamma || [1, 1, 1];
+  const hasColorGrade = colorGrade.enabled !== false && (
+    colorGrade.hue !== 0
+    || colorGrade.saturation !== 0
+    || colorGrade.brightness !== 0
+    || colorGrade.contrast !== 0
+    || rgbGain.some((value, index) => Number(value) !== [1, 1, 1][index])
+    || rgbLift.some((value, index) => Number(value) !== [0, 0, 0][index])
+    || rgbGamma.some((value, index) => Number(value) !== [1, 1, 1][index])
+  );
+  const hasPostEffect = hasColorGrade || config.bloom?.enabled || config.vignette?.enabled || config.noise?.enabled;
+  if (!hasPostEffect) return null;
   return (
-    <EffectComposer multisampling={config.multisampling ?? 2}>
-      {colorGrade.enabled !== false && (
+    <EffectComposer multisampling={config.multisampling ?? 0}>
+      {hasColorGrade && (
         <>
           <HueSaturation
             hue={THREE.MathUtils.degToRad(colorGrade.hue ?? 0)}
@@ -468,10 +611,68 @@ function RendererSettings({ renderer }) {
   return null;
 }
 
+function SceneCapture({ requestRef, requestToken }) {
+  const { gl, scene, camera, invalidate } = useThree();
+
+  useEffect(() => {
+    if (requestToken > 0) invalidate();
+  }, [invalidate, requestToken]);
+
+  useFrame(() => {
+    const resolve = requestRef.current;
+    if (!resolve) return;
+    requestRef.current = null;
+
+    let target = null;
+    let previousTarget = null;
+    try {
+      const size = gl.getDrawingBufferSize(new THREE.Vector2());
+      const width = Math.max(1, Math.floor(size.x));
+      const height = Math.max(1, Math.floor(size.y));
+      target = new THREE.WebGLRenderTarget(width, height, {
+        depthBuffer: true,
+        stencilBuffer: false,
+        colorSpace: THREE.SRGBColorSpace,
+      });
+      previousTarget = gl.getRenderTarget();
+      gl.setRenderTarget(target);
+      gl.clear();
+      gl.render(scene, camera);
+      const pixels = new Uint8Array(width * height * 4);
+      gl.readRenderTargetPixels(target, 0, 0, width, height, pixels);
+      gl.setRenderTarget(previousTarget);
+
+      const output = document.createElement("canvas");
+      output.width = width;
+      output.height = height;
+      const context = output.getContext("2d");
+      if (!context) {
+        resolve(null);
+        return;
+      }
+      const imageData = context.createImageData(width, height);
+      const rowSize = width * 4;
+      for (let row = 0; row < height; row += 1) {
+        const sourceOffset = (height - row - 1) * rowSize;
+        imageData.data.set(pixels.subarray(sourceOffset, sourceOffset + rowSize), row * rowSize);
+      }
+      context.putImageData(imageData, 0, 0);
+      resolve(output.toDataURL("image/png"));
+    } catch {
+      resolve(null);
+    } finally {
+      if (gl.getRenderTarget() === target) gl.setRenderTarget(previousTarget);
+      target?.dispose();
+    }
+  });
+
+  return null;
+}
+
 /* ---------------- 镜头编排 ---------------- */
 
 function CameraRig({ shot, controlsRef }) {
-  const { camera } = useThree();
+  const { camera, invalidate } = useThree();
 
   useEffect(() => {
     if (!shot) return;
@@ -503,10 +704,12 @@ function CameraRig({ shot, controlsRef }) {
         } else {
           camera.lookAt(v.tx, v.ty, v.tz);
         }
+        invalidate();
       })
       .start();
+    invalidate();
     return () => tween.stop();
-  }, [shot, camera, controlsRef]);
+  }, [shot, camera, controlsRef, invalidate]);
 
   useFrame(() => {
     TWEEN.update();
@@ -576,6 +779,9 @@ function SceneContent({
   motionPreview,
   selectedNodeIds,
   onNodeSelect,
+  onModelError,
+  modelReloadTokens,
+  autoRotate,
 }) {
   const env = scene.environment || {};
   const controlsCfg = scene.controls || {};
@@ -593,25 +799,35 @@ function SceneContent({
     if (ancestry.has(entry.id)) return null;
     const nextAncestry = new Set(ancestry);
     nextAncestry.add(entry.id);
+    const ModelComponent = entry.url ? ViewerModel : EmptyViewerModel;
     return (
-    <Suspense key={entry.id} fallback={null}>
-      <ViewerModel
-        entry={entry}
-        dracoPath={scene.dracoDecoderPath || "/draco/"}
-        variant={variant}
-        visible={visibility[entry.id] !== false}
-        modelRefCb={(id, g) => {
-          if (g) modelRefs.current.set(id, g);
-          else modelRefs.current.delete(id);
-        }}
-        onInspect={onInspect}
-        motionPreview={motionPreview?.modelId === entry.id ? motionPreview : null}
-        selectedNodeIds={selectedNodeIds?.[entry.id] || []}
-        onNodeSelect={onNodeSelect}
+      <ModelLoadBoundary
+        key={`${entry.id}-${modelReloadTokens?.[entry.id] || 0}`}
+        modelId={entry.id}
+        label={entry.label}
+        resetKey={`${entry.url || "empty"}-${modelReloadTokens?.[entry.id] || 0}`}
+        onError={onModelError}
       >
-        {(childrenById.get(entry.id) || []).map((child) => renderModel(child, nextAncestry))}
-      </ViewerModel>
-    </Suspense>
+        <Suspense fallback={<ModelLoadingPlaceholder label={entry.label} />}>
+          <ModelComponent
+            entry={entry}
+            dracoPath={scene.dracoDecoderPath || "/draco/"}
+            variant={variant}
+            visible={visibility[entry.id] !== false}
+            modelRefCb={(id, g) => {
+              if (g) modelRefs.current.set(id, g);
+              else modelRefs.current.delete(id);
+            }}
+            onInspect={onInspect}
+            motionPreview={motionPreview?.modelId === entry.id ? motionPreview : null}
+            selectedNodeIds={selectedNodeIds?.[entry.id] || []}
+            onNodeSelect={onNodeSelect}
+            materialMode={scene.renderer?.materialMode}
+          >
+            {(childrenById.get(entry.id) || []).map((child) => renderModel(child, nextAncestry))}
+          </ModelComponent>
+        </Suspense>
+      </ModelLoadBoundary>
     );
   };
 
@@ -681,6 +897,7 @@ function SceneContent({
           scale={env.contactShadowScale || 8}
           blur={2.2}
           far={3}
+          frames={env.contactShadowFrames ?? 1}
         />
       )}
 
@@ -701,7 +918,7 @@ function SceneContent({
       <OrbitControls
         ref={controlsRef}
         makeDefault
-        autoRotate={controlsCfg.autoRotate ?? false}
+        autoRotate={autoRotate}
         autoRotateSpeed={controlsCfg.autoRotateSpeed ?? 0.6}
         enableDamping
         dampingFactor={0.08}
@@ -715,7 +932,16 @@ function SceneContent({
 
 /* ---------------- 模型管理面板 ---------------- */
 
-function ModelPanel({ models, modelsInfo, visibility, onToggleVisible, onFocus }) {
+function ModelPanel({
+  models,
+  modelsInfo,
+  modelErrors,
+  visibility,
+  onToggleVisible,
+  onSetAllVisible,
+  onRetry,
+  onFocus,
+}) {
   const [open, setOpen] = useState(true);
 
   const totals = useMemo(() => {
@@ -735,8 +961,16 @@ function ModelPanel({ models, modelsInfo, visibility, onToggleVisible, onFocus }
       </button>
       {open && (
         <div className="scene-viewer-models-body">
+          <div className="scene-viewer-models-actions">
+            <span>场景部件</span>
+            <div>
+              <button type="button" onClick={() => onSetAllVisible(true)}>全部显示</button>
+              <button type="button" onClick={() => onSetAllVisible(false)}>全部隐藏</button>
+            </div>
+          </div>
           {models.map((m) => {
             const info = modelsInfo[m.id];
+            const error = modelErrors[m.id];
             const hidden = visibility[m.id] === false;
             return (
               <div key={m.id} className={`scene-viewer-model-item ${hidden ? "is-hidden" : ""}`}>
@@ -755,7 +989,12 @@ function ModelPanel({ models, modelsInfo, visibility, onToggleVisible, onFocus }
                     </button>
                   </span>
                 </div>
-                {info ? (
+                {error ? (
+                  <div className="model-item-error">
+                    <span>加载失败：{error}</span>
+                    <button type="button" onClick={() => onRetry(m.id)}>重试</button>
+                  </div>
+                ) : info ? (
                   <div className="model-item-stats">
                     <span>网格 {info.meshCount}</span>
                     <span>顶点 {info.vertexCount.toLocaleString()}</span>
@@ -765,7 +1004,7 @@ function ModelPanel({ models, modelsInfo, visibility, onToggleVisible, onFocus }
                     </span>
                   </div>
                 ) : (
-                  <div className="model-item-stats">加载中…</div>
+                  <div className="model-item-stats">{m.url ? "加载中…" : "待加载本地文件"}</div>
                 )}
               </div>
             );
@@ -776,6 +1015,120 @@ function ModelPanel({ models, modelsInfo, visibility, onToggleVisible, onFocus }
         </div>
       )}
     </div>
+  );
+}
+
+function ViewerPerformancePanel({ stats, models, modelsInfo, renderInfo, adaptiveQuality, qualityTier, onToggleAdaptive, open, onOpenChange }) {
+  const loadedCount = models.filter((model) => modelsInfo[model.id]).length;
+  const fps = stats?.fps;
+  const tone = !stats ? "is-pending" : fps < 30 ? "is-danger" : fps < 45 ? "is-warning" : "is-ready";
+  const advice = !stats
+    ? "正在采集渲染数据。"
+    : fps < 30
+      ? "帧率偏低，建议关闭高成本灯光、后期或粒子。"
+      : stats.triangles > 5000000
+        ? "三角面较高，建议准备减面或 LOD 版本。"
+        : stats.calls > 800
+          ? "Draw Call 较高，建议合并材质槽。"
+          : "当前展台负载正常。";
+  const format = (value) => Number.isFinite(value) ? value.toLocaleString("zh-CN") : "—";
+
+  return (
+    <aside className={`scene-viewer-performance ${open ? "is-open" : ""}`} aria-label="实时性能监控">
+      <button type="button" className="scene-viewer-performance-toggle" onClick={() => onOpenChange((value) => !value)}>
+        <span>性能监控</span>
+        <strong className={tone}>{stats ? `${format(fps)} FPS` : "采集中"}</strong>
+        <span>{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="scene-viewer-performance-body">
+          <div className="scene-viewer-performance-grid">
+            <span>模型体检<strong>{loadedCount}/{models.length}</strong><small>已加载 / 总数</small></span>
+            <span>Draw Call<strong>{format(stats?.calls)}</strong><small>次 / 帧</small></span>
+            <span>三角面<strong>{format(stats?.triangles)}</strong><small>面 / 帧</small></span>
+            <span>纹理<strong>{format(stats?.textures)}</strong><small>张</small></span>
+          </div>
+          <div className="scene-viewer-performance-peak-grid">
+            <span>Draw Call 峰值<strong>{format(stats?.callsPeak)}</strong><small>采样周期内</small></span>
+            <span>三角面峰值<strong>{format(stats?.trianglesPeak)}</strong><small>面 / 帧</small></span>
+            <span>采样帧数<strong>{format(stats?.sampleFrames)}</strong><small>{format(stats?.sampleDurationMs)} ms</small></span>
+          </div>
+          <p className="scene-viewer-performance-note">平均值用于判断持续负载，峰值用于定位瞬时卡顿；这里不等于系统 GPU 占用率。</p>
+          <p className={`scene-viewer-performance-advice ${tone}`}>{advice}</p>
+          <div className="scene-viewer-render-info" title={renderInfo?.renderer || "等待渲染器信息"}>
+            <span>渲染后端</span>
+            <strong className={`is-${renderInfo?.hardware || "unknown"}`}>{renderInfo?.hardwareLabel || "等待检测"}</strong>
+            <small>{renderInfo?.context || "WebGL"} · {renderInfo?.renderer || "等待 GPU 信息"}</small>
+          </div>
+          <div className="scene-viewer-quality-control">
+            <span>自动画质<strong>{adaptiveQuality ? QUALITY_TIER_LABELS[qualityTier] : "手动高质量"}</strong></span>
+            <button type="button" onClick={onToggleAdaptive}>{adaptiveQuality ? "关闭自动优化" : "开启自动优化"}</button>
+          </div>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function ShowcaseNodePanel({ models, modelsInfo, nodeVisibility, onToggle, onIsolate, onReset }) {
+  const [open, setOpen] = useState(false);
+  const loadedModels = models.filter((model) => modelsInfo[model.id]?.nodeHierarchy?.length);
+  const [activeModelId, setActiveModelId] = useState(loadedModels[0]?.id || models[0]?.id || "");
+
+  useEffect(() => {
+    if (loadedModels.some((model) => model.id === activeModelId)) return;
+    setActiveModelId(loadedModels[0]?.id || models[0]?.id || "");
+  }, [activeModelId, loadedModels, models]);
+
+  const activeModel = models.find((model) => model.id === activeModelId) || models[0];
+  const nodes = modelsInfo[activeModel?.id]?.nodeHierarchy || [];
+  const visibility = nodeVisibility[activeModel?.id] || {};
+  const hiddenCount = nodes.filter((node) => visibility[node.id] === false).length;
+
+  return (
+    <aside className={`scene-viewer-node-panel ${open ? "is-open" : ""}`} aria-label="模型节点树">
+      <button type="button" className="scene-viewer-node-toggle" onClick={() => setOpen((value) => !value)}>
+        <span>节点树</span>
+        <strong>{nodes.length ? `${nodes.length} 个` : "待加载"}</strong>
+        <span>{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="scene-viewer-node-body">
+          {models.length > 1 && (
+            <label className="scene-viewer-node-model-select">
+              <span>当前模型</span>
+              <select value={activeModel?.id || ""} onChange={(event) => setActiveModelId(event.target.value)}>
+                {models.map((model) => <option key={model.id} value={model.id}>{model.label || model.id}</option>)}
+              </select>
+            </label>
+          )}
+          {nodes.length > 0 ? (
+            <div className="scene-viewer-node-list">
+              {nodes.map((node) => {
+                const hidden = visibility[node.id] === false;
+                return (
+                  <div key={node.id} className={`scene-viewer-node-row ${hidden ? "is-hidden" : ""}`} style={{ paddingLeft: `${7 + node.depth * 12}px` }}>
+                    <span className="scene-viewer-node-name" title={node.id}>
+                      <i>{node.childCount > 0 ? "▾" : "·"}</i>{node.name}
+                    </span>
+                    <div>
+                      <button type="button" aria-label={`${hidden ? "显示" : "隐藏"}${node.name}`} onClick={() => onToggle(activeModel.id, node.id, !hidden)}>{hidden ? "显示" : "隐藏"}</button>
+                      <button type="button" aria-label={`隔离${node.name}`} onClick={() => onIsolate(activeModel.id, node.id)}>隔离</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="scene-viewer-node-empty">模型加载完成后，这里会显示 GLB 内部节点结构。</p>
+          )}
+          <div className="scene-viewer-node-footer">
+            <span>{hiddenCount > 0 ? `已隐藏 ${hiddenCount} 个节点` : "节点可单独控制"}</span>
+            <button type="button" onClick={() => onReset(activeModel?.id)} disabled={!activeModel || nodes.length === 0}>恢复全部</button>
+          </div>
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -801,10 +1154,6 @@ export default function SceneViewer({
   }, [runtime, normalizedScene]);
   const runtimeState = useSceneRuntime(runtime);
 
-  const models = useMemo(() => {
-    return normalizedScene.models;
-  }, [normalizedScene.models]);
-
   const {
     modelsInfo,
     visibility,
@@ -819,7 +1168,50 @@ export default function SceneViewer({
 
   const modelRefs = useRef(new Map());
   const controlsRef = useRef(null);
-  const rendererRef = useRef(null);
+  const rendererContextCleanupRef = useRef(null);
+  const captureRequestRef = useRef(null);
+  const [modelErrors, setModelErrors] = useState({});
+  const [modelReloadTokens, setModelReloadTokens] = useState({});
+  const [performanceStats, setPerformanceStats] = useState(null);
+  const [renderInfo, setRenderInfo] = useState(null);
+  const [rendererContextStatus, setRendererContextStatus] = useState("ready");
+  const [adaptiveQuality, setAdaptiveQuality] = useState(normalizedScene.renderer?.adaptiveQuality !== false);
+  const [qualityTier, setQualityTier] = useState("high");
+  const qualityCountersRef = useRef({ down: 0, up: 0 });
+  const [nodeVisibility, setNodeVisibility] = useState({});
+  const [autoRotate, setAutoRotate] = useState(Boolean(normalizedScene.controls?.autoRotate));
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [constrainedRenderer, setConstrainedRenderer] = useState(false);
+
+  const models = useMemo(() => normalizedScene.models.map((model) => {
+    const override = nodeVisibility[model.id];
+    return override
+      ? { ...model, nodeVisibility: { ...model.nodeVisibility, ...override } }
+      : model;
+  }), [nodeVisibility, normalizedScene.models]);
+
+  useEffect(() => {
+    setNodeVisibility({});
+  }, [normalizedScene.models]);
+
+  useEffect(() => {
+    setAutoRotate(Boolean(normalizedScene.controls?.autoRotate));
+  }, [normalizedScene.controls?.autoRotate]);
+
+  useEffect(() => {
+    setAdaptiveQuality(normalizedScene.renderer?.adaptiveQuality !== false);
+    setQualityTier("high");
+    qualityCountersRef.current = { down: 0, up: 0 };
+  }, [normalizedScene.models, normalizedScene.renderer?.adaptiveQuality]);
+
+  useEffect(() => {
+    if (!presentationMode) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setPresentationMode(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [presentationMode]);
 
   const sceneApi = useMemo(() => ({
     alignSocket({ childId, childSocketId, parentId, parentSocketId }) {
@@ -868,8 +1260,90 @@ export default function SceneViewer({
 
   const handleInspect = useCallback((id, info, url) => {
     runtime.dispatch({ type: "model/inspected", payload: { id, info } });
+    setModelErrors((previous) => {
+      if (!previous[id]) return previous;
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
     onModelInspect?.(id, info, url);
   }, [onModelInspect, runtime]);
+
+  const handleModelError = useCallback((id, error) => {
+    const message = String(error?.message || "无法解析模型文件")
+      .replace(/\s+/g, " ")
+      .slice(0, 120);
+    setModelErrors((previous) => ({ ...previous, [id]: message || "无法解析模型文件" }));
+  }, []);
+
+  const handlePerformance = useCallback((stats) => {
+    setPerformanceStats(stats);
+    onPerformance?.(stats);
+    if (!adaptiveQuality) return;
+    const result = nextQualityTier(qualityTier, stats, qualityCountersRef.current);
+    qualityCountersRef.current = result.counters;
+    if (result.tier !== qualityTier) setQualityTier(result.tier);
+  }, [adaptiveQuality, onPerformance, qualityTier]);
+
+  const toggleAdaptiveQuality = useCallback(() => {
+    setAdaptiveQuality((enabled) => {
+      const nextEnabled = !enabled;
+      if (!nextEnabled) {
+        setQualityTier("high");
+        qualityCountersRef.current = { down: 0, up: 0 };
+      }
+      return nextEnabled;
+    });
+  }, []);
+
+  const toggleNodeVisibility = useCallback((modelId, nodeId, visible) => {
+    setNodeVisibility((previous) => ({
+      ...previous,
+      [modelId]: { ...previous[modelId], [nodeId]: visible },
+    }));
+  }, []);
+
+  const isolateNode = useCallback((modelId, nodeId) => {
+    const nodes = modelsInfo[modelId]?.nodeHierarchy || [];
+    const target = nodes.find((node) => node.id === nodeId);
+    if (!target) return;
+    const allowed = new Set(nodes.filter((node) => node.id === nodeId || node.id.startsWith(`${nodeId}/`)).map((node) => node.id));
+    const parentById = new Map(nodes.map((node) => [node.id, node.parentId]));
+    let cursor = target.parentId;
+    while (cursor) {
+      allowed.add(cursor);
+      cursor = parentById.get(cursor) || null;
+    }
+    setNodeVisibility((previous) => ({
+      ...previous,
+      [modelId]: Object.fromEntries(nodes.map((node) => [node.id, allowed.has(node.id)])),
+    }));
+  }, [modelsInfo]);
+
+  const resetNodeVisibility = useCallback((modelId) => {
+    if (!modelId) return;
+    setNodeVisibility((previous) => {
+      if (!previous[modelId]) return previous;
+      const next = { ...previous };
+      delete next[modelId];
+      return next;
+    });
+  }, []);
+
+  const retryModel = useCallback((id) => {
+    const model = models.find((item) => item.id === id);
+    if (model?.url) useGLTF.clear(model.url);
+    setModelErrors((previous) => {
+      if (!previous[id]) return previous;
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+    setModelReloadTokens((previous) => ({
+      ...previous,
+      [id]: (previous[id] || 0) + 1,
+    }));
+  }, [models]);
 
   useEffect(() => {
     onRuntimeReady?.(runtime);
@@ -935,32 +1409,175 @@ export default function SceneViewer({
     runtime.dispatch({ type: "shot/set", payload: { id: `__focus_${id}` } });
   }, [runtime]);
 
+  // 将当前可见模型整体收入镜头，适合多模型展台快速构图。
+  const focusAllModels = useCallback(() => {
+    const box = new THREE.Box3();
+    const visibleGroups = models
+      .filter((model) => visibility[model.id] !== false)
+      .map((model) => modelRefs.current.get(model.id))
+      .filter(Boolean);
+    const groups = visibleGroups.length > 0
+      ? visibleGroups
+      : models.map((model) => modelRefs.current.get(model.id)).filter(Boolean);
+    groups.forEach((group) => box.expandByObject(group));
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 0.8);
+    const cam = controlsRef.current;
+    const dir = new THREE.Vector3(0.6, 0.45, 1).normalize();
+    if (cam?.object) {
+      dir.copy(cam.object.position).sub(cam.target).normalize();
+    }
+    const pos = center.clone().add(dir.multiplyScalar(radius * 2.35));
+    focusShot.current = {
+      id: "__focus_all",
+      position: pos.toArray(),
+      target: center.toArray(),
+      durationMs: 1200,
+    };
+    runtime.dispatch({ type: "shot/set", payload: { id: "__focus_all" } });
+  }, [models, runtime, visibility]);
+
   const activeShot = shotId?.startsWith("__focus_") ? focusShot.current : shot;
-  const renderer = normalizedScene.renderer;
+  const renderScene = useMemo(
+    () => {
+      const qualityScene = applyQualityTier(normalizedScene, adaptiveQuality ? qualityTier : "high");
+      if (!constrainedRenderer) return qualityScene;
+      const constrainedDpr = qualityTier === "performance"
+        ? [0.5, 0.65]
+        : qualityTier === "balanced"
+          ? [0.7, 0.8]
+          : [0.8, 0.9];
+      return {
+        ...qualityScene,
+        renderer: {
+          ...qualityScene.renderer,
+          dpr: constrainedDpr,
+        },
+      };
+    },
+    [adaptiveQuality, constrainedRenderer, normalizedScene, qualityTier]
+  );
+  const renderer = renderScene.renderer;
+  const viewerRootRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [rendererReady, setRendererReady] = useState(false);
+  const [captureToken, setCaptureToken] = useState(0);
+  const [performancePanelOpen, setPerformancePanelOpen] = useState(false);
   const handleRendererCreated = useCallback(({ gl }) => {
-    rendererRef.current = gl;
+    rendererContextCleanupRef.current?.();
+    setRendererReady(true);
+    setRendererContextStatus("ready");
+    const inspected = inspectWebGLContext(gl);
+    setRenderInfo(inspected);
+    // 仅在明确识别为软件渲染时强制进入受限档位；WebGL 1 或信息未知不代表没有 GPU。
+    const isConstrained = inspected.hardware === "software";
+    setConstrainedRenderer(isConstrained);
+    if (isConstrained) {
+      setQualityTier("performance");
+    }
+    const handleContextLost = (event) => {
+      event.preventDefault();
+      setRendererReady(false);
+      setRendererContextStatus("lost");
+    };
+    const handleContextRestored = () => {
+      setRendererReady(true);
+      setRendererContextStatus("ready");
+      setRenderInfo(inspectWebGLContext(gl));
+    };
+    gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
+    gl.domElement.addEventListener("webglcontextrestored", handleContextRestored, false);
+    rendererContextCleanupRef.current = () => {
+      gl.domElement.removeEventListener("webglcontextlost", handleContextLost);
+      gl.domElement.removeEventListener("webglcontextrestored", handleContextRestored);
+    };
     gl.toneMapping = getToneMapping(renderer.toneMapping);
     gl.toneMappingExposure = renderer.exposure;
-    onCaptureReady?.(() => rendererRef.current?.domElement.toDataURL("image/png"));
-  }, [onCaptureReady, renderer.exposure, renderer.toneMapping]);
+  }, [renderer.exposure, renderer.toneMapping, rendererContextCleanupRef]);
+
+  const requestCapture = useCallback(() => new Promise((resolve) => {
+    if (!rendererReady) {
+      resolve(null);
+      return;
+    }
+    captureRequestRef.current = resolve;
+    setCaptureToken((token) => token + 1);
+  }), [rendererReady]);
+
+  useEffect(() => {
+    onCaptureReady?.(requestCapture);
+  }, [onCaptureReady, requestCapture]);
+
+  useEffect(() => () => rendererContextCleanupRef.current?.(), []);
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsFullscreen(document.fullscreenElement === viewerRootRef.current);
+    };
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await viewerRootRef.current?.requestFullscreen?.();
+      }
+    } catch {
+      // 浏览器禁止全屏时保持当前展示状态，不影响模型浏览。
+    }
+  }, []);
+
+  const captureScreenshot = useCallback(async () => {
+    const dataUrl = await requestCapture();
+    if (!dataUrl) return;
+    const fileName = (normalizedScene.title || "model-showcase")
+      .replace(/[\\/:*?"<>|]/g, "-")
+      .trim() || "model-showcase";
+    const anchor = document.createElement("a");
+    anchor.download = `${fileName}.png`;
+    anchor.href = dataUrl;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }, [normalizedScene.title, requestCapture]);
+
+  const continuousRender = autoRotate
+    || autoPlay
+    || Boolean(motionPreview?.playing || motionPreview?.clipPlaying)
+    || performancePanelOpen
+    || machine?.state === "driving"
+    || machine?.state === "harvesting"
+    || machine?.state === "unloading";
 
   return (
-    <div className="scene-viewer">
+    <div ref={viewerRootRef} className={`scene-viewer ${presentationMode ? "is-presentation" : ""}`}>
       <Canvas
+        frameloop={continuousRender ? "always" : "demand"}
         dpr={renderer.dpr}
         camera={{
           position: shot?.position || [0, 0, 5],
-          fov: normalizedScene.camera?.fov ?? 40,
-          near: normalizedScene.camera?.near ?? 0.1,
-          far: normalizedScene.camera?.far ?? 200,
+          fov: renderScene.camera?.fov ?? 40,
+          near: renderScene.camera?.near ?? 0.1,
+          far: renderScene.camera?.far ?? 200,
         }}
-        gl={{ antialias: true, outputColorSpace: THREE.SRGBColorSpace, preserveDrawingBuffer: true }}
+        gl={{
+          antialias: renderer.antialias === true,
+          outputColorSpace: THREE.SRGBColorSpace,
+          powerPreference: "high-performance",
+          preserveDrawingBuffer: false,
+        }}
         onCreated={handleRendererCreated}
         shadows={renderer.shadows}
       >
-        <ScenePerformanceProbe onUpdate={onPerformance} />
+        <ScenePerformanceProbe onUpdate={handlePerformance} />
+        <SceneCapture requestRef={captureRequestRef} requestToken={captureToken} />
         <SceneContent
-          scene={normalizedScene}
+          scene={renderScene}
           models={models}
           shot={activeShot}
           variant={variant}
@@ -981,9 +1598,21 @@ export default function SceneViewer({
           motionPreview={motionPreview}
           selectedNodeIds={selectedNodeIds}
           onNodeSelect={onNodeSelect}
+          onModelError={handleModelError}
+          modelReloadTokens={modelReloadTokens}
+          autoRotate={autoRotate}
         />
       </Canvas>
       <Loader />
+      {rendererContextStatus === "lost" && (
+        <div className="scene-viewer-context-overlay" role="alert">
+          <div>
+            <strong>WebGL 渲染上下文已丢失</strong>
+            <p>浏览器暂时无法继续使用当前 GPU 渲染器，正在等待恢复。</p>
+            <button type="button" onClick={() => window.location.reload()}>重新初始化渲染器</button>
+          </div>
+        </div>
+      )}
 
       <div className="scene-viewer-ui">
         <header className="scene-viewer-header">
@@ -1002,6 +1631,7 @@ export default function SceneViewer({
         <ModelPanel
           models={models}
           modelsInfo={modelsInfo}
+          modelErrors={modelErrors}
           visibility={visibility}
           onToggleVisible={(id) =>
             runtime.dispatch({
@@ -1009,7 +1639,35 @@ export default function SceneViewer({
               payload: { id },
             })
           }
+          onSetAllVisible={(visible) =>
+            runtime.dispatch({
+              type: "model/set-visibility",
+              payload: { visible },
+            })
+          }
+          onRetry={retryModel}
           onFocus={focusModel}
+        />
+
+        <ShowcaseNodePanel
+          models={models}
+          modelsInfo={modelsInfo}
+          nodeVisibility={nodeVisibility}
+          onToggle={toggleNodeVisibility}
+          onIsolate={isolateNode}
+          onReset={resetNodeVisibility}
+        />
+
+        <ViewerPerformancePanel
+          stats={performanceStats}
+          models={models}
+          modelsInfo={modelsInfo}
+          renderInfo={renderInfo}
+          adaptiveQuality={adaptiveQuality}
+          qualityTier={qualityTier}
+          onToggleAdaptive={toggleAdaptiveQuality}
+          open={performancePanelOpen}
+          onOpenChange={setPerformancePanelOpen}
         />
 
         <div className="scene-viewer-dock">
@@ -1066,7 +1724,24 @@ export default function SceneViewer({
               ))}
             </div>
           )}
+          <div className="scene-viewer-group scene-viewer-utility-group">
+            <span className="scene-viewer-group-label">展示</span>
+            <button type="button" onClick={focusAllModels} title="将当前可见模型全部收入镜头">适配全部</button>
+            <button type="button" disabled={!rendererReady} onClick={captureScreenshot} title="导出当前展台画面">导出截图</button>
+            <button type="button" onClick={toggleFullscreen} title="切换全屏展示">
+              {isFullscreen ? "退出全屏" : "全屏展示"}
+            </button>
+            <button type="button" className={autoRotate ? "is-active" : ""} onClick={() => setAutoRotate((value) => !value)}>
+              {autoRotate ? "停止旋转" : "自动旋转"}
+            </button>
+            <button type="button" onClick={() => setPresentationMode(true)}>纯净展示</button>
+          </div>
         </div>
+        {presentationMode && (
+          <button type="button" className="scene-viewer-presentation-restore" onClick={() => setPresentationMode(false)}>
+            显示控制
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1075,6 +1750,6 @@ export default function SceneViewer({
 // 预加载工具：路由跳转前可调用
 SceneViewer.preload = (scene) => {
   for (const m of scene?.models || []) {
-    useGLTF.preload(m.url, scene.dracoDecoderPath || "/draco/");
+    if (m?.url) useGLTF.preload(m.url, scene.dracoDecoderPath || "/draco/");
   }
 };

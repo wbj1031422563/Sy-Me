@@ -44,7 +44,8 @@ export function normalizeScene(input = {}) {
     },
     renderer: {
       ...(source.renderer || {}),
-      dpr: source.renderer?.dpr || [1, 1.5],
+      dpr: source.renderer?.dpr || [1, 1.25],
+      antialias: source.renderer?.antialias ?? false,
       toneMapping: source.renderer?.toneMapping || "None",
       exposure: source.renderer?.exposure ?? 1,
       shadows: source.renderer?.shadows ?? true,

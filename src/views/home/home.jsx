@@ -80,21 +80,6 @@ function Home() {
             <div
               className="image-container"
               onClick={() => {
-                goRouter("/viewer/houtou");
-              }}
-            >
-              <img className="pre-img" src="/img/banner2.jpg" />
-              <div className="mask">
-                <span>猴头展厅</span>
-              </div>
-            </div>
-            <p className="project-item-name">猴头展厅（SceneViewer）</p>
-            <p className="project-item-time">2026-11-02</p>
-          </div>
-          <div className="project-list-item">
-            <div
-              className="image-container"
-              onClick={() => {
                 goRouter("/tools/asset-workbench");
               }}
             >

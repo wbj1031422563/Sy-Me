@@ -56,24 +56,28 @@ export default function useModelLoader({
     };
   }, []);
 
-  const handleModelFile = async (file) => {
+  const loadModelAsset = async (file, targetModelId = selectedModelId, preloadedReport = null, stagedObjectUrl = null) => {
     if (!file) return;
     const requestId = beginLoadRequest();
-    const modelId = selectedModelId;
-    let objectUrl = null;
+    const modelId = targetModelId || selectedModelId;
+    let objectUrl = stagedObjectUrl;
     setBusy(true);
     try {
-      const nextReport = await inspectAssetFile(file);
-      if (!isCurrentLoadRequest(requestId)) return;
+      const nextReport = preloadedReport || await inspectAssetFile(file);
+      if (!isCurrentLoadRequest(requestId)) {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        return;
+      }
       setReports((previous) => ({ ...previous, [modelId]: nextReport }));
 
       if (!nextReport.previewSupported) {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
         setMessage(`${file.name} 已完成格式检查，但当前建议先转换为 GLB。`);
         return;
       }
 
       releaseModelUrl(modelId);
-      objectUrl = URL.createObjectURL(file);
+      objectUrl ||= URL.createObjectURL(file);
       modelUrlsRef.current.set(modelId, objectUrl);
       const matchingPreset = localModelPresets.find((preset) =>
         preset.fileName.toLowerCase() === file.name.toLowerCase()
@@ -115,7 +119,7 @@ export default function useModelLoader({
         model: modelManifest,
         models: { ...(previous.models || {}), [modelId]: modelManifest },
       }));
-      setMessage(`${file.name} 已检查并替换到当前场景。`);
+      setMessage(`${file.name} 已检查并替换到当前场景 · ${nextReport.performanceLabel || "待评估"}。`);
     } catch (error) {
       if (objectUrl && modelUrlsRef.current.get(modelId) === objectUrl) releaseModelUrl(modelId);
       if (isCurrentLoadRequest(requestId)) setMessage(`模型加载失败：${error.message}`);
@@ -123,6 +127,12 @@ export default function useModelLoader({
       if (isCurrentLoadRequest(requestId)) setBusy(false);
     }
   };
+
+  const handleModelFile = (file, targetModelId = selectedModelId) =>
+    loadModelAsset(file, targetModelId);
+
+  const handleStagedModelAsset = (session, targetModelId = selectedModelId) =>
+    loadModelAsset(session?.file, targetModelId, session?.report, session?.objectUrl);
 
   const handleBatchModelFiles = async (fileList) => {
     const files = Array.from(fileList || []);
@@ -214,7 +224,7 @@ export default function useModelLoader({
           loadedModels.push(model);
           loadedReports[modelId] = nextReport;
           loadedManifests[modelId] = manifest;
-          updateQueueItem(queueItem.id, { status: "loaded", message: "已创建模型槽位" });
+          updateQueueItem(queueItem.id, { status: "loaded", message: `${nextReport.performanceLabel || "已完成体检"} · 已创建模型槽位` });
         } catch (error) {
           updateQueueItem(queueItem.id, { status: "failed", message: error.message });
         }
@@ -323,6 +333,7 @@ export default function useModelLoader({
 
   return {
     handleModelFile,
+    handleStagedModelAsset,
     handleBatchModelFiles,
     loadLocalModel,
     releaseModelUrl,

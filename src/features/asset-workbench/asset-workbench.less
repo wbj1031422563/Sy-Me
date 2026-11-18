@@ -28,6 +28,49 @@
   }
 }
 
+html[data-page-custom="true"] .asset-workbench-panel {
+  color: var(--page-text);
+  border-color: var(--page-border);
+  background: var(--page-panel);
+}
+
+html[data-page-custom="true"] .asset-workbench-panel h3,
+html[data-page-custom="true"] .asset-workbench-title,
+html[data-page-custom="true"] .asset-tool-group > summary,
+html[data-page-custom="true"] .asset-tool-group-content strong {
+  color: var(--page-text);
+}
+
+html[data-page-custom="true"] .asset-workbench-panel small,
+html[data-page-custom="true"] .asset-toolbox-nav > span,
+html[data-page-custom="true"] .asset-tool-group > summary small,
+html[data-page-custom="true"] .asset-tool-group-content small {
+  color: var(--page-muted);
+}
+
+html[data-page-custom="true"] .asset-tool-group,
+html[data-page-custom="true"] .asset-toolbox-nav button,
+html[data-page-custom="true"] .asset-toolbox-settings,
+html[data-page-custom="true"] .asset-workbench-panel input,
+html[data-page-custom="true"] .asset-workbench-panel select,
+html[data-page-custom="true"] .asset-workbench-panel textarea {
+  border-color: var(--page-border);
+  background: color-mix(in srgb, var(--page-surface) 88%, transparent);
+  color: var(--page-text);
+}
+
+html[data-page-custom="true"] .asset-toolbox-nav button:hover,
+html[data-page-custom="true"] .asset-toolbox-nav button.is-active,
+html[data-page-custom="true"] .asset-workbench-panel button:hover {
+  border-color: var(--page-accent);
+  background: color-mix(in srgb, var(--page-accent) 15%, transparent);
+  color: var(--page-text);
+}
+
+html[data-page-custom="true"] .asset-workbench-panel input {
+  accent-color: var(--page-accent);
+}
+
 .asset-workbench-title {
   display: flex;
   align-items: baseline;
@@ -689,6 +732,46 @@
     font-size: 7px;
   }
 
+  .asset-performance-peak-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 5px;
+  }
+
+  .asset-performance-peak-grid span {
+    min-width: 0;
+    padding: 6px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    background: rgba(11, 17, 19, 0.48);
+    color: #91a49d;
+    font-size: 7px;
+    text-align: center;
+  }
+
+  .asset-performance-peak-grid strong {
+    display: block;
+    margin-top: 2px;
+    color: #edc889;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .asset-performance-peak-grid small {
+    display: block;
+    margin-top: 1px;
+    color: #718781;
+    font-size: 7px;
+  }
+
+  .asset-performance-note {
+    margin: 6px 1px 0;
+    color: #718781;
+    font-size: 8px;
+    line-height: 1.45;
+  }
+
   .asset-optimization-plan {
     display: grid;
     gap: 3px;
@@ -815,6 +898,19 @@
   }
 }
 
+.asset-file-load-primary {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+  padding: 8px;
+  border: 1px solid rgba(120, 225, 174, 0.22);
+  border-radius: 8px;
+  background: rgba(70, 190, 123, 0.06);
+
+  .asset-primary-button { margin-top: 0; }
+  span { overflow: hidden; color: #8ea19d; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+}
+
 .asset-local-model-list {
   margin-top: 8px;
 }
@@ -926,7 +1022,7 @@
 
 .asset-model-slot-actions {
   display: grid;
-  grid-template-columns: repeat(2, auto);
+  grid-template-columns: repeat(3, auto);
   gap: 4px;
   align-items: center;
 
@@ -944,6 +1040,11 @@
     border-color: rgba(120, 225, 174, 0.62);
     background: rgba(70, 190, 123, 0.2);
     color: #ffffff;
+  }
+
+  .asset-model-slot-load {
+    border-color: rgba(120, 225, 174, 0.34);
+    color: #98dbbb;
   }
 
   button:disabled {
@@ -1246,6 +1347,37 @@
     white-space: nowrap;
   }
 }
+
+.asset-preprocess-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #9fb3ac;
+  font-size: 9px;
+
+  strong { color: #d7e7e1; font-size: 10px; }
+  &.is-low { border-color: rgba(120, 225, 174, 0.24); strong { color: #8fe4b0; } }
+  &.is-medium { border-color: rgba(241, 199, 127, 0.28); strong { color: #f1c77f; } }
+  &.is-high { border-color: rgba(255, 145, 129, 0.3); strong { color: #ff9b91; } }
+}
+
+.asset-preprocess-recommendations {
+  display: grid;
+  gap: 3px;
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: #9fb3ac;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.asset-preprocess-action { margin-top: 9px; }
 
 .asset-export-button {
   margin-top: 16px;

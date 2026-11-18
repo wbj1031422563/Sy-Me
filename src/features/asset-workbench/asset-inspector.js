@@ -29,8 +29,11 @@ function emptyReport(file, format) {
     previewSupported: false,
     vertices: null,
     faces: null,
+    triangles: null,
     meshes: null,
     materials: null,
+    primitiveCount: null,
+    textures: null,
     nodes: null,
     nodeNames: [],
     nodeHierarchy: [],
@@ -39,13 +42,60 @@ function emptyReport(file, format) {
     animations: null,
     clipNames: [],
     motion: null,
+    performanceLevel: "unknown",
+    performanceLabel: "待评估",
+    recommendations: [],
     notes: [],
   };
 }
 
-function parseGltfJson(json, report) {
+function countPrimitiveTriangles(primitive, accessors) {
+  const positionAccessor = accessors[primitive.attributes?.POSITION];
+  if (!positionAccessor?.count) return 0;
+  const vertexCount = accessors[primitive.indices]?.count || positionAccessor.count;
+  const mode = primitive.mode ?? 4;
+  if (mode === 4) return Math.floor(vertexCount / 3);
+  if (mode === 5 || mode === 6) return Math.max(0, vertexCount - 2);
+  return 0;
+}
+
+function assessPerformance(report, file, json) {
+  const sizeBytes = file.size || 0;
+  const triangles = report.triangles || 0;
+  const primitives = report.primitiveCount || 0;
+  const materials = report.materials || 0;
+  const textures = report.textures || 0;
+  const nodes = report.nodes || 0;
+  const isHigh = triangles > 3000000
+    || primitives > 400
+    || materials > 120
+    || textures > 48
+    || sizeBytes > 300 * 1024 * 1024;
+  const isMedium = !isHigh && (
+    triangles > 1000000
+    || primitives > 180
+    || materials > 60
+    || textures > 24
+    || nodes > 500
+    || sizeBytes > 120 * 1024 * 1024
+  );
+  const recommendations = [];
+  if (triangles > 1000000) recommendations.push("建议减面，并准备近景 / 远景 LOD 版本。");
+  if (primitives > 180 || materials > 60) recommendations.push("材质槽或绘制批次较多，建议合并材质并减少材质种类。");
+  if (textures > 24 || sizeBytes > 120 * 1024 * 1024) recommendations.push("纹理或文件体积较大，建议压缩纹理并优先使用 KTX2 / WebP。");
+  if (nodes > 500) recommendations.push("节点层级较深，建议清理不可见节点和无效空物体。");
+  if (json.extensionsUsed?.includes("KHR_draco_mesh_compression")) recommendations.push("已使用 Draco 压缩，几何体加载带宽表现较好。");
+  if (json.extensionsUsed?.includes("EXT_meshopt_compression")) recommendations.push("已使用 Meshopt 压缩，几何体加载带宽表现较好。");
+  if (recommendations.length === 0) recommendations.push("当前资产适合直接进入模型展台预览。");
+  report.performanceLevel = isHigh ? "high" : isMedium ? "medium" : "low";
+  report.performanceLabel = isHigh ? "高负载" : isMedium ? "中等负载" : "轻量资产";
+  report.recommendations = recommendations;
+}
+
+function parseGltfJson(json, report, file) {
   report.meshes = json.meshes?.length ?? 0;
   report.materials = json.materials?.length ?? 0;
+  report.textures = json.images?.length ?? 0;
   report.nodes = json.nodes?.length ?? 0;
   report.nodeNames = (json.nodes || []).map((node) => node.name).filter(Boolean);
   report.materialNames = [...new Set((json.materials || []).map((material) => material.name).filter(Boolean))];
@@ -56,9 +106,26 @@ function parseGltfJson(json, report) {
     duration: null,
   }));
   report.motion = analyzeMotionCapabilities(json);
+  const accessors = json.accessors || [];
+  let vertices = 0;
+  let triangles = 0;
+  let primitiveCount = 0;
+  (json.meshes || []).forEach((mesh) => {
+    (mesh.primitives || []).forEach((primitive) => {
+      primitiveCount += 1;
+      const positionAccessor = accessors[primitive.attributes?.POSITION];
+      vertices += positionAccessor?.count || 0;
+      triangles += countPrimitiveTriangles(primitive, accessors);
+    });
+  });
+  report.vertices = vertices || null;
+  report.faces = triangles || null;
+  report.triangles = triangles || null;
+  report.primitiveCount = primitiveCount;
   const hasExternalDependencies = [...(json.buffers || []), ...(json.images || [])]
     .some((item) => item.uri && !item.uri.startsWith("data:"));
   report.previewSupported = !hasExternalDependencies;
+  assessPerformance(report, file, json);
   report.notes.push(
     hasExternalDependencies
       ? "模型依赖外部贴图或 BIN 文件，请打包成单文件 GLB。"
@@ -71,7 +138,7 @@ function parseGltfJson(json, report) {
 
 async function inspectGltf(file, report) {
   if (report.format === "gltf") {
-    return parseGltfJson(JSON.parse(await file.text()), report);
+    return parseGltfJson(JSON.parse(await file.text()), report, file);
   }
 
   // 只读取文件头和 JSON 元数据，避免为了检查再分配一份完整的几何数据。
@@ -87,7 +154,7 @@ async function inspectGltf(file, report) {
     return report;
   }
 
-  return parseGltfJson(JSON.parse(await file.slice(20, 20 + length).text()), report);
+  return parseGltfJson(JSON.parse(await file.slice(20, 20 + length).text()), report, file);
 }
 
 async function inspectObj(file, report) {

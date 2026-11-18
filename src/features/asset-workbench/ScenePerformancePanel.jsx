@@ -35,6 +35,12 @@ export default function ScenePerformancePanel({ stats, scene, onOptimize, onAuto
           </span>
         ))}
       </div>
+      <div className="asset-performance-peak-grid">
+        <span>Draw Call 峰值<strong>{formatValue(stats?.callsPeak)}</strong><small>采样周期内</small></span>
+        <span>三角面峰值<strong>{formatValue(stats?.trianglesPeak)}</strong><small>面 / 帧</small></span>
+        <span>采样帧数<strong>{formatValue(stats?.sampleFrames)}</strong><small>{formatValue(stats?.sampleDurationMs)} ms</small></span>
+      </div>
+      <p className="asset-performance-note">平均值用于判断持续负载，峰值用于定位瞬时卡顿；这里不等于系统 GPU 占用率。</p>
       <div className={`asset-optimization-plan is-${plan.id}`}>
         <strong>{plan.label}</strong>
         <span>{plan.description}</span>

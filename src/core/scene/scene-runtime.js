@@ -58,6 +58,13 @@ function reduceState(state, action) {
         },
       };
     }
+    case "model/set-visibility": {
+      const visible = Boolean(action.payload.visible);
+      const visibility = Object.fromEntries(
+        Object.keys(state.visibility).map((id) => [id, visible])
+      );
+      return { ...state, visibility };
+    }
     case "shot/set":
       return { ...state, shotId: action.payload.id };
     case "hotspot/set-active":

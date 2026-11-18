@@ -173,8 +173,8 @@ export const VISUAL_PRESETS = [
   },
   {
     id: "field-operation",
-    label: "白天田间",
-    description: "自然环境光、田间尘埃和绿色材质，适合作业演示。",
+    label: "自然田间",
+    description: "自然环境光、田间尘埃和绿色材质，适合户外模型展示。",
     theme: "field",
     background: "field",
     quality: "soft",
@@ -185,7 +185,7 @@ export const VISUAL_PRESETS = [
   },
   {
     id: "night-operation",
-    label: "夜间作业",
+    label: "夜间展台",
     description: "冷蓝环境、暖色轮廓光和夜间蓝调，突出灯光层次。",
     theme: "night",
     background: "night",

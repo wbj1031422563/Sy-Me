@@ -1,6 +1,17 @@
 import os
+import struct
 
 from playwright.sync_api import sync_playwright
+
+
+def make_minimal_glb():
+    json_bytes = (
+        b'{"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],'
+        b'"nodes":[],"meshes":[],"materials":[]}'
+    )
+    json_bytes += b" " * ((4 - len(json_bytes) % 4) % 4)
+    chunk = struct.pack("<II", len(json_bytes), 0x4E4F534A) + json_bytes
+    return struct.pack("<III", 0x46546C67, 2, 12 + len(chunk)) + chunk
 
 
 with sync_playwright() as playwright:
@@ -60,8 +71,15 @@ with sync_playwright() as playwright:
         timeout=5000,
     )
 
-    page.get_by_role("button", name="＋ 新增模型槽位", exact=True).click(force=True)
+    with page.expect_file_chooser() as chooser_info:
+        page.get_by_role("button", name="＋ 新增模型槽位", exact=True).click(force=True)
+    chooser_info.value.set_files({
+        "name": "assembled.glb",
+        "mimeType": "model/gltf-binary",
+        "buffer": make_minimal_glb(),
+    })
     page.wait_for_function("document.querySelectorAll('.asset-model-slot').length === 2", timeout=10000)
+    page.locator(".asset-model-slot").nth(1).locator(".asset-model-slot-select strong").get_by_text("assembled", exact=True).wait_for(timeout=10000)
     assembly = page.locator(".asset-model-assembly")
     assembly.locator("select").first.select_option("model-2")
     assembly.get_by_label("父模型", exact=True).select_option("harvester")

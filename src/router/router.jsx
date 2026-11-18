@@ -18,7 +18,8 @@ const  LoadingPage=lazy(() => import('../views/loading-page/loading-page.jsx'));
 const StudioLayout = lazy(() => import("../views/studio/StudioLayout.jsx"));
 const StudioHome = lazy(() => import("../views/studio/StudioHome.jsx"));
 const SceneLibraryPage = lazy(() => import("../views/studio/SceneLibraryPage.jsx"));
-const StudioPlaceholderPage = lazy(() => import("../views/studio/StudioPlaceholderPage.jsx"));
+const AssetCatalogPage = lazy(() => import("../views/studio/AssetCatalogPage.jsx"));
+const DiagnosticsPage = lazy(() => import("../views/studio/DiagnosticsPage.jsx"));
 const routerList=[
   {
     path:'/',
@@ -31,10 +32,6 @@ const routerList=[
   {
     path:'/maxwell-car',
     component:lazy(()=>import('../example/maxwell-car/maxwell-car.jsx'))
-  },
-  {
-    path:'/viewer/houtou',
-    component:lazy(()=>import('../views/scene-viewer-page/houtou-page.jsx'))
   },
   {
     path:'/viewer/harvester',
@@ -62,9 +59,8 @@ const router = createBrowserRouter(
       <Route path="/studio" element={<Suspense fallback={<LoadingPage />}><StudioLayout /></Suspense>}>
         <Route index element={<Suspense fallback={<LoadingPage />}><StudioHome /></Suspense>} />
         <Route path="scenes" element={<Suspense fallback={<LoadingPage />}><SceneLibraryPage /></Suspense>} />
-        <Route path="assets" element={<Suspense fallback={<LoadingPage />}><StudioPlaceholderPage type="assets" /></Suspense>} />
-        <Route path="operations" element={<Suspense fallback={<LoadingPage />}><StudioPlaceholderPage type="operation" /></Suspense>} />
-        <Route path="diagnostics" element={<Suspense fallback={<LoadingPage />}><StudioPlaceholderPage type="diagnostics" /></Suspense>} />
+        <Route path="assets" element={<Suspense fallback={<LoadingPage />}><AssetCatalogPage /></Suspense>} />
+        <Route path="diagnostics" element={<Suspense fallback={<LoadingPage />}><DiagnosticsPage /></Suspense>} />
       </Route>
     </Route>
   )

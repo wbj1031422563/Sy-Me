@@ -4,6 +4,16 @@ export const PAGE_THEME_STORAGE_KEY = "sy-me.page-theme.v1";
 export const DEFAULT_PAGE_THEME_ID = "forest";
 export const DEFAULT_PAGE_DENSITY = "standard";
 
+export const PAGE_THEME_COLOR_FIELDS = [
+  { key: "accent", label: "强调色", description: "按钮、导航、选中状态" },
+  { key: "accentStrong", label: "强调深色", description: "高亮背景与悬停状态" },
+  { key: "pageBackground", label: "页面背景", description: "全局工作区底色" },
+  { key: "surface", label: "面板底色", description: "卡片、侧栏和内容区域" },
+  { key: "surfaceStrong", label: "面板高亮", description: "输入框和重点面板" },
+  { key: "text", label: "主要文字", description: "标题与核心信息" },
+  { key: "muted", label: "辅助文字", description: "说明、标签与次要信息" },
+];
+
 export const PAGE_THEMES = [
   {
     id: "forest",
@@ -53,7 +63,7 @@ export const PAGE_THEMES = [
   {
     id: "violet",
     label: "夜航紫",
-    description: "紫蓝夜景主题，适合灯光与夜间作业场景。",
+    description: "紫蓝夜景主题，适合灯光与夜间模型展示。",
     accent: "#d4b6ff",
     accentStrong: "#8f67cf",
     pageBackground: "#100d1a",
@@ -98,6 +108,35 @@ function isValidColor(value) {
   return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
 }
 
+function hexToRgba(value, alpha) {
+  if (!isValidColor(value)) return `rgba(152, 211, 178, ${alpha})`;
+  const number = Number.parseInt(value.slice(1), 16);
+  const red = (number >> 16) & 255;
+  const green = (number >> 8) & 255;
+  const blue = number & 255;
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function isLightColor(value) {
+  if (!isValidColor(value)) return false;
+  const number = Number.parseInt(value.slice(1), 16);
+  const red = (number >> 16) & 255;
+  const green = (number >> 8) & 255;
+  const blue = number & 255;
+  return ((red * 299) + (green * 587) + (blue * 114)) / 1000 > 165;
+}
+
+function readCustomPalette(stored) {
+  const palette = stored?.customPalette;
+  if (!palette || typeof palette !== "object") {
+    return isValidColor(stored?.customAccent) ? { accent: stored.customAccent } : {};
+  }
+  return PAGE_THEME_COLOR_FIELDS.reduce((result, field) => {
+    if (isValidColor(palette[field.key])) result[field.key] = palette[field.key];
+    return result;
+  }, {});
+}
+
 export function PageThemeProvider({ children }) {
   const [stored] = useState(readStoredTheme);
   const [themeId, setThemeId] = useState(() => (
@@ -108,15 +147,27 @@ export function PageThemeProvider({ children }) {
   const [customAccent, setCustomAccent] = useState(() => (
     isValidColor(stored.customAccent) ? stored.customAccent : null
   ));
+  const [customPalette, setCustomPalette] = useState(() => readCustomPalette(stored));
   const [density, setDensity] = useState(() => (
     stored.density === "compact" ? "compact" : DEFAULT_PAGE_DENSITY
   ));
 
   const baseTheme = PAGE_THEMES.find((item) => item.id === themeId) || PAGE_THEMES[0];
-  const theme = useMemo(() => ({
-    ...baseTheme,
-    accent: customAccent || baseTheme.accent,
-  }), [baseTheme, customAccent]);
+  const theme = useMemo(() => {
+    const palette = { ...customPalette };
+    if (customAccent && !palette.accent) palette.accent = customAccent;
+    const resolved = { ...baseTheme, ...palette };
+    return {
+      ...resolved,
+      border: palette.accent ? hexToRgba(resolved.accent, 0.2) : baseTheme.border,
+      glow: palette.accentStrong
+        ? hexToRgba(resolved.accentStrong, 0.2)
+        : baseTheme.glow,
+      panel: palette.pageBackground
+        ? hexToRgba(resolved.pageBackground, isLightColor(resolved.pageBackground) ? 0.96 : 0.92)
+        : baseTheme.panel,
+    };
+  }, [baseTheme, customAccent, customPalette]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -132,19 +183,23 @@ export function PageThemeProvider({ children }) {
     root.style.setProperty("--page-border", theme.border);
     root.style.setProperty("--page-glow", theme.glow);
     root.style.setProperty("--page-panel", theme.panel);
-    root.style.colorScheme = theme.id === "ivory" ? "light" : "dark";
+    root.dataset.pageCustom = Object.keys(customPalette).length > 0 ? "true" : "false";
+    root.style.colorScheme = isLightColor(theme.pageBackground) ? "light" : "dark";
 
     localStorage.setItem(PAGE_THEME_STORAGE_KEY, JSON.stringify({
       themeId: theme.id,
-      customAccent,
+      customAccent: customPalette.accent || customAccent,
+      customPalette,
       density,
     }));
-  }, [customAccent, density, theme]);
+  }, [customAccent, customPalette, density, theme]);
 
   const value = useMemo(() => ({
     theme,
     themeId,
-    customAccent,
+    customAccent: customPalette.accent || customAccent,
+    customPalette,
+    hasCustomColors: Object.keys(customPalette).length > 0,
     density,
     themes: PAGE_THEMES,
     setThemeId: (nextId) => {
@@ -152,14 +207,34 @@ export function PageThemeProvider({ children }) {
     },
     setCustomAccent: (nextAccent) => {
       setCustomAccent(isValidColor(nextAccent) ? nextAccent : null);
+      setCustomPalette((current) => {
+        if (!isValidColor(nextAccent)) {
+          const nextPalette = { ...current };
+          delete nextPalette.accent;
+          return nextPalette;
+        }
+        return { ...current, accent: nextAccent };
+      });
+    },
+    setCustomColor: (key, nextColor) => {
+      if (!PAGE_THEME_COLOR_FIELDS.some((field) => field.key === key)) return;
+      if (!isValidColor(nextColor)) return;
+      setCustomPalette((current) => ({ ...current, [key]: nextColor }));
     },
     setDensity: (nextDensity) => {
       if (nextDensity === "compact" || nextDensity === DEFAULT_PAGE_DENSITY) {
         setDensity(nextDensity);
       }
     },
-    resetTheme: () => setCustomAccent(null),
-  }), [customAccent, density, theme, themeId]);
+    resetTheme: () => {
+      setCustomAccent(null);
+      setCustomPalette({});
+    },
+    resetColors: () => {
+      setCustomAccent(null);
+      setCustomPalette({});
+    },
+  }), [customAccent, customPalette, density, theme, themeId]);
 
   return createElement(PageThemeContext.Provider, { value }, children);
 }

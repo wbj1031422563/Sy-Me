@@ -20,17 +20,8 @@ const MODES = [
     to: "/tools/asset-workbench",
   },
   {
-    id: "operation",
-    index: "03",
-    title: "作业模拟",
-    description: "地块、路线、天气、作业目标和机器遥测，逐步构建农机作业流程。",
-    state: "规划中",
-    tone: "blue",
-    to: "/studio/operations",
-  },
-  {
     id: "diagnostics",
-    index: "04",
+    index: "03",
     title: "诊断中心",
     description: "资产体检、动画、材质、性能和资源加载状态集中查看。",
     state: "部分可用",
@@ -54,13 +45,6 @@ const RECENT_SCENES = [
     className: "scene-card-showcase",
     to: "/viewer/harvester",
   },
-  {
-    title: "猴头多模型展厅",
-    type: "SceneViewer · 多模型",
-    status: "可预览",
-    className: "scene-card-houtou",
-    to: "/viewer/houtou",
-  },
 ];
 
 export default function StudioHome() {
@@ -69,8 +53,8 @@ export default function StudioHome() {
       <section className="studio-hero-panel">
         <div className="studio-hero-copy">
           <span className="studio-section-kicker">DIGITAL TWIN WORKSPACE / 2026</span>
-          <h2>从模型资产，<br /><em>走向作业场景。</em></h2>
-          <p>统一管理农机模型、装配关系、视觉方案和未来的田间作业流程。</p>
+          <h2>从模型资产，<br /><em>走向展示场景。</em></h2>
+          <p>统一管理农机模型、装配关系、视觉方案和模型展厅场景。</p>
           <div className="studio-hero-actions">
             <Link className="studio-primary-action" to="/studio/scenes">浏览场景库 <span>→</span></Link>
             <Link className="studio-secondary-action" to="/tools/asset-workbench">打开资产工作台</Link>
@@ -96,7 +80,7 @@ export default function StudioHome() {
       <section className="studio-section-block">
         <div className="studio-section-heading">
           <div><span className="studio-section-kicker">WORK MODES</span><h3>选择工作模式</h3></div>
-          <p>同一套场景数据，在展示、装配、作业和诊断之间切换。</p>
+          <p>同一套场景数据，在展示、装配和诊断之间切换。</p>
         </div>
         <div className="studio-mode-grid">
           {MODES.map((mode) => (

@@ -6,15 +6,13 @@ const NAV_ITEMS = [
   { to: "/studio", label: "工作区总览", icon: "⌂", end: true },
   { to: "/studio/scenes", label: "场景库", icon: "▦" },
   { to: "/studio/assets", label: "资产目录", icon: "◇" },
-  { to: "/studio/operations", label: "作业模拟", icon: "▶" },
   { to: "/studio/diagnostics", label: "诊断中心", icon: "⌁" },
 ];
 
 const PAGE_META = {
-  "/studio": { eyebrow: "SCENE OPERATIONS", title: "工作区总览" },
+  "/studio": { eyebrow: "MODEL SHOWROOM", title: "工作区总览" },
   "/studio/scenes": { eyebrow: "SCENE LIBRARY", title: "场景库" },
   "/studio/assets": { eyebrow: "ASSET CATALOG", title: "资产目录" },
-  "/studio/operations": { eyebrow: "FIELD OPERATIONS", title: "作业模拟" },
   "/studio/diagnostics": { eyebrow: "DIAGNOSTICS", title: "诊断中心" },
 };
 
@@ -30,7 +28,7 @@ export default function StudioLayout() {
           <span className="studio-brand-mark">SY</span>
           <div>
             <strong>SY·ME</strong>
-            <small>SCENE OPERATIONS</small>
+            <small>MODEL SHOWROOM</small>
           </div>
         </div>
 

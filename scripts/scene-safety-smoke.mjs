@@ -63,5 +63,9 @@ runtime.syncScene({
   models: [{ id: "machine", visible: true }],
 });
 assert.equal(runtime.getState().visibility.machine, true);
+runtime.dispatch({ type: "model/set-visibility", payload: { visible: false } });
+assert.equal(runtime.getState().visibility.machine, false);
+runtime.dispatch({ type: "model/set-visibility", payload: { visible: true } });
+assert.equal(runtime.getState().visibility.machine, true);
 
 console.log("scene_safety: ok");

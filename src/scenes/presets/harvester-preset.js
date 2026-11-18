@@ -91,10 +91,11 @@ export function createHarvesterScene({
     title,
     dracoDecoderPath: "/draco/",
     renderer: {
-      dpr: [1, 1.5],
+      dpr: [1, 1.25],
+      antialias: false,
       toneMapping: "ACESFilmic",
       exposure: 1.15,
-      shadows: true,
+      shadows: false,
     },
     models: [
       {
@@ -153,6 +154,7 @@ export function createHarvesterScene({
         color: "#ffd18a",
       },
       contactShadow: true,
+      contactShadowFrames: 1,
       contactShadowPosition: [0, 0.02, 0],
       contactShadowScale: 18,
     },
@@ -171,21 +173,21 @@ export function createHarvesterScene({
     },
     effects: {
       enabled: true,
-      multisampling: 2,
+      multisampling: 0,
       bloom: {
-        enabled: true,
+        enabled: false,
         threshold: 0.78,
         intensity: 1.15,
         radius: 0.72,
       },
       vignette: {
-        enabled: true,
+        enabled: false,
         offset: 0.24,
         darkness: 0.58,
       },
       noise: {
-        enabled: true,
-        opacity: 0.018,
+        enabled: false,
+        opacity: 0,
       },
     },
     camera: {

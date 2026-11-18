@@ -1,0 +1,197 @@
+.studio-diagnostics-page {
+  padding-bottom: 30px;
+}
+
+.studio-diagnostics-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0 25px;
+}
+
+.studio-diagnostics-hero h2 {
+  margin-top: 8px;
+  font-size: 32px;
+}
+
+.studio-diagnostics-hero p {
+  max-width: 570px;
+  margin-top: 8px;
+  color: var(--page-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.studio-diagnostics-health {
+  min-width: 180px;
+  padding: 16px;
+  border: 1px solid var(--page-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--page-surface-strong) 72%, transparent);
+}
+
+.studio-diagnostics-health small,
+.studio-diagnostics-card-heading span {
+  color: var(--page-muted);
+  font-size: 9px;
+  letter-spacing: .1em;
+}
+
+.studio-diagnostics-health strong {
+  display: block;
+  margin: 8px 0 4px;
+  color: var(--page-text);
+  font-size: 18px;
+}
+
+.studio-diagnostics-health span {
+  color: var(--page-muted);
+  font-size: 10px;
+}
+
+.studio-diagnostics-health.is-ready strong { color: #a8e3b7; }
+.studio-diagnostics-health.is-attention strong { color: #f1c77f; }
+.studio-diagnostics-health.is-critical strong { color: #f1a6a6; }
+
+.studio-diagnostics-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 20px;
+}
+
+.studio-diagnostics-actions button,
+.studio-diagnostics-actions a {
+  padding: 9px 12px;
+  border: 1px solid var(--page-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--page-accent) 8%, transparent);
+  color: var(--page-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.studio-diagnostic-check-grid,
+.studio-diagnostics-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.studio-diagnostics-render-info {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--page-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--page-surface) 88%, transparent);
+}
+
+.studio-diagnostics-render-info .studio-section-heading { margin-bottom: 16px; }
+.studio-diagnostics-render-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.studio-diagnostics-render-grid > div { min-width: 0; padding: 10px; border: 1px solid var(--page-border); border-radius: 7px; }
+.studio-diagnostics-render-grid span,
+.studio-diagnostics-render-grid strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-diagnostics-render-grid span { color: var(--page-muted); font-size: 9px; }
+.studio-diagnostics-render-grid strong { margin-top: 7px; color: var(--page-text); font-size: 11px; font-weight: 500; }
+.studio-diagnostics-render-grid strong.is-hardware { color: #a8e3b7; }
+.studio-diagnostics-render-grid strong.is-software { color: #f1c77f; }
+.studio-diagnostics-render-grid strong.is-unknown { color: var(--page-muted); }
+
+.studio-diagnostic-check {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 68px;
+  padding: 12px;
+  border: 1px solid var(--page-border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--page-surface) 88%, transparent);
+}
+
+.studio-diagnostic-check > span {
+  color: var(--page-muted);
+  font-size: 10px;
+}
+
+.studio-diagnostic-check strong,
+.studio-diagnostic-check small {
+  display: block;
+}
+
+.studio-diagnostic-check strong { color: var(--page-text); font-size: 11px; }
+.studio-diagnostic-check small { margin-top: 5px; color: var(--page-muted); font-size: 9px; }
+.studio-diagnostic-check.is-ready { border-color: color-mix(in srgb, #8bd8a8 35%, var(--page-border)); }
+.studio-diagnostic-check.is-attention { border-color: color-mix(in srgb, #f1c77f 35%, var(--page-border)); }
+.studio-diagnostic-check.is-critical { border-color: color-mix(in srgb, #f1a6a6 45%, var(--page-border)); }
+
+.studio-diagnostics-summary-grid {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 16px;
+}
+
+.studio-diagnostics-summary-card {
+  min-height: 170px;
+  padding: 18px;
+  border: 1px solid var(--page-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--page-surface) 88%, transparent);
+}
+
+.studio-diagnostics-card-heading,
+.studio-diagnostics-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.studio-diagnostics-card-heading strong { color: var(--page-accent); font-size: 20px; font-weight: 500; }
+.studio-diagnostics-summary-card h3 { margin-top: 22px; color: var(--page-text); font-size: 17px; }
+.studio-diagnostics-summary-card p { margin-top: 7px; color: var(--page-muted); font-size: 10px; line-height: 1.6; }
+
+.studio-diagnostics-format-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.studio-diagnostics-format-list span {
+  padding: 5px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--page-accent) 10%, transparent);
+  color: var(--page-accent);
+  font-size: 9px;
+}
+
+.studio-diagnostics-format-list b { margin-left: 5px; font-weight: 500; }
+.studio-diagnostics-meta { margin-top: 11px; color: var(--page-muted); font-size: 9px; }
+.studio-diagnostics-meta b { color: var(--page-text); font-weight: 500; }
+
+.studio-diagnostics-issues {
+  margin-top: 27px;
+  padding: 18px;
+  border: 1px solid var(--page-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--page-surface-strong) 45%, transparent);
+}
+
+.studio-diagnostics-issues .studio-section-heading { margin-bottom: 17px; }
+.studio-diagnostics-issues ul { display: grid; gap: 10px; margin: 0; padding-left: 18px; color: #f1c77f; font-size: 11px; line-height: 1.6; }
+.studio-diagnostics-clear { color: #a8e3b7; font-size: 11px; }
+
+@media (max-width: 840px) {
+  .studio-diagnostics-hero { align-items: stretch; flex-direction: column; }
+  .studio-diagnostics-health { min-width: 0; }
+  .studio-diagnostic-check-grid { grid-template-columns: repeat(2, 1fr); }
+  .studio-diagnostics-render-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .studio-diagnostic-check-grid,
+  .studio-diagnostics-summary-grid,
+  .studio-diagnostics-render-grid { grid-template-columns: 1fr; }
+}
