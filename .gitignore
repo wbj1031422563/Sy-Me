@@ -14,6 +14,9 @@ dist-ssr
 
 # Original high-poly workspace model (local preview only)
 /public/model/text_model001.glb
+# Local harvester showroom links (hardlink / junction into ../glb — do not commit)
+/public/model/收获机.glb
+/public/model/harvester-parts/
 
 # Local screenshots captured while validating the asset workbench
 /asset-workbench-*.png

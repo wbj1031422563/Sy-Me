@@ -1,9 +1,27 @@
 # 收获机视觉预设
 
-入口是 `harvester-preset.js` 中的 `createHarvesterScene`。
+入口是 `harvester-preset.js` 中的 `createHarvesterScene` /
+`createHarvesterAssemblyScene`。
 
 项目已预留页面：`/viewer/harvester`。模型文件不存在时会显示接入提示，
 不会破坏其他页面。
+
+## 分件整机装配
+
+`glb/` 下 23 个分件经 `public/model/harvester-parts` junction 暴露。
+各 GLB 网格顶点已在同一 CAD 世界坐标中，根节点 `scale≈0.01`；
+场景层使用单位 `position/rotation/scale`，且 **关闭 autoFrame**，
+由嵌入变换拼成整机（不必再写外部矩阵表）。
+运行时 `AssemblyGroundAligner` 优先按轮系底面 AABB 自适应贴地（`assemblyMeta.adaptiveGround`），
+`1.57m` 仅作测量前兜底；侧栏可开关包围盒辅助线。
+
+```js
+import { createHarvesterAssemblyScene } from "@/scenes/presets/harvester-preset.js";
+
+const scene = createHarvesterAssemblyScene({ mode: "full" }); // header | core | full
+```
+
+展厅侧栏可切换「整机装配 / 精简整机 / 仅割台」。整机约 1.3GB，内存紧张时请用精简或仅割台。
 
 ## 使用方式
 

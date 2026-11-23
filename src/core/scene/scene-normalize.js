@@ -9,6 +9,14 @@ import {
   CURRENT_SCENE_SCHEMA_VERSION,
   migrateSceneDocument,
 } from "./scene-schema.js";
+import {
+  clampCameraConfig,
+  clampEnvironment,
+  clampGround,
+  clampModelTransform,
+  clampRenderer,
+  clampShot,
+} from "./scene-visual-limits.js";
 
 export function normalizeScene(input = {}) {
   const { scene: migratedScene } = migrateSceneDocument(input);
@@ -26,30 +34,30 @@ export function normalizeScene(input = {}) {
     id: source.id || "scene",
     title: source.title || "未命名场景",
     models: normalizeModelCollection(rawModels).map((model, index) => ({
-      ...model,
+      ...clampModelTransform(model),
       nodeTransformDeltas: model.nodeTransformDeltas || undefined,
       // 没有显式指定时，保持旧版“第一个模型作为变体目标”的行为。
       variantTarget: model.variantTarget ?? index === 0,
     })),
-    environment: {
+    environment: clampEnvironment({
       ...(source.environment || {}),
       background: source.environment?.background || "#05060a",
       ambientIntensity: source.environment?.ambientIntensity ?? 0.3,
-    },
-    camera: {
+    }),
+    camera: clampCameraConfig({
       ...(source.camera || {}),
       fov: source.camera?.fov ?? 40,
       near: source.camera?.near ?? 0.1,
       far: source.camera?.far ?? 200,
-    },
-    renderer: {
+    }),
+    renderer: clampRenderer({
       ...(source.renderer || {}),
       dpr: source.renderer?.dpr || [1, 1.25],
       antialias: source.renderer?.antialias ?? false,
       toneMapping: source.renderer?.toneMapping || "None",
       exposure: source.renderer?.exposure ?? 1,
       shadows: source.renderer?.shadows ?? true,
-    },
+    }),
     colorGrade: {
       enabled: source.colorGrade?.enabled ?? true,
       hue: source.colorGrade?.hue ?? 0,
@@ -76,8 +84,18 @@ export function normalizeScene(input = {}) {
       ...(source.controls || {}),
       autoRotate: source.controls?.autoRotate ?? false,
     },
-    shots: Array.isArray(source.shots) ? source.shots : [],
+    ground: source.ground ? clampGround(source.ground) : source.ground,
+    shots: Array.isArray(source.shots) ? source.shots.map((shot) => clampShot(shot)) : [],
     hotspots: Array.isArray(source.hotspots) ? source.hotspots : [],
+    tour: source.tour
+      ? {
+        enabled: source.tour.enabled !== false,
+        loop: source.tour.loop !== false,
+        intervalMs: Math.min(12000, Math.max(1200, source.tour.intervalMs ?? 3800)),
+        autoStart: Boolean(source.tour.autoStart),
+        shotIds: Array.isArray(source.tour.shotIds) ? source.tour.shotIds : [],
+      }
+      : null,
     materialVariants: rawVariants,
     machine: source.machine
       ? {

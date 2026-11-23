@@ -38,6 +38,10 @@ const routerList=[
     component:lazy(()=>import('../views/scene-viewer-page/harvester-page.jsx'))
   },
   {
+    path:'/viewer/:sceneId',
+    component:lazy(()=>import('../views/scene-viewer-page/ShowroomViewerPage.jsx'))
+  },
+  {
     path:'/tools/asset-workbench',
     component:lazy(()=>import('../features/asset-workbench/AssetWorkbench.jsx'))
   },

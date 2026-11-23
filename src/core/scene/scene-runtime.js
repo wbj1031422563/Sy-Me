@@ -60,6 +60,15 @@ function reduceState(state, action) {
     }
     case "model/set-visibility": {
       const visible = Boolean(action.payload.visible);
+      if (action.payload.id) {
+        return {
+          ...state,
+          visibility: {
+            ...state.visibility,
+            [action.payload.id]: visible,
+          },
+        };
+      }
       const visibility = Object.fromEntries(
         Object.keys(state.visibility).map((id) => [id, visible])
       );

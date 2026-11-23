@@ -18,6 +18,13 @@ import ScenePerformancePanel from "./ScenePerformancePanel.jsx";
 import VisualPresetPanel from "./VisualPresetPanel.jsx";
 import VisualPresetLibraryPanel from "./VisualPresetLibraryPanel.jsx";
 import CameraPresetPanel from "./CameraPresetPanel.jsx";
+import ShowcaseStoryPanel from "./ShowcaseStoryPanel.jsx";
+import ShowroomPropsPanel from "./ShowroomPropsPanel.jsx";
+import {
+  buildShowcaseExportScene,
+  saveShowcaseLibraryEntry,
+} from "./showcase-library.js";
+import { downloadShowcasePack } from "./showcase-pack.js";
 import ModelTransformPanel from "./ModelTransformPanel.jsx";
 import ModelNodeTransformPanel from "./ModelNodeTransformPanel.jsx";
 import ModelAssemblyPanel from "./ModelAssemblyPanel.jsx";
@@ -146,6 +153,9 @@ function createDefaultScene() {
     modelUrl: DEMO_MODEL_URL,
     modelLabel: "示例模型（可替换）",
     title: "收获机视觉工作台",
+    // 工作台保留 machine 编辑能力；展厅入口另传 machineEnabled: false
+    machineEnabled: true,
+    cinematic: false,
   });
   return normalizeScene({
     ...scene,
@@ -212,6 +222,7 @@ export default function AssetWorkbench() {
   const [backgroundPreset, setBackgroundPreset] = useState("field");
   const [visualPresetId, setVisualPresetId] = useState("custom");
   const [cameraShotId, setCameraShotId] = useState("hero");
+  const [selectedHotspotId, setSelectedHotspotId] = useState(null);
   const [modelAccept, setModelAccept] = useState(
     ".glb,.gltf,.fbx,.obj,.stl,.ply,.dae"
   );
@@ -226,6 +237,8 @@ export default function AssetWorkbench() {
   const [modelSockets, setModelSockets] = useState({});
   const [selectedNodeIds, setSelectedNodeIds] = useState({});
   const [batchQueue, setBatchQueue] = useState([]);
+  /** 批量加载布局：assemble=按原坐标装配（默认）；sideBySide=并排对比 */
+  const [batchLayout, setBatchLayout] = useState("assemble");
   const [motionPreview, setMotionPreview] = useState({
     playing: false,
     clipPlaying: false,
@@ -992,6 +1005,117 @@ export default function AssetWorkbench() {
     downloadScene({ ...scene, models, defaultVariant }, assetManifest);
   };
 
+  const exportAsShowcase = () => {
+    const defaultVariant = runtimeRef.current?.getState().variantId ?? scene.defaultVariant;
+    const showcaseScene = buildShowcaseExportScene({
+      ...scene,
+      defaultVariant,
+      kind: "showcase",
+      machine: { ...(scene.machine || {}), enabled: false },
+    }, {
+      id: scene.id || `showcase-${Date.now()}`,
+      title: scene.title || "展厅场景",
+    });
+    saveShowcaseLibraryEntry({
+      id: showcaseScene.id,
+      title: showcaseScene.title,
+      detail: `${showcaseScene.hotspots?.length || 0} 热点 · ${showcaseScene.shots?.length || 0} 镜头`,
+      scene: showcaseScene,
+      to: `/viewer/${showcaseScene.id}`,
+    });
+    downloadScene(showcaseScene, assetManifest);
+    downloadShowcasePack(showcaseScene, {
+      title: showcaseScene.title,
+      note: "asset-workbench showcase export",
+    });
+    setMessage(`已导出展厅方案与演示包「${showcaseScene.title}」，可在场景库或 /viewer/${showcaseScene.id} 打开。`);
+  };
+
+  const updateHotspot = (hotspotId, patch) => {
+    updateVisualScene((previous) => ({
+      ...previous,
+      hotspots: (previous.hotspots || []).map((spot) => (
+        spot.id === hotspotId ? { ...spot, ...patch } : spot
+      )),
+    }));
+  };
+
+  const addHotspot = () => {
+    const existingIds = new Set((scene.hotspots || []).map((spot) => spot.id));
+    let index = (scene.hotspots || []).length + 1;
+    let id = `hotspot-${index}`;
+    while (existingIds.has(id)) {
+      index += 1;
+      id = `hotspot-${index}`;
+    }
+    const nextHotspot = {
+      id,
+      label: `热点 ${index}`,
+      anchor: "object",
+      offset: [0, 1.6, 0],
+      shotId: scene.camera?.defaultShot || scene.shots?.[0]?.id,
+      panel: {
+        title: `热点 ${index}`,
+        body: "在此填写产品讲解文案。",
+      },
+    };
+    updateVisualScene((previous) => ({
+      ...previous,
+      hotspots: [...(previous.hotspots || []), nextHotspot],
+    }));
+    setSelectedHotspotId(id);
+    setMessage(`已新增热点「${nextHotspot.label}」。`);
+  };
+
+  const removeHotspot = (hotspotId) => {
+    updateVisualScene((previous) => ({
+      ...previous,
+      hotspots: (previous.hotspots || []).filter((spot) => spot.id !== hotspotId),
+    }));
+    setSelectedHotspotId((current) => (current === hotspotId ? null : current));
+    setMessage("已删除热点。");
+  };
+
+  const updateTour = (patch) => {
+    updateVisualScene((previous) => {
+      const currentTour = previous.tour || {};
+      const nextTour = {
+        enabled: true,
+        loop: true,
+        intervalMs: 3800,
+        autoStart: false,
+        shotIds: (previous.shots || []).map((shot) => shot.id),
+        ...currentTour,
+        ...patch,
+      };
+      return { ...previous, tour: nextTour };
+    });
+  };
+
+  const moveTourShot = (index, direction) => {
+    updateVisualScene((previous) => {
+      const shotIds = Array.isArray(previous.tour?.shotIds) && previous.tour.shotIds.length
+        ? [...previous.tour.shotIds]
+        : (previous.shots || []).map((shot) => shot.id);
+      const target = index + direction;
+      if (target < 0 || target >= shotIds.length) return previous;
+      const next = [...shotIds];
+      const [item] = next.splice(index, 1);
+      next.splice(target, 0, item);
+      return {
+        ...previous,
+        tour: {
+          enabled: true,
+          loop: true,
+          intervalMs: previous.tour?.intervalMs ?? 3800,
+          autoStart: Boolean(previous.tour?.autoStart),
+          ...previous.tour,
+          shotIds: next,
+        },
+      };
+    });
+  };
+
   const themeOptions = useMemo(() => Object.keys(HARVESTER_THEMES), []);
 
   const handleBackgroundFile = (file) => {
@@ -1551,6 +1675,9 @@ export default function AssetWorkbench() {
             <button type="button" className="asset-secondary-button" disabled={busy} onClick={exportScene}>
               导出场景配置
             </button>
+            <button type="button" className="asset-secondary-button" disabled={busy} onClick={exportAsShowcase}>
+              导出为展厅场景
+            </button>
             <button type="button" className="asset-secondary-button" disabled={busy} onClick={resetWorkspace}>
               恢复完整默认
             </button>
@@ -1727,7 +1854,7 @@ export default function AssetWorkbench() {
             multiple
             hidden
             onChange={(event) => {
-              handleBatchModelFiles(event.target.files);
+              handleBatchModelFiles(event.target.files, { layout: batchLayout });
               event.target.value = "";
             }}
           />
@@ -1756,6 +1883,26 @@ export default function AssetWorkbench() {
             </button>
             <span>当前目标：{activeModel?.label || "未选择模型槽位"}</span>
           </div>
+          <div className="asset-batch-layout-toggle" role="group" aria-label="批量加载布局">
+            <button
+              type="button"
+              className={batchLayout === "assemble" ? "is-active" : ""}
+              disabled={busy}
+              title="各模型 identity + 关闭逐件落地，按 GLB 内嵌世界坐标拼装"
+              onClick={() => setBatchLayout("assemble")}
+            >
+              按原坐标装配
+            </button>
+            <button
+              type="button"
+              className={batchLayout === "sideBySide" ? "is-active" : ""}
+              disabled={busy}
+              title="沿 X 轴并排展开，适合无关模型对比"
+              onClick={() => setBatchLayout("sideBySide")}
+            >
+              并排对比
+            </button>
+          </div>
           <button
             type="button"
             className="asset-secondary-button"
@@ -1764,6 +1911,11 @@ export default function AssetWorkbench() {
           >
             批量选择 GLB / GLTF
           </button>
+          <p className="asset-workbench-hint">
+            {batchLayout === "assemble"
+              ? "多选默认按原坐标自动装配（不偏移、不逐件落地）。"
+              : "并排对比会沿 X 轴展开各模型，会破坏同坐标系装配。"}
+          </p>
           <div className="asset-local-model-list">
             {LOCAL_MODEL_PRESETS.map((preset) => (
               <button key={preset.id} className="asset-local-model-button" disabled={busy} onClick={() => loadLocalModel(preset)}>
@@ -1951,6 +2103,24 @@ export default function AssetWorkbench() {
           onRemove={removeCameraShot}
         />
 
+        <ShowcaseStoryPanel
+          hotspots={scene.hotspots || []}
+          shots={scene.shots || []}
+          tour={scene.tour || {}}
+          selectedHotspotId={selectedHotspotId || scene.hotspots?.[0]?.id}
+          onSelectHotspot={setSelectedHotspotId}
+          onUpdateHotspot={updateHotspot}
+          onAddHotspot={addHotspot}
+          onRemoveHotspot={removeHotspot}
+          onUpdateTour={updateTour}
+          onMoveShot={moveTourShot}
+        />
+
+        <ShowroomPropsPanel
+          scene={scene}
+          onChange={(nextScene) => updateVisualScene(() => nextScene)}
+        />
+
         <RenderTuningPanel scene={scene} onChange={updateVisualScene} />
           </div>
         </details>
@@ -1959,6 +2129,9 @@ export default function AssetWorkbench() {
         <div className="asset-toolbox-footer">
           <button className="asset-export-button" onClick={exportScene}>
             导出当前场景配置
+          </button>
+          <button className="asset-export-button" type="button" onClick={exportAsShowcase}>
+            导出为展厅场景
           </button>
         </div>
         <div className="asset-workbench-message">{message}</div>

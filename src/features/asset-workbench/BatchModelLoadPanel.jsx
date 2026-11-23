@@ -17,7 +17,7 @@ export default function BatchModelLoadPanel({ items, onClear, busy }) {
       <div className="asset-capability-heading">
         <div>
           <h3>批量模型加载队列</h3>
-          <p>逐个完成格式检查，成功项会自动创建新的模型槽位。</p>
+          <p>逐个完成格式检查；成功项按所选布局创建槽位（默认按原坐标自动装配）。</p>
         </div>
         <span className={warningCount > 0 ? "asset-capability-state" : "asset-capability-state is-ready"}>
           {loadedCount}/{items.length}

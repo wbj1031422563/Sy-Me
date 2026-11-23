@@ -52,6 +52,10 @@ import {
 } from "../core/scene/SceneExtensionLayer.jsx";
 import MachinePanel from "./MachinePanel.jsx";
 import HarvesterAnimationDriver from "./HarvesterAnimationDriver.jsx";
+import MachineSimTicker from "./MachineSimTicker.jsx";
+import AssemblyGroundAligner from "./AssemblyGroundAligner.jsx";
+import AssemblyBoundsOverlay from "./AssemblyBoundsOverlay.jsx";
+import { offsetShotByLift } from "./assembly-bounds.js";
 import ModelClipAnimationDriver from "./ModelClipAnimationDriver.jsx";
 import ModelMotionDriver from "./ModelMotionDriver.jsx";
 import MotionDiagnostics from "./MotionDiagnostics.jsx";
@@ -59,6 +63,7 @@ import SceneParticles from "./SceneParticles.jsx";
 import ScenePerformanceProbe from "./ScenePerformanceProbe.jsx";
 import RgbColorGrade from "./RgbColorGrade.jsx";
 import { describeAnimationClips } from "./animation-clips.js";
+import { VISUAL_LIMITS } from "../core/scene/scene-visual-limits.js";
 import "./scene-viewer.less";
 
 /* ---------------- 模型 ---------------- */
@@ -671,11 +676,12 @@ function SceneCapture({ requestRef, requestToken }) {
 
 /* ---------------- 镜头编排 ---------------- */
 
-function CameraRig({ shot, controlsRef }) {
+function CameraRig({ shot, controlsRef, assemblyLiftY = 0 }) {
   const { camera, invalidate } = useThree();
 
   useEffect(() => {
     if (!shot) return;
+    const lifted = offsetShotByLift(shot, assemblyLiftY);
     const controls = controlsRef.current;
     const from = {
       px: camera.position.x,
@@ -686,12 +692,12 @@ function CameraRig({ shot, controlsRef }) {
       tz: controls ? controls.target.z : 0,
     };
     const to = {
-      px: shot.position[0],
-      py: shot.position[1],
-      pz: shot.position[2],
-      tx: shot.target[0],
-      ty: shot.target[1],
-      tz: shot.target[2],
+      px: lifted.position[0],
+      py: lifted.position[1],
+      pz: lifted.position[2],
+      tx: lifted.target[0],
+      ty: lifted.target[1],
+      tz: lifted.target[2],
     };
     const tween = new TWEEN.Tween(from)
       .to(to, shot.durationMs ?? 1500)
@@ -709,7 +715,7 @@ function CameraRig({ shot, controlsRef }) {
       .start();
     invalidate();
     return () => tween.stop();
-  }, [shot, camera, controlsRef, invalidate]);
+  }, [shot, camera, controlsRef, invalidate, assemblyLiftY]);
 
   useFrame(() => {
     TWEEN.update();
@@ -720,29 +726,35 @@ function CameraRig({ shot, controlsRef }) {
 
 /* ---------------- 热点 ---------------- */
 
-function Hotspot({ spot, modelRefs, defaultModelId, active, onToggle }) {
+function Hotspot({ spot, modelRefs, defaultModelId, active, onToggle, onLookHere, showcase, assemblyLiftY = 0 }) {
   const [worldPos, setWorldPos] = useState(null);
 
   useEffect(() => {
     // anchor=node/world：直接使用 spot.position（HOT_ 解析结果或 JSON 坐标）
     if (spot.anchor === "node" || spot.anchor === "world") {
-      setWorldPos(new THREE.Vector3(...spot.position));
+      const position = spot.position || [0, 0, 0];
+      setWorldPos(new THREE.Vector3(
+        position[0],
+        (position[1] || 0) + (Number(assemblyLiftY) || 0),
+        position[2]
+      ));
       return;
     }
-    // anchor=object：取所属模型包围盒中心 + offset
+    // anchor=object：取所属模型包围盒中心 + offset（模型已在自适应抬升根节点下）
     const model = modelRefs.current.get(spot.modelId || defaultModelId);
     if (!model) return;
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     const offset = spot.offset || [0, 0, 0];
     setWorldPos(center.add(new THREE.Vector3(...offset)));
-  }, [spot, modelRefs, defaultModelId]);
+  }, [spot, modelRefs, defaultModelId, assemblyLiftY]);
 
   if (!worldPos) return null;
   return (
-    <Html position={worldPos} center distanceFactor={6} zIndexRange={[20, 0]}>
-      <div className={`viewer-hotspot ${active ? "is-active" : ""}`}>
+    <Html position={worldPos} center distanceFactor={showcase ? 7 : 6} zIndexRange={[20, 0]}>
+      <div className={`viewer-hotspot ${active ? "is-active" : ""} ${showcase ? "is-showcase" : ""}`}>
         <button
+          type="button"
           className="viewer-hotspot-dot"
           title={spot.label}
           onClick={() => onToggle(active ? null : spot.id)}
@@ -753,6 +765,15 @@ function Hotspot({ spot, modelRefs, defaultModelId, active, onToggle }) {
           <div className="viewer-hotspot-panel">
             <h4>{spot.panel?.title || spot.label}</h4>
             <p>{spot.panel?.body}</p>
+            {spot.shotId && onLookHere && (
+              <button
+                type="button"
+                className="viewer-hotspot-look"
+                onClick={() => onLookHere(spot.shotId)}
+              >
+                看这里
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -771,6 +792,7 @@ function SceneContent({
   visibility,
   activeHotspot,
   setActiveHotspot,
+  onHotspotLookHere,
   onInspect,
   modelRefs,
   controlsRef,
@@ -782,12 +804,34 @@ function SceneContent({
   onModelError,
   modelReloadTokens,
   autoRotate,
+  showcase = false,
+  onAssemblyAligned,
 }) {
   const env = scene.environment || {};
   const controlsCfg = scene.controls || {};
   const defaultModelId = models[0]?.id;
   const modelById = new Map(models.map((model) => [model.id, model]));
   const childrenById = new Map();
+  const assemblyRootRef = useRef(null);
+  const adaptiveGround = scene.assemblyMeta?.adaptiveGround !== false
+    && (scene.assemblyMeta?.adaptiveGround === true || Boolean(scene.assemblyMeta?.groundOffset));
+  const fallbackLiftY = scene.assemblyMeta?.groundOffset?.[1]
+    ?? VISUAL_LIMITS.assembly.groundLiftY.default;
+  const [assemblyLiftY, setAssemblyLiftY] = useState(adaptiveGround ? fallbackLiftY : 0);
+  const [assemblyAlign, setAssemblyAlign] = useState(null);
+  const showBoundsOverlay = adaptiveGround
+    && (scene.assemblyMeta?.showBounds === true || scene.parameters?.showAssemblyBounds === true);
+
+  useEffect(() => {
+    if (!adaptiveGround) {
+      setAssemblyLiftY(0);
+      setAssemblyAlign(null);
+      return;
+    }
+    setAssemblyLiftY(fallbackLiftY);
+    setAssemblyAlign(null);
+  }, [adaptiveGround, fallbackLiftY, scene.id, models.length]);
+
   models.forEach((model) => {
     if (!model.parentId || !modelById.has(model.parentId)) return;
     const childrenForParent = childrenById.get(model.parentId) || [];
@@ -880,19 +924,48 @@ function SceneContent({
       <SceneGround config={scene.ground} />
       <SceneParticles config={scene.particles} />
 
-      {rootModels.map((entry) => renderModel(entry))}
+      <group ref={assemblyRootRef} name="assembly-root">
+        {rootModels.map((entry) => renderModel(entry))}
+      </group>
 
-      {scene.machine?.enabled && models[0] && !models[0].motionTracks?.length && (
-        <HarvesterAnimationDriver
+      {adaptiveGround && (
+        <AssemblyGroundAligner
+          enabled
           modelRefs={modelRefs}
-          modelId={models[0].id}
-          machine={machine}
+          models={models}
+          visibility={visibility}
+          groundY={scene.assemblyMeta?.groundY ?? scene.ground?.y ?? 0}
+          wheelPatterns={scene.assemblyMeta?.wheelModelIdPatterns}
+          fallbackLiftY={fallbackLiftY}
+          assemblyRootRef={assemblyRootRef}
+          onAligned={(result) => {
+            setAssemblyLiftY(result.liftY);
+            setAssemblyAlign(result);
+            onAssemblyAligned?.(result);
+          }}
         />
+      )}
+
+      <AssemblyBoundsOverlay
+        enabled={showBoundsOverlay}
+        result={assemblyAlign}
+      />
+
+      {scene.machine?.enabled && (
+        <>
+          <MachineSimTicker enabled={Boolean(scene.machine?.enabled)} runtime={runtime} />
+          <HarvesterAnimationDriver
+            modelRefs={modelRefs}
+            modelId={models[0]?.id}
+            modelIds={models.map((model) => model.id)}
+            machine={machine}
+          />
+        </>
       )}
 
       {env.contactShadow && (
         <ContactShadows
-          position={env.contactShadowPosition || [0, -1.05, 0]}
+          position={env.contactShadowPosition || [0, 0.02, 0]}
           opacity={0.55}
           scale={env.contactShadowScale || 8}
           blur={2.2}
@@ -909,12 +982,19 @@ function SceneContent({
           spot={spot}
           modelRefs={modelRefs}
           defaultModelId={defaultModelId}
+          showcase={showcase}
+          onLookHere={onHotspotLookHere}
           active={activeHotspot === spot.id}
           onToggle={setActiveHotspot}
+          assemblyLiftY={adaptiveGround ? assemblyLiftY : 0}
         />
       ))}
 
-      <CameraRig shot={shot} controlsRef={controlsRef} />
+      <CameraRig
+        shot={shot}
+        controlsRef={controlsRef}
+        assemblyLiftY={adaptiveGround ? assemblyLiftY : 0}
+      />
       <OrbitControls
         ref={controlsRef}
         makeDefault
@@ -1134,10 +1214,35 @@ function ShowcaseNodePanel({ models, modelsInfo, nodeVisibility, onToggle, onIso
 
 /* ---------------- 外壳：UI + Canvas ---------------- */
 
+const VIEWER_UI_DEFAULTS = {
+  showcase: {
+    header: true,
+    dock: true,
+    models: false,
+    nodes: false,
+    performance: false,
+    themeControl: true,
+    utility: true,
+  },
+  studio: {
+    header: true,
+    dock: true,
+    models: true,
+    nodes: true,
+    performance: true,
+    themeControl: true,
+    utility: true,
+  },
+};
+
 export default function SceneViewer({
   scene,
+  mode = "studio",
+  ui = null,
   onRuntimeReady,
   onModelInspect,
+  onModelStatus,
+  onAssemblyAligned,
   motionPreview,
   onPerformance,
   onCaptureReady,
@@ -1145,6 +1250,11 @@ export default function SceneViewer({
   onNodeSelect,
   onSceneApiReady,
 }) {
+  const isShowcase = mode === "showcase";
+  const uiFlags = useMemo(
+    () => ({ ...(VIEWER_UI_DEFAULTS[isShowcase ? "showcase" : "studio"]), ...(ui || {}) }),
+    [isShowcase, ui]
+  );
   const normalizedScene = useMemo(() => normalizeScene(scene), [scene]);
   const runtimeRef = useRef(null);
   if (!runtimeRef.current) runtimeRef.current = createSceneRuntime(normalizedScene);
@@ -1192,7 +1302,28 @@ export default function SceneViewer({
 
   useEffect(() => {
     setNodeVisibility({});
+    setModelErrors({});
+    setModelReloadTokens({});
   }, [normalizedScene.models]);
+
+  useEffect(() => {
+    if (!onModelStatus) return undefined;
+    const failed = models
+      .filter((model) => modelErrors[model.id])
+      .map((model) => ({
+        id: model.id,
+        label: model.label || model.id,
+        message: modelErrors[model.id],
+      }));
+    const loaded = models.filter((model) => modelsInfo[model.id] && !modelErrors[model.id]).length;
+    onModelStatus({
+      total: models.length,
+      loaded,
+      failed,
+      pending: Math.max(0, models.length - loaded - failed.length),
+    });
+    return undefined;
+  }, [models, modelsInfo, modelErrors, onModelStatus]);
 
   useEffect(() => {
     setAutoRotate(Boolean(normalizedScene.controls?.autoRotate));
@@ -1371,19 +1502,30 @@ export default function SceneViewer({
   const shot = shots.find((s) => s.id === shotId) || shots[0];
   const variant = variants.find((v) => v.id === variantId) || variants[0];
 
-  // 机位序列自动巡演（镜头脚本的最小形态）
+  // 机位序列自动巡演（优先使用 scene.tour.shotIds，否则按 shots 顺序）
   useEffect(() => {
     if (!autoPlay || shots.length < 2) return;
+    const tourIds = Array.isArray(normalizedScene.tour?.shotIds) && normalizedScene.tour.shotIds.length > 1
+      ? normalizedScene.tour.shotIds.filter((id) => shots.some((shot) => shot.id === id))
+      : shots.map((shot) => shot.id);
+    if (tourIds.length < 2) return;
+    const intervalMs = normalizedScene.tour?.intervalMs || 3800;
     const timer = setInterval(() => {
       const currentShotId = runtime.getState().shotId;
-      const idx = shots.findIndex((s) => s.id === currentShotId);
+      const idx = tourIds.findIndex((id) => id === currentShotId);
+      const nextId = tourIds[(idx + 1 + tourIds.length) % tourIds.length];
       runtime.dispatch({
         type: "shot/set",
-        payload: { id: shots[(idx + 1) % shots.length].id },
+        payload: { id: nextId },
       });
-    }, 3800);
+    }, intervalMs);
     return () => clearInterval(timer);
-  }, [autoPlay, runtime, shots]);
+  }, [autoPlay, normalizedScene.tour, runtime, shots]);
+
+  useEffect(() => {
+    if (!isShowcase || !normalizedScene.tour?.autoStart || shots.length < 2) return;
+    runtime.dispatch({ type: "autoplay/set", payload: { value: true } });
+  }, [isShowcase, normalizedScene.tour?.autoStart, runtime, shots.length]);
 
   const focusShot = useRef(null);
 
@@ -1554,13 +1696,31 @@ export default function SceneViewer({
     || machine?.state === "harvesting"
     || machine?.state === "unloading";
 
+  const lookAtHotspotShot = useCallback((nextShotId) => {
+    if (!nextShotId) return;
+    runtime.dispatch({ type: "autoplay/set", payload: { value: false } });
+    runtime.dispatch({ type: "shot/set", payload: { id: nextShotId } });
+  }, [runtime]);
+
+  const bootstrapLiftY = (
+    normalizedScene.assemblyMeta?.adaptiveGround === true
+    || Boolean(normalizedScene.assemblyMeta?.groundOffset)
+  )
+    ? (normalizedScene.assemblyMeta?.groundOffset?.[1] ?? VISUAL_LIMITS.assembly.groundLiftY.default)
+    : 0;
+  const canvasCameraShot = offsetShotByLift(activeShot, bootstrapLiftY);
+
   return (
-    <div ref={viewerRootRef} className={`scene-viewer ${presentationMode ? "is-presentation" : ""}`}>
+    <div
+      ref={viewerRootRef}
+      className={`scene-viewer ${presentationMode ? "is-presentation" : ""} ${isShowcase ? "is-showcase-mode" : ""}`}
+      data-viewer-mode={mode}
+    >
       <Canvas
         frameloop={continuousRender ? "always" : "demand"}
         dpr={renderer.dpr}
         camera={{
-          position: shot?.position || [0, 0, 5],
+          position: canvasCameraShot?.position || [0, 0, 5],
           fov: renderScene.camera?.fov ?? 40,
           near: renderScene.camera?.near ?? 0.1,
           far: renderScene.camera?.far ?? 200,
@@ -1590,6 +1750,7 @@ export default function SceneViewer({
               payload: { id },
             })
           }
+          onHotspotLookHere={lookAtHotspotShot}
           onInspect={handleInspect}
           modelRefs={modelRefs}
           controlsRef={controlsRef}
@@ -1601,6 +1762,8 @@ export default function SceneViewer({
           onModelError={handleModelError}
           modelReloadTokens={modelReloadTokens}
           autoRotate={autoRotate}
+          showcase={isShowcase}
+          onAssemblyAligned={onAssemblyAligned}
         />
       </Canvas>
       <Loader />
@@ -1615,128 +1778,169 @@ export default function SceneViewer({
       )}
 
       <div className="scene-viewer-ui">
-        <header className="scene-viewer-header">
-          <div className="scene-viewer-header-content">
-            <h2>{normalizedScene.title}</h2>
-            <PageThemeControl className="scene-viewer-theme-control" />
-          </div>
-        </header>
+        {uiFlags.header && (
+          <header className="scene-viewer-header">
+            <div className="scene-viewer-header-content">
+              <div className="scene-viewer-header-copy">
+                {isShowcase && <span className="scene-viewer-brand-mark">SY·ME</span>}
+                <h2>{normalizedScene.title}</h2>
+              </div>
+              {uiFlags.themeControl && (
+                <PageThemeControl className="scene-viewer-theme-control" />
+              )}
+            </div>
+          </header>
+        )}
 
         <MachinePanel
           config={normalizedScene.machine}
           machine={machine}
+          showcase={isShowcase}
           onDispatch={runtime.dispatch}
+          onFocusPart={(part) => {
+            runtime.dispatch({ type: "autoplay/set", payload: { value: false } });
+            if (Array.isArray(part?.modelIds) && part.modelIds.length > 0) {
+              const known = new Set(models.map((model) => model.id));
+              const focusIds = part.modelIds.filter((id) => known.has(id));
+              if (focusIds.length > 0) {
+                // 先保证关联分件可见，再切镜头
+                focusIds.forEach((id) => {
+                  runtime.dispatch({
+                    type: "model/set-visibility",
+                    payload: { id, visible: true },
+                  });
+                });
+              }
+            }
+            if (part?.shotId) {
+              runtime.dispatch({ type: "shot/set", payload: { id: part.shotId } });
+            } else if (part?.modelIds?.[0]) {
+              focusModel(part.modelIds[0]);
+            }
+          }}
         />
 
-        <ModelPanel
-          models={models}
-          modelsInfo={modelsInfo}
-          modelErrors={modelErrors}
-          visibility={visibility}
-          onToggleVisible={(id) =>
-            runtime.dispatch({
-              type: "model/toggle-visibility",
-              payload: { id },
-            })
-          }
-          onSetAllVisible={(visible) =>
-            runtime.dispatch({
-              type: "model/set-visibility",
-              payload: { visible },
-            })
-          }
-          onRetry={retryModel}
-          onFocus={focusModel}
-        />
+        {uiFlags.models && (
+          <ModelPanel
+            models={models}
+            modelsInfo={modelsInfo}
+            modelErrors={modelErrors}
+            visibility={visibility}
+            onToggleVisible={(id) =>
+              runtime.dispatch({
+                type: "model/toggle-visibility",
+                payload: { id },
+              })
+            }
+            onSetAllVisible={(visible) =>
+              runtime.dispatch({
+                type: "model/set-visibility",
+                payload: { visible },
+              })
+            }
+            onRetry={retryModel}
+            onFocus={focusModel}
+          />
+        )}
 
-        <ShowcaseNodePanel
-          models={models}
-          modelsInfo={modelsInfo}
-          nodeVisibility={nodeVisibility}
-          onToggle={toggleNodeVisibility}
-          onIsolate={isolateNode}
-          onReset={resetNodeVisibility}
-        />
+        {uiFlags.nodes && (
+          <ShowcaseNodePanel
+            models={models}
+            modelsInfo={modelsInfo}
+            nodeVisibility={nodeVisibility}
+            onToggle={toggleNodeVisibility}
+            onIsolate={isolateNode}
+            onReset={resetNodeVisibility}
+          />
+        )}
 
-        <ViewerPerformancePanel
-          stats={performanceStats}
-          models={models}
-          modelsInfo={modelsInfo}
-          renderInfo={renderInfo}
-          adaptiveQuality={adaptiveQuality}
-          qualityTier={qualityTier}
-          onToggleAdaptive={toggleAdaptiveQuality}
-          open={performancePanelOpen}
-          onOpenChange={setPerformancePanelOpen}
-        />
+        {uiFlags.performance && (
+          <ViewerPerformancePanel
+            stats={performanceStats}
+            models={models}
+            modelsInfo={modelsInfo}
+            renderInfo={renderInfo}
+            adaptiveQuality={adaptiveQuality}
+            qualityTier={qualityTier}
+            onToggleAdaptive={toggleAdaptiveQuality}
+            open={performancePanelOpen}
+            onOpenChange={setPerformancePanelOpen}
+          />
+        )}
 
-        <div className="scene-viewer-dock">
-          {shots.length > 0 && (
-            <div className="scene-viewer-group">
-              <span className="scene-viewer-group-label">镜头</span>
-              {shots.map((s) => (
-                <button
-                  key={s.id}
-                  className={s.id === shotId ? "is-active" : ""}
-                  onClick={() => {
-                    runtime.dispatch({ type: "autoplay/set", payload: { value: false } });
-                    runtime.dispatch({ type: "shot/set", payload: { id: s.id } });
-                  }}
-                >
-                  {s.label}
+        {uiFlags.dock && (
+          <div className={`scene-viewer-dock ${isShowcase ? "is-showcase" : ""}`}>
+            {shots.length > 0 && (
+              <div className="scene-viewer-group scene-viewer-shot-rail">
+                <span className="scene-viewer-group-label">镜头</span>
+                {shots.map((s) => (
+                  <button
+                    type="button"
+                    key={s.id}
+                    className={s.id === shotId ? "is-active" : ""}
+                    onClick={() => {
+                      runtime.dispatch({ type: "autoplay/set", payload: { value: false } });
+                      runtime.dispatch({ type: "shot/set", payload: { id: s.id } });
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+                {shots.length > 1 && (
+                  <button
+                    type="button"
+                    className={`scene-viewer-play ${autoPlay ? "is-active" : ""}`}
+                    title="机位自动巡演"
+                    onClick={() =>
+                      runtime.dispatch({
+                        type: "autoplay/set",
+                        payload: { value: !autoPlay },
+                      })
+                    }
+                  >
+                    {autoPlay ? "⏸ 巡演" : "▶ 巡演"}
+                  </button>
+                )}
+              </div>
+            )}
+            {variants.length > 0 && (
+              <div className="scene-viewer-group">
+                <span className="scene-viewer-group-label">材质</span>
+                {variants.map((v) => (
+                  <button
+                    type="button"
+                    key={v.id}
+                    className={`scene-viewer-swatch ${
+                      v.id === variant?.id ? "is-active" : ""
+                    } ${v.useOriginal ? "is-original" : ""}`}
+                    style={{ "--swatch": v.color }}
+                    title={v.useOriginal ? "使用模型自带的颜色、贴图和材质" : v.label}
+                    aria-pressed={v.id === variant?.id}
+                    onClick={() =>
+                      runtime.dispatch({ type: "variant/set", payload: { id: v.id } })
+                    }
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {uiFlags.utility && (
+              <div className="scene-viewer-group scene-viewer-utility-group">
+                <span className="scene-viewer-group-label">展示</span>
+                <button type="button" onClick={focusAllModels} title="将当前可见模型全部收入镜头">适配全部</button>
+                <button type="button" disabled={!rendererReady} onClick={captureScreenshot} title="导出当前展台画面">导出截图</button>
+                <button type="button" onClick={toggleFullscreen} title="切换全屏展示">
+                  {isFullscreen ? "退出全屏" : "全屏展示"}
                 </button>
-              ))}
-              {shots.length > 1 && (
-                <button
-                  className={`scene-viewer-play ${autoPlay ? "is-active" : ""}`}
-                  title="机位自动巡演"
-                  onClick={() =>
-                    runtime.dispatch({
-                      type: "autoplay/set",
-                      payload: { value: !autoPlay },
-                    })
-                  }
-                >
-                  {autoPlay ? "⏸ 巡演" : "▶ 巡演"}
+                <button type="button" className={autoRotate ? "is-active" : ""} onClick={() => setAutoRotate((value) => !value)}>
+                  {autoRotate ? "停止旋转" : "自动旋转"}
                 </button>
-              )}
-            </div>
-          )}
-          {variants.length > 0 && (
-            <div className="scene-viewer-group">
-              <span className="scene-viewer-group-label">材质</span>
-              {variants.map((v) => (
-                <button
-                  type="button"
-                  key={v.id}
-                  className={`scene-viewer-swatch ${
-                    v.id === variant?.id ? "is-active" : ""
-                  } ${v.useOriginal ? "is-original" : ""}`}
-                  style={{ "--swatch": v.color }}
-                  title={v.useOriginal ? "使用模型自带的颜色、贴图和材质" : v.label}
-                  aria-pressed={v.id === variant?.id}
-                  onClick={() =>
-                    runtime.dispatch({ type: "variant/set", payload: { id: v.id } })
-                  }
-                >
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="scene-viewer-group scene-viewer-utility-group">
-            <span className="scene-viewer-group-label">展示</span>
-            <button type="button" onClick={focusAllModels} title="将当前可见模型全部收入镜头">适配全部</button>
-            <button type="button" disabled={!rendererReady} onClick={captureScreenshot} title="导出当前展台画面">导出截图</button>
-            <button type="button" onClick={toggleFullscreen} title="切换全屏展示">
-              {isFullscreen ? "退出全屏" : "全屏展示"}
-            </button>
-            <button type="button" className={autoRotate ? "is-active" : ""} onClick={() => setAutoRotate((value) => !value)}>
-              {autoRotate ? "停止旋转" : "自动旋转"}
-            </button>
-            <button type="button" onClick={() => setPresentationMode(true)}>纯净展示</button>
+                <button type="button" onClick={() => setPresentationMode(true)}>纯净展示</button>
+              </div>
+            )}
           </div>
-        </div>
+        )}
         {presentationMode && (
           <button type="button" className="scene-viewer-presentation-restore" onClick={() => setPresentationMode(false)}>
             显示控制

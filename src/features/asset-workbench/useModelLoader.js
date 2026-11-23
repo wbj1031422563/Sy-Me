@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import { inspectAssetFile } from "./asset-inspector.js";
 import { createMotionCapabilitiesFromDefinitions } from "./motion-analysis.js";
+import {
+  HARVESTER_ASSEMBLY_GROUND_OFFSET,
+} from "../../scenes/presets/harvester-parts.js";
+import { VISUAL_LIMITS } from "../../core/scene/scene-visual-limits.js";
 
 export default function useModelLoader({
   selectedModelId,
@@ -134,10 +138,18 @@ export default function useModelLoader({
   const handleStagedModelAsset = (session, targetModelId = selectedModelId) =>
     loadModelAsset(session?.file, targetModelId, session?.report, session?.objectUrl);
 
-  const handleBatchModelFiles = async (fileList) => {
+  /**
+   * 批量加载本地模型。
+   * @param {FileList|File[]} fileList
+   * @param {{ layout?: 'assemble'|'sideBySide' }} [options]
+   *   assemble（默认）：identity + autoFrame=false，按 GLB 内嵌 CAD 坐标自动拼装
+   *   sideBySide：沿 X 轴展开，便于无关模型对比
+   */
+  const handleBatchModelFiles = async (fileList, { layout = "assemble" } = {}) => {
     const files = Array.from(fileList || []);
     if (files.length === 0) return;
     const requestId = beginLoadRequest();
+    const assembleInPlace = layout !== "sideBySide";
     const queueItems = files.map((file, index) => ({
       id: `batch-${Date.now()}-${index}`,
       name: file.name,
@@ -152,6 +164,7 @@ export default function useModelLoader({
     const loadedManifests = {};
     const existingIds = new Set(sceneRef.current.models.map((model) => model.id));
     let modelIndex = sceneRef.current.models.length + 1;
+    const batchAssemblyId = assembleInPlace ? `batch-assembly-${Date.now()}` : null;
 
     const updateQueueItem = (id, patch) => {
       if (!isCurrentLoadRequest(requestId)) return;
@@ -202,16 +215,20 @@ export default function useModelLoader({
             assetId: modelId,
             label: file.name.replace(/\.(glb|gltf)$/i, ""),
             url: objectUrl,
-            position: [loadedModels.length * 2.2, 0, 0],
+            // 装配：CAD 重合，由 SceneViewer 自适应贴地；并排：沿 X 展开
+            position: assembleInPlace
+              ? [0, 0, 0]
+              : [loadedModels.length * 2.2, 0, 0],
             rotation: [0, 0, 0],
             scale: 1,
             visible: true,
             variantTarget: false,
             parentId: null,
-            assemblyId: null,
+            assemblyId: batchAssemblyId,
             assetFormat: nextReport.format,
             assetSource: "local",
-            autoFrame: true,
+            // 装配必须关闭：逐件 autoFrame 会把分件独立挪到原点，破坏 CAD 重合
+            autoFrame: !assembleInPlace,
             nodeVisibility: undefined,
             nodeTransformDeltas: undefined,
           };
@@ -224,7 +241,12 @@ export default function useModelLoader({
           loadedModels.push(model);
           loadedReports[modelId] = nextReport;
           loadedManifests[modelId] = manifest;
-          updateQueueItem(queueItem.id, { status: "loaded", message: `${nextReport.performanceLabel || "已完成体检"} · 已创建模型槽位` });
+          updateQueueItem(queueItem.id, {
+            status: "loaded",
+            message: assembleInPlace
+              ? `${nextReport.performanceLabel || "已完成体检"} · 按原坐标装配`
+              : `${nextReport.performanceLabel || "已完成体检"} · 已创建模型槽位`,
+          });
         } catch (error) {
           updateQueueItem(queueItem.id, { status: "failed", message: error.message });
         }
@@ -238,6 +260,29 @@ export default function useModelLoader({
         updateScene((previous) => ({
           ...previous,
           models: [...previous.models, ...loadedModels],
+          ...(assembleInPlace
+            ? {
+              assemblyMeta: {
+                ...(previous.assemblyMeta || {}),
+                transformSource: "embedded-glb-world",
+                adaptiveGround: true,
+                groundY: 0,
+                groundOffset: previous.assemblyMeta?.groundOffset
+                  || [...HARVESTER_ASSEMBLY_GROUND_OFFSET],
+                partCount: (previous.models?.length || 0) + loadedModels.length,
+                note: "Workbench batch assemble: runtime adaptive ground from wheel bottoms.",
+              },
+              controls: {
+                ...(previous.controls || {}),
+                minDistance: Math.min(previous.controls?.minDistance ?? 6, 6),
+                maxDistance: Math.max(previous.controls?.maxDistance ?? 80, 80),
+              },
+              camera: {
+                ...(previous.camera || {}),
+                far: Math.max(previous.camera?.far ?? 400, VISUAL_LIMITS.camera.far.min),
+              },
+            }
+            : {}),
         }));
         setReports((previous) => ({ ...previous, ...loadedReports }));
         setAssetManifest((previous) => ({
@@ -247,7 +292,11 @@ export default function useModelLoader({
         }));
         setSelectedModelId(loadedModels[loadedModels.length - 1].id);
         setSelectedNodeIds({});
-        setMessage(`批量加载完成：新增 ${loadedModels.length} 个模型槽位。`);
+        setMessage(
+          assembleInPlace
+            ? `批量加载完成：已按原坐标自动装配 ${loadedModels.length} 个模型，轮底自适应贴地。`
+            : `批量加载完成：已并排放入 ${loadedModels.length} 个模型槽位。`
+        );
       } else {
         setMessage("批量预处理完成，但没有可直接预览的模型。");
       }

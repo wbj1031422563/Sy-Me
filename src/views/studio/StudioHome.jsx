@@ -1,14 +1,17 @@
 import { Link } from "react-router-dom";
+import { VISUAL_PRESETS } from "../../features/asset-workbench/visual-presets.js";
+import { listShowroomEntries } from "../../scenes/showroom-catalog.js";
+import { listShowcaseLibrary } from "../../features/asset-workbench/showcase-library.js";
 
 const MODES = [
   {
     id: "showcase",
     index: "01",
     title: "展示模式",
-    description: "镜头、灯光、材质和视觉方案，快速生成可交付的产品展示场景。",
+    description: "镜头、灯光、材质和视觉方案，快速进入可交付的产品展厅。",
     state: "已可用",
     tone: "gold",
-    to: "/studio/scenes",
+    to: "/viewer/harvester",
   },
   {
     id: "assembly",
@@ -30,7 +33,15 @@ const MODES = [
   },
 ];
 
-const RECENT_SCENES = [
+const BUILTIN_RECENT = [
+  {
+    title: "收获机展厅",
+    type: "主推展厅 · 镜头 / 热点 / 巡演",
+    status: "主推",
+    className: "scene-card-showcase",
+    to: "/viewer/harvester",
+    featured: true,
+  },
   {
     title: "收获机视觉工作台",
     type: "多模型装配 · 视觉配置",
@@ -38,26 +49,33 @@ const RECENT_SCENES = [
     className: "scene-card-harvester",
     to: "/tools/asset-workbench",
   },
-  {
-    title: "收获机展示场景",
-    type: "产品展示 · 镜头预设",
-    status: "可预览",
-    className: "scene-card-showcase",
-    to: "/viewer/harvester",
-  },
 ];
 
+function buildStudioStats() {
+  const catalog = listShowroomEntries();
+  const localShowcases = listShowcaseLibrary();
+  return [
+    { label: "展厅条目", value: String(catalog.length).padStart(2, "0"), hint: "注册表可用" },
+    { label: "本地方案", value: String(localShowcases.length).padStart(2, "0"), hint: "浏览器已保存" },
+    { label: "视觉预设", value: String(VISUAL_PRESETS.length).padStart(2, "0"), hint: "可直接应用" },
+    { label: "Schema", value: "v2", hint: "迁移已启用" },
+  ];
+}
+
 export default function StudioHome() {
+  const stats = buildStudioStats();
+  const recentScenes = BUILTIN_RECENT;
+
   return (
     <div className="studio-home">
       <section className="studio-hero-panel">
         <div className="studio-hero-copy">
-          <span className="studio-section-kicker">DIGITAL TWIN WORKSPACE / 2026</span>
-          <h2>从模型资产，<br /><em>走向展示场景。</em></h2>
-          <p>统一管理农机模型、装配关系、视觉方案和模型展厅场景。</p>
+          <span className="studio-section-kicker">SY·ME SHOWROOM / 2026</span>
+          <h2>从模型资产，<br /><em>走向产品展厅。</em></h2>
+          <p>统一管理农机模型、装配关系、视觉方案，并以收获机展厅作为主推演示入口。</p>
           <div className="studio-hero-actions">
-            <Link className="studio-primary-action" to="/studio/scenes">浏览场景库 <span>→</span></Link>
-            <Link className="studio-secondary-action" to="/tools/asset-workbench">打开资产工作台</Link>
+            <Link className="studio-primary-action" to="/viewer/harvester">进入收获机展厅 <span>→</span></Link>
+            <Link className="studio-secondary-action" to="/studio/scenes">浏览场景库</Link>
           </div>
         </div>
         <div className="studio-hero-visual" aria-hidden="true">
@@ -71,10 +89,13 @@ export default function StudioHome() {
       </section>
 
       <section className="studio-stat-row" aria-label="工作区概览">
-        <div><span>场景配置</span><strong>03</strong><small>本地可用</small></div>
-        <div><span>模型资产</span><strong>06</strong><small>已接入工作区</small></div>
-        <div><span>视觉预设</span><strong>05</strong><small>可直接应用</small></div>
-        <div><span>Schema</span><strong>v2</strong><small>迁移已启用</small></div>
+        {stats.map((item) => (
+          <div key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <small>{item.hint}</small>
+          </div>
+        ))}
       </section>
 
       <section className="studio-section-block">
@@ -96,11 +117,11 @@ export default function StudioHome() {
 
       <section className="studio-section-block studio-recent-block">
         <div className="studio-section-heading">
-          <div><span className="studio-section-kicker">RECENT SCENES</span><h3>最近场景</h3></div>
+          <div><span className="studio-section-kicker">FEATURED / RECENT</span><h3>主推与最近场景</h3></div>
           <Link to="/studio/scenes">查看全部 →</Link>
         </div>
         <div className="studio-scene-grid">
-          {RECENT_SCENES.map((scene) => (
+          {recentScenes.map((scene) => (
             <Link key={scene.title} to={scene.to} className={`studio-scene-card ${scene.className}`}>
               <div className="studio-scene-card-visual"><span>{scene.status}</span><i /></div>
               <div className="studio-scene-card-copy"><h4>{scene.title}</h4><p>{scene.type}</p></div>
