@@ -11,8 +11,10 @@ import {
   HARVESTER_MODEL_PLACEHOLDER,
   listHarvesterParts,
   probeHarvesterPartsAvailable,
+  probeHarvesterPartsWebAvailable,
   summarizeHarvesterParts,
 } from "../../scenes/presets/harvester-preset.js";
+import { HARVESTER_PARTS_WEB_BASE } from "../../scenes/presets/harvester-parts.js";
 import {
   COLOR_GRADE_PRESETS,
   PARTICLE_PRESETS,
@@ -77,12 +79,13 @@ const LOCAL_ASSEMBLY_SHOTS = [
   },
 ];
 
-function buildWorkspaceScene(assemblyMode, partsAvailable, showroomSkin = "amber-hall") {
+function buildWorkspaceScene(assemblyMode, partsAvailable, showroomSkin = "amber-hall", partsWebAvailable = false) {
   if (partsAvailable && assemblyMode !== "header") {
     return createHarvesterAssemblyScene({
       mode: assemblyMode,
       machineEnabled: false,
       showroomSkin,
+      partsBase: partsWebAvailable ? HARVESTER_PARTS_WEB_BASE : undefined,
     });
   }
   const headerScene = createHarvesterScene({
@@ -620,6 +623,7 @@ export default function HarvesterPage() {
   const [activePresetId, setActivePresetId] = useState("custom");
   const [twinMode, setTwinMode] = useState(false);
   const [partsAvailable, setPartsAvailable] = useState(false);
+  const [partsWebAvailable, setPartsWebAvailable] = useState(false);
   const [assemblyMode, setAssemblyMode] = useState(DEFAULT_ASSEMBLY_MODE);
   const [showroomSkin, setShowroomSkin] = useState("amber-hall");
   const [stageSurface, setStageSurface] = useState("amber-dark");
@@ -646,15 +650,17 @@ export default function HarvesterPage() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const [headerResponse, hasParts] = await Promise.all([
+      const [headerResponse, hasParts, hasPartsWeb] = await Promise.all([
         fetch(HARVESTER_MODEL_PLACEHOLDER, { method: "HEAD" }).catch(() => null),
         probeHarvesterPartsAvailable(),
+        probeHarvesterPartsWebAvailable(),
       ]);
       if (!active) return;
 
       const contentType = headerResponse?.headers.get("content-type") || "";
       const headerOk = Boolean(headerResponse?.ok && !contentType.includes("text/html"));
       setPartsAvailable(hasParts);
+      setPartsWebAvailable(hasPartsWeb);
 
       if (!headerOk && !hasParts) {
         setAssetStatus("select");
@@ -666,14 +672,15 @@ export default function HarvesterPage() {
       setShowroomSkin("amber-hall");
       setVisibilityPreset("all");
       setScene(applyHarvesterVisibilityPreset(
-        buildWorkspaceScene(mode, hasParts, "amber-hall"),
+        buildWorkspaceScene(mode, hasParts, "amber-hall", hasPartsWeb),
         "all"
       ));
       setAssetLabel(describeAssemblyMode(mode, hasParts));
       setAssetStatus("ready");
       if (hasParts) {
         const summary = summarizeHarvesterParts(listHarvesterParts(mode));
-        setMessage(`已按 CAD 世界坐标装配 ${summary.count} 个分件（约 ${summary.sizeMB}MB），轮底自适应贴地。侧栏可切皮肤 / 性能档 / 巡演。`);
+        const sizeNote = hasPartsWeb ? "网页优化版，体积已大幅压缩" : `约 ${summary.sizeMB}MB`;
+        setMessage(`已按 CAD 世界坐标装配 ${summary.count} 个分件（${sizeNote}），轮底自适应贴地。侧栏可切皮肤 / 性能档 / 巡演。`);
       }
     })();
 
@@ -697,7 +704,7 @@ export default function HarvesterPage() {
     clearLocalSelection();
     setAssemblyMode(mode);
     setLoadStatus(null);
-    const skinned = buildWorkspaceScene(mode, partsAvailable, showroomSkin);
+    const skinned = buildWorkspaceScene(mode, partsAvailable, showroomSkin, partsWebAvailable);
     const withSurface = stageSurface && stageSurface !== "custom"
       ? applyStageSurface(skinned, stageSurface)
       : skinned;
@@ -716,7 +723,7 @@ export default function HarvesterPage() {
       if (!previous) return previous;
       const skinned = localMultiSelect
         ? applyShowroomSkin(previous, skinId)
-        : buildWorkspaceScene(assemblyMode, partsAvailable, skinId);
+        : buildWorkspaceScene(assemblyMode, partsAvailable, skinId, partsWebAvailable);
       const withSurface = stageSurface && stageSurface !== "custom"
         ? applyStageSurface(skinned, stageSurface)
         : skinned;

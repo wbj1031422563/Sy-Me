@@ -17,6 +17,8 @@ dist-ssr
 # Local harvester showroom links (hardlink / junction into ../glb — do not commit)
 /public/model/收获机.glb
 /public/model/harvester-parts/
+# Optimized web GLBs (junction into ../glb-web — regenerate via npm run optimize:harvester)
+/public/model/harvester-web/
 
 # Local screenshots captured while validating the asset workbench
 /asset-workbench-*.png

@@ -15,13 +15,34 @@
 运行时 `AssemblyGroundAligner` 优先按轮系底面 AABB 自适应贴地（`assemblyMeta.adaptiveGround`），
 `1.57m` 仅作测量前兜底；侧栏可开关包围盒辅助线。
 
+### 网页优化版（harvester-web）
+
+原始分件总计约 1.3GB，直接加载吃力。优化管线：
+
+```bash
+npm run optimize:harvester          # 全量（../glb → ../glb-web）
+npm run optimize:harvester -- --only guwugetai   # 只处理割台
+npm run optimize:harvester -- --force --ratio 0.3 # 覆盖重写 + 自定义减面比例
+```
+
+管线做 dedup → weld → simplify(meshopt，按体量 0.85/0.65/0.45 三档) →
+reorder → quantize → webp 纹理 → EXT_meshopt_compression，
+**保留节点树与命名**（动作绑定依赖）。当前一轮结果：1.34GB → 267MB（20%）。
+
+产物经 `public/model/harvester-web` junction 暴露（不入库，可随时重跑生成）。
+页面启动时探测该目录，可用则优先加载优化版，否则回退原始分件；
+`SceneViewer` 已全局配置 meshopt 解码器。
+
 ```js
 import { createHarvesterAssemblyScene } from "@/scenes/presets/harvester-preset.js";
 
 const scene = createHarvesterAssemblyScene({ mode: "full" }); // header | core | full
+// 指定分件目录（默认 /model/harvester-parts）：
+const webScene = createHarvesterAssemblyScene({ mode: "full", partsBase: "/model/harvester-web" });
 ```
 
-展厅侧栏可切换「整机装配 / 精简整机 / 仅割台」。整机约 1.3GB，内存紧张时请用精简或仅割台。
+展厅侧栏可切换「整机装配 / 精简整机 / 仅割台」。整机优化版约 267MB（原始约 1.3GB），
+内存紧张时请用精简或仅割台。
 
 ## 使用方式
 

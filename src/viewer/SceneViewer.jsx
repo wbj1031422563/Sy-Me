@@ -31,6 +31,7 @@ import {
   useGLTF,
 } from "@react-three/drei";
 import * as THREE from "three";
+import { MeshoptDecoder } from "three-stdlib";
 import TWEEN from "@tweenjs/tween.js";
 import {
   Bloom,
@@ -66,6 +67,11 @@ import RgbColorGrade from "./RgbColorGrade.jsx";
 import { describeAnimationClips } from "./animation-clips.js";
 import { VISUAL_LIMITS } from "../core/scene/scene-visual-limits.js";
 import "./scene-viewer.less";
+
+// 网页优化分件使用 EXT_meshopt_compression + KHR_mesh_quantization；全局只需设置一次解码器
+if (typeof useGLTF.setMeshoptDecoder === "function") {
+  useGLTF.setMeshoptDecoder(MeshoptDecoder);
+}
 
 /* ---------------- 模型 ---------------- */
 

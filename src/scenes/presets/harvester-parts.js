@@ -18,6 +18,12 @@ import {
 export const HARVESTER_PARTS_BASE = "/model/harvester-parts";
 
 /**
+ * 网页优化版分件目录（经 public/model/harvester-web → ../../glb-web junction）。
+ * 由 scripts/optimize-harvester-glb.mjs 生成：减面 + meshopt 压缩，文件名与原件一致。
+ */
+export const HARVESTER_PARTS_WEB_BASE = "/model/harvester-web";
+
+/**
  * 整机落地偏移（米）。默认取自 VISUAL_LIMITS.assembly.groundLiftY。
  */
 export const HARVESTER_ASSEMBLY_GROUND_OFFSET = Object.freeze(
@@ -44,6 +50,9 @@ export function offsetHarvesterAssemblyPoint(point = [0, 0, 0], offset = HARVEST
 
 /** 探测用：体积适中、文件名无全角括号，便于 HEAD 检查 junction 是否可用 */
 export const HARVESTER_PARTS_PROBE_FILE = "006text_model(tuolijiti).glb";
+
+/** 优化目录探测用：体量最小的件，文件名无全角括号 */
+export const HARVESTER_PARTS_WEB_PROBE_FILE = "011text_model(jinqixizongcheng).glb";
 
 /**
  * @typedef {object} HarvesterPartDef
@@ -90,17 +99,17 @@ export const HARVESTER_ASSEMBLY_MODES = Object.freeze({
   core: {
     id: "core",
     label: "精简整机",
-    description: "不含谷物割台的 22 个分件（约 0.7GB）。割台约 637MB，需切「整机装配」才加载。",
+    description: "不含谷物割台的 22 个分件（网页优化版约 157MB，原始约 0.7GB）。割台需切「整机装配」才加载。",
   },
   full: {
     id: "full",
     label: "整机装配",
-    description: "全部 23 个分件（含谷物割台）按 CAD 世界坐标拼装（约 1.3GB，加载较慢）。",
+    description: "全部 23 个分件（含谷物割台）按 CAD 世界坐标拼装（网页优化版约 267MB，原始约 1.3GB）。",
   },
 });
 
-export function encodeHarvesterPartUrl(fileName) {
-  const segments = `${HARVESTER_PARTS_BASE}/${fileName}`.split("/").map((segment) => {
+export function encodeHarvesterPartUrl(fileName, base = HARVESTER_PARTS_BASE) {
+  const segments = `${base}/${fileName}`.split("/").map((segment) => {
     if (!segment) return segment;
     // Keep literal "+" — Vite on Windows resolves "%2B" to a missing path and
     // falls back to index.html (text/html), which breaks GLBs named with "+".
@@ -126,11 +135,11 @@ export function summarizeHarvesterParts(parts) {
 }
 
 /**
- * 探测 harvester-parts junction 是否可被开发服务器访问。
+ * 探测指定分件目录 junction 是否可被开发服务器访问。
  * @returns {Promise<boolean>}
  */
-export async function probeHarvesterPartsAvailable(fetchImpl = fetch) {
-  const url = encodeHarvesterPartUrl(HARVESTER_PARTS_PROBE_FILE);
+async function probePartsBaseAvailable(base, probeFile, fetchImpl) {
+  const url = encodeHarvesterPartUrl(probeFile, base);
   try {
     const response = await fetchImpl(url, { method: "HEAD" });
     const contentType = response.headers.get("content-type") || "";
@@ -140,4 +149,20 @@ export async function probeHarvesterPartsAvailable(fetchImpl = fetch) {
   } catch {
     return false;
   }
+}
+
+/**
+ * 探测 harvester-parts junction 是否可被开发服务器访问。
+ * @returns {Promise<boolean>}
+ */
+export async function probeHarvesterPartsAvailable(fetchImpl = fetch) {
+  return probePartsBaseAvailable(HARVESTER_PARTS_BASE, HARVESTER_PARTS_PROBE_FILE, fetchImpl);
+}
+
+/**
+ * 探测网页优化版分件目录（harvester-web）是否可用。
+ * @returns {Promise<boolean>}
+ */
+export async function probeHarvesterPartsWebAvailable(fetchImpl = fetch) {
+  return probePartsBaseAvailable(HARVESTER_PARTS_WEB_BASE, HARVESTER_PARTS_WEB_PROBE_FILE, fetchImpl);
 }

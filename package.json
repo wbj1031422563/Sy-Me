@@ -11,6 +11,7 @@
     "lint:workbench": "eslint src/core/scene src/features/asset-workbench src/features/page-theme src/theme src/viewer/SceneViewer.jsx --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "lint:studio": "eslint src/views/studio src/features/page-theme src/theme src/router/router.jsx src/views/home/home.jsx --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "test:scene": "node scripts/scene-schema-smoke.mjs && node scripts/scene-safety-smoke.mjs && node scripts/validate-scenes.mjs",
+    "optimize:harvester": "node --max-old-space-size=8192 scripts/optimize-harvester-glb.mjs",
     "preview": "vite preview",
     "validate:scenes": "node scripts/validate-scenes.mjs"
   },
@@ -39,6 +40,9 @@
     "three-custom-shader-material": "^5.4.0"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
     "@react-three/eslint-plugin": "^0.1.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.0",
@@ -47,6 +51,8 @@
     "eslint-plugin-react": "^7.34.2",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
+    "meshoptimizer": "^1.3.0",
+    "sharp": "^0.35.5",
     "vite": "^5.3.1",
     "vite-plugin-glsl": "^1.3.0"
   }

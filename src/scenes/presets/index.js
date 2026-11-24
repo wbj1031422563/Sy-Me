@@ -4,6 +4,7 @@ export {
   HARVESTER_THEMES,
   HARVESTER_PARTS,
   HARVESTER_PARTS_BASE,
+  HARVESTER_PARTS_WEB_BASE,
   HARVESTER_ASSEMBLY_GROUND_OFFSET,
   HARVESTER_ASSEMBLY_MODES,
   createHarvesterScene,
@@ -14,6 +15,7 @@ export {
   offsetHarvesterAssemblyPoint,
   summarizeHarvesterParts,
   probeHarvesterPartsAvailable,
+  probeHarvesterPartsWebAvailable,
 } from "./harvester-preset.js";
 
 export {

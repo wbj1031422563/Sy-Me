@@ -23,6 +23,7 @@ export const HARVESTER_MODEL_PLACEHOLDER = "/model/收获机.glb";
 export {
   HARVESTER_PARTS,
   HARVESTER_PARTS_BASE,
+  HARVESTER_PARTS_WEB_BASE,
   HARVESTER_ASSEMBLY_GROUND_OFFSET,
   offsetHarvesterAssemblyPoint,
   HARVESTER_ASSEMBLY_MODES,
@@ -30,6 +31,7 @@ export {
   listHarvesterParts,
   summarizeHarvesterParts,
   probeHarvesterPartsAvailable,
+  probeHarvesterPartsWebAvailable,
 } from "./harvester-parts.js";
 
 /** 展厅默认视觉方案（电影向柔和档） */
@@ -521,6 +523,7 @@ export function createHarvesterAssemblyScene({
   cinematic = true,
   title,
   showroomSkin = "amber-hall",
+  partsBase,
 } = {}) {
   if (mode === "header") {
     return createHarvesterScene({
@@ -535,7 +538,7 @@ export function createHarvesterAssemblyScene({
   const parts = listHarvesterParts(mode);
   const summary = summarizeHarvesterParts(parts);
   const base = createHarvesterScene({
-    modelUrl: parts[0] ? encodeHarvesterPartUrl(parts[0].file) : HARVESTER_MODEL_PLACEHOLDER,
+    modelUrl: parts[0] ? encodeHarvesterPartUrl(parts[0].file, partsBase) : HARVESTER_MODEL_PLACEHOLDER,
     modelId: parts[0]?.id || "harvester",
     modelLabel: parts[0]?.label || "收获机",
     title: title || (mode === "core"
@@ -550,7 +553,7 @@ export function createHarvesterAssemblyScene({
   const models = parts.map((part, index) => ({
     id: part.id,
     label: part.label,
-    url: encodeHarvesterPartUrl(part.file),
+    url: encodeHarvesterPartUrl(part.file, partsBase),
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: 1,
