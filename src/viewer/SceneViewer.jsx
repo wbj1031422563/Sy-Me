@@ -38,6 +38,7 @@ import {
   EffectComposer,
   HueSaturation,
   Noise,
+  SMAA,
   Vignette,
 } from "@react-three/postprocessing";
 import { buildNodeHierarchy, mergeById, inspectModel, PREFIX } from "./conventions.js";
@@ -164,10 +165,32 @@ function ViewerModel({
   selectedNodeIds = [],
   onNodeSelect,
   materialMode,
+  textureAnisotropy = 0,
   children,
 }) {
+  const gl = useThree((state) => state.gl);
   const gltf = useGLTF(entry.url, dracoPath);
   const scene3 = useMemo(() => gltf.scene.clone(true), [gltf]);
+
+  // 贴图锐化：在倾斜视角下减少糊感（各向异性过滤）
+  useEffect(() => {
+    if (!textureAnisotropy) return;
+    const max = Math.min(Number(gl?.capabilities?.getMaxAnisotropy?.()) || 1, Number(textureAnisotropy) || 1);
+    if (!Number.isFinite(max) || max <= 1) return;
+    scene3.traverse((node) => {
+      if (!node.isMesh) return;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach((material) => {
+        ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap", "emissiveMap", "bumpMap"].forEach((slot) => {
+          const texture = material?.[slot];
+          if (texture && "anisotropy" in texture) {
+            texture.anisotropy = max;
+            texture.needsUpdate = true;
+          }
+        });
+      });
+    });
+  }, [scene3, gl, textureAnisotropy]);
   const clipPreview = motionPreview || entry.clipAnimation
     ? {
       ...(motionPreview || {}),
@@ -553,9 +576,11 @@ function SceneEffects({ config }) {
     || rgbGamma.some((value, index) => Number(value) !== [1, 1, 1][index])
   );
   const hasPostEffect = hasColorGrade || config.bloom?.enabled || config.vignette?.enabled || config.noise?.enabled;
-  if (!hasPostEffect) return null;
+  const hasSmaa = Boolean(config.smaa?.enabled);
+  if (!hasPostEffect && !hasSmaa) return null;
   return (
     <EffectComposer multisampling={config.multisampling ?? 0}>
+      {hasSmaa && <SMAA />}
       {hasColorGrade && (
         <>
           <HueSaturation
@@ -867,6 +892,7 @@ function SceneContent({
             selectedNodeIds={selectedNodeIds?.[entry.id] || []}
             onNodeSelect={onNodeSelect}
             materialMode={scene.renderer?.materialMode}
+            textureAnisotropy={scene.renderer?.textureAnisotropy}
           >
             {(childrenById.get(entry.id) || []).map((child) => renderModel(child, nextAncestry))}
           </ModelComponent>
@@ -1730,6 +1756,7 @@ export default function SceneViewer({
           outputColorSpace: THREE.SRGBColorSpace,
           powerPreference: "high-performance",
           preserveDrawingBuffer: false,
+          logarithmicDepthBuffer: renderer.logarithmicDepthBuffer === true,
         }}
         onCreated={handleRendererCreated}
         shadows={renderer.shadows}

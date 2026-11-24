@@ -48,6 +48,7 @@ export function applyQualityTier(scene, tier) {
     ...baseEffects,
     enabled: tier !== "performance",
     multisampling: 0,
+    smaa: { enabled: tier !== "performance" },
     bloom: { ...baseEffects.bloom, enabled: false },
     noise: { ...baseEffects.noise, enabled: false, opacity: 0 },
     vignette: tier === "performance" ? { ...baseEffects.vignette, enabled: false } : baseEffects.vignette,

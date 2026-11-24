@@ -145,6 +145,17 @@ function createLocalShowcaseScene(files, urls, { layout = LOCAL_LAYOUT_ASSEMBLE 
     machineEnabled: false,
   });
   const offset = (files.length - 1) / 2;
+  const crispRenderer = {
+    ...(baseScene.renderer || {}),
+    dpr: [1, 1.25],
+    antialias: false,
+    textureAnisotropy: 4,
+  };
+  const crispEffects = {
+    ...(baseScene.effects || {}),
+    enabled: true,
+    smaa: { enabled: true },
+  };
   const models = files.map((file, index) => ({
     ...baseScene.models[0],
     id: `showcase-local-${index + 1}`,
@@ -171,6 +182,8 @@ function createLocalShowcaseScene(files, urls, { layout = LOCAL_LAYOUT_ASSEMBLE 
       ...baseScene,
       id: "local-showcase-assembly",
       models,
+      renderer: crispRenderer,
+      effects: crispEffects,
       localLayout: LOCAL_LAYOUT_ASSEMBLE,
       assemblyMeta: {
         transformSource: "embedded-glb-world",
@@ -192,6 +205,8 @@ function createLocalShowcaseScene(files, urls, { layout = LOCAL_LAYOUT_ASSEMBLE 
   return {
     ...baseScene,
     models,
+    renderer: crispRenderer,
+    effects: crispEffects,
     localLayout: isMulti ? LOCAL_LAYOUT_SIDE_BY_SIDE : undefined,
   };
 }
@@ -274,6 +289,10 @@ function ShowroomChrome({
   localMultiSelect,
   localLayout,
   showBounds,
+  sideOpen,
+  onSideToggle,
+  railOpen,
+  onRailToggle,
   alignLabel,
   onAssemblyMode,
   onShowroomSkin,
@@ -303,6 +322,17 @@ function ShowroomChrome({
     <div className="harvester-showroom-chrome">
       <input ref={inputRef} hidden type="file" accept=".glb,.gltf" multiple onChange={onChoose} />
 
+      <button
+        type="button"
+        className={`harvester-showroom-drawer-toggle${sideOpen ? " is-open" : ""}`}
+        title={sideOpen ? "收起控制台" : "展开控制台"}
+        aria-expanded={sideOpen}
+        onClick={() => onSideToggle?.(!sideOpen)}
+      >
+        <span className="harvester-showroom-drawer-toggle-icon" aria-hidden="true" />
+        <em>{sideOpen ? "收起" : "控制台"}</em>
+      </button>
+
       <header className="harvester-showroom-brand">
         <div>
           <span className="harvester-showroom-brand-mark">SY·ME</span>
@@ -322,16 +352,18 @@ function ShowroomChrome({
             </small>
           )}
         </div>
-        <div className="harvester-showroom-brand-actions">
-          <button type="button" className={twinMode ? "is-active" : ""} onClick={() => onTwinMode(!twinMode)}>
-            {twinMode ? "退出主体状态" : "主体状态"}
-          </button>
-          <Link to="/tools/asset-workbench">编辑</Link>
-          <Link to="/">门户</Link>
-        </div>
       </header>
 
-      <aside className="harvester-showroom-side">
+      <aside className={`harvester-showroom-side${sideOpen ? " is-open" : ""}`}>
+        <div className="harvester-showroom-panel harvester-showroom-panel-actions">
+          <div className="harvester-showroom-panel-body harvester-showroom-quick-actions">
+            <button type="button" className={twinMode ? "is-active" : ""} onClick={() => onTwinMode(!twinMode)}>
+              {twinMode ? "退出主体状态" : "主体状态"}
+            </button>
+            <Link to="/tools/asset-workbench">编辑</Link>
+            <Link to="/">门户</Link>
+          </div>
+        </div>
         {partsAvailable && (
           <details className="harvester-showroom-panel" open>
             <summary>装配模式</summary>
@@ -470,19 +502,24 @@ function ShowroomChrome({
             ))}
           </div>
         </details>
-        <details className="harvester-showroom-panel">
+        <details className="harvester-showroom-panel" open>
           <summary>材质变体</summary>
           <div className="harvester-showroom-panel-body">
-            {variants.map((variant) => (
-              <button
-                type="button"
-                key={variant.id}
-                className={scene?.defaultVariant === variant.id ? "is-active" : ""}
-                onClick={() => onVariant(variant.id)}
-              >
-                {variant.label}
-              </button>
-            ))}
+            <div className="harvester-stage-swatches harvester-variant-swatches">
+              {variants.map((variant) => (
+                <button
+                  type="button"
+                  key={variant.id}
+                  className={`harvester-stage-swatch${scene?.defaultVariant === variant.id ? " is-active" : ""}`}
+                  title={variant.description || variant.label}
+                  style={{ "--swatch": variant.swatch || variant.color || "#8a97a3" }}
+                  onClick={() => onVariant(variant.id)}
+                >
+                  <span className="harvester-stage-swatch-chip" aria-hidden="true" />
+                  <em>{variant.label}</em>
+                </button>
+              ))}
+            </div>
           </div>
         </details>
         {partsAvailable && (
@@ -528,7 +565,18 @@ function ShowroomChrome({
         {message && <small className="harvester-showroom-status" role="status">{message}</small>}
       </aside>
 
-      <footer className="harvester-showroom-rail">
+      <button
+        type="button"
+        className={`harvester-showroom-rail-toggle${railOpen ? " is-open" : ""}`}
+        title={railOpen ? "收起视角与巡演" : "展开视角与巡演"}
+        aria-expanded={railOpen}
+        onClick={() => onRailToggle?.(!railOpen)}
+      >
+        <span className="harvester-showroom-rail-toggle-icon" aria-hidden="true" />
+        <em>{railOpen ? "收起视角" : "视角 · 巡演"}</em>
+      </button>
+
+      <footer className={`harvester-showroom-rail${railOpen ? " is-open" : ""}`}>
         <div className="harvester-showroom-rail-main">
           <div className="harvester-showroom-tour-progress" aria-hidden="true">
             <span style={{ width: `${tourProgress}%` }} />
@@ -580,6 +628,8 @@ export default function HarvesterPage() {
   const [localMultiSelect, setLocalMultiSelect] = useState(false);
   const [loadStatus, setLoadStatus] = useState(null);
   const [showBounds, setShowBounds] = useState(true);
+  const [sideOpen, setSideOpen] = useState(true);
+  const [railOpen, setRailOpen] = useState(true);
   const [alignLabel, setAlignLabel] = useState("");
   const [runtimeVersion, setRuntimeVersion] = useState(0);
   const [runtimeSnapshot, setRuntimeSnapshot] = useState({
@@ -887,6 +937,10 @@ export default function HarvesterPage() {
         localMultiSelect={localMultiSelect}
         localLayout={localLayout}
         showBounds={showBounds}
+        sideOpen={sideOpen}
+        onSideToggle={setSideOpen}
+        railOpen={railOpen}
+        onRailToggle={setRailOpen}
         alignLabel={alignLabel}
         onAssemblyMode={applyAssemblyMode}
         onShowroomSkin={applyShowroomSkinChoice}

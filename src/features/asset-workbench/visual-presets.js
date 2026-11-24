@@ -56,13 +56,30 @@ export const PARTICLE_PRESETS = [
 
 export const QUALITY_PRESETS = [
   {
+    id: "crisp",
+    label: "清晰优先",
+    description: "SMAA 抗锯齿 + 适度 DPR 与贴图各向异性，减少锯齿与糊感。",
+    config: {
+      renderer: { dpr: [1, 1.5], toneMapping: "ACESFilmic", exposure: 1, shadows: false, textureAnisotropy: 8 },
+      effects: {
+        enabled: true,
+        smaa: { enabled: true },
+        multisampling: 0,
+        bloom: { enabled: false },
+        vignette: { enabled: false },
+        noise: { enabled: false },
+      },
+    },
+  },
+  {
     id: "cinematic",
     label: "电影高光",
     config: {
-      renderer: { dpr: [1, 1.5], toneMapping: "ACESFilmic", exposure: 1.15, shadows: true },
+      renderer: { dpr: [1, 1.5], toneMapping: "ACESFilmic", exposure: 1.15, shadows: true, textureAnisotropy: 4 },
       effects: {
         enabled: true,
         multisampling: 2,
+        smaa: { enabled: true },
         bloom: { enabled: true, threshold: 0.72, intensity: 1.2, radius: 0.72 },
         vignette: { enabled: true, offset: 0.24, darkness: 0.56 },
         noise: { enabled: true, opacity: 0.018 },
@@ -73,10 +90,11 @@ export const QUALITY_PRESETS = [
     id: "soft",
     label: "柔和展示",
     config: {
-      renderer: { dpr: [1, 1.25], toneMapping: "ACESFilmic", exposure: 1.05, shadows: true },
+      renderer: { dpr: [1, 1.25], toneMapping: "ACESFilmic", exposure: 1.05, shadows: true, textureAnisotropy: 4 },
       effects: {
         enabled: true,
         multisampling: 2,
+        smaa: { enabled: true },
         bloom: { enabled: true, threshold: 0.86, intensity: 0.68, radius: 0.62 },
         vignette: { enabled: true, offset: 0.2, darkness: 0.34 },
         noise: { enabled: false, opacity: 0 },
@@ -87,10 +105,11 @@ export const QUALITY_PRESETS = [
     id: "performance",
     label: "性能优先",
     config: {
-      renderer: { dpr: [1, 1], toneMapping: "ACESFilmic", exposure: 1, shadows: false },
+      renderer: { dpr: [1, 1], toneMapping: "ACESFilmic", exposure: 1, shadows: false, textureAnisotropy: 2 },
       effects: {
         enabled: false,
         multisampling: 0,
+        smaa: { enabled: false },
         bloom: { enabled: false },
         vignette: { enabled: false },
         noise: { enabled: false },
@@ -159,6 +178,18 @@ export const COLOR_GRADE_PRESETS = [
 ];
 
 export const VISUAL_PRESETS = [
+  {
+    id: "crisp-showcase",
+    label: "清晰展示",
+    description: "SMAA + 适度 DPR 与贴图各向异性，优先消除锯齿感。",
+    theme: "studio",
+    background: "studio",
+    quality: "crisp",
+    particles: "none",
+    colorGrade: "neutral",
+    variant: "original",
+    shot: "hero",
+  },
   {
     id: "cinematic-gold",
     label: "电影金色",

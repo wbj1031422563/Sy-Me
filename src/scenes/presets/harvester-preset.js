@@ -437,7 +437,7 @@ export function createHarvesterScene({
       autoStart: false,
     },
     materialVariants: [
-      { id: "original", label: "原始材质", useOriginal: true },
+      { id: "original", label: "原始材质", useOriginal: true, description: "保留 GLB 内嵌材质与贴图。", swatch: "#8a97a3" },
       {
         id: "harvest-yellow",
         label: "收获金",
@@ -447,6 +447,8 @@ export function createHarvesterScene({
         physical: true,
         clearcoat: 0.42,
         clearcoatRoughness: 0.14,
+        description: "高光金色漆面，适合主视觉。",
+        swatch: "#d9a52a",
       },
       {
         id: "field-green",
@@ -457,6 +459,8 @@ export function createHarvesterScene({
         physical: true,
         clearcoat: 0.28,
         clearcoatRoughness: 0.18,
+        description: "偏自然的低饱和绿色漆面。",
+        swatch: "#4d7654",
       },
       {
         id: "graphite",
@@ -467,6 +471,8 @@ export function createHarvesterScene({
         physical: true,
         clearcoat: 0.3,
         clearcoatRoughness: 0.16,
+        description: "深色金属漆，突出轮廓与高光。",
+        swatch: "#303940",
       },
       {
         id: "ivory",
@@ -477,6 +483,8 @@ export function createHarvesterScene({
         physical: true,
         clearcoat: 0.22,
         clearcoatRoughness: 0.2,
+        description: "浅色柔光漆面，接近白馆静物。",
+        swatch: "#e6e1d2",
       },
     ],
     defaultVariant: cinematic ? "harvest-yellow" : "original",
@@ -659,12 +667,18 @@ export function createHarvesterAssemblyScene({
       ...base.ground,
       size: 72,
     },
-    // 整机体量大：默认关掉阴影与过高 DPR，降低 OOM 风险
+    // 整机体量大：默认用 SMAA 抗锯齿而非 MSAA 上下文；阴影保持关闭，降低 OOM 风险
     renderer: {
       ...base.renderer,
-      dpr: [1, 1],
+      dpr: [1, 1.25],
       shadows: false,
       antialias: false,
+      textureAnisotropy: 4,
+    },
+    effects: {
+      ...base.effects,
+      enabled: true,
+      smaa: { enabled: true },
     },
     shots: assemblyShots,
     hotspots: (base.hotspots || []).map((spot) => {
