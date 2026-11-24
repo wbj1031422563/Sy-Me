@@ -65,12 +65,38 @@ import SceneParticles from "./SceneParticles.jsx";
 import ScenePerformanceProbe from "./ScenePerformanceProbe.jsx";
 import RgbColorGrade from "./RgbColorGrade.jsx";
 import { describeAnimationClips } from "./animation-clips.js";
-import { VISUAL_LIMITS } from "../core/scene/scene-visual-limits.js";
+import { VISUAL_LIMITS, resolveCameraConstraints } from "../core/scene/scene-visual-limits.js";
 import "./scene-viewer.less";
 
 // 网页优化分件使用 EXT_meshopt_compression + KHR_mesh_quantization；全局只需设置一次解码器
 if (typeof useGLTF.setMeshoptDecoder === "function") {
   useGLTF.setMeshoptDecoder(MeshoptDecoder);
+}
+
+/* ---------------- 相机地面碰撞 ---------------- */
+
+/**
+ * 真实感视角约束：监听 OrbitControls change，把相机与目标点钳制在地面以上。
+ * 配合 OrbitControls 的 maxPolarAngle 软上限；阻尼/平移过程中逐帧生效。
+ */
+function CameraGroundGuard({ controlsRef, groundY = 0, constraints }) {
+  useEffect(() => {
+    if (!constraints?.groundClamp) return undefined;
+    const controls = controlsRef.current;
+    if (!controls) return undefined;
+    const minCameraY = groundY + constraints.minCameraHeight;
+    const minTargetY = groundY + constraints.minTargetHeight;
+    const clampView = () => {
+      const position = controls.object?.position;
+      if (position && position.y < minCameraY) position.y = minCameraY;
+      const target = controls.target;
+      if (target && target.y < minTargetY) target.y = minTargetY;
+    };
+    clampView();
+    controls.addEventListener("change", clampView);
+    return () => controls.removeEventListener("change", clampView);
+  }, [controlsRef, groundY, constraints]);
+  return null;
 }
 
 /* ---------------- 模型 ---------------- */
@@ -840,6 +866,8 @@ function SceneContent({
 }) {
   const env = scene.environment || {};
   const controlsCfg = scene.controls || {};
+  const cameraConstraints = useMemo(() => resolveCameraConstraints(scene.controls), [scene.controls]);
+  const stageGroundY = scene.assemblyMeta?.groundY ?? scene.ground?.y ?? 0;
   const defaultModelId = models[0]?.id;
   const modelById = new Map(models.map((model) => [model.id, model]));
   const childrenById = new Map();
@@ -1037,6 +1065,12 @@ function SceneContent({
         enablePan={controlsCfg.enablePan ?? true}
         minDistance={controlsCfg.minDistance ?? 1.5}
         maxDistance={controlsCfg.maxDistance ?? 12}
+        maxPolarAngle={controlsCfg.maxPolarAngle ?? cameraConstraints.maxPolarAngle}
+      />
+      <CameraGroundGuard
+        controlsRef={controlsRef}
+        groundY={stageGroundY}
+        constraints={cameraConstraints}
       />
     </>
   );

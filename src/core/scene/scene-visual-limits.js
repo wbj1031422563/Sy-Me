@@ -12,6 +12,11 @@ export const VISUAL_LIMITS = Object.freeze({
     near: { min: 0.01, max: 10 },
     far: { min: 20, max: 2000 },
     distance: { min: 1, max: 250 },
+    // 地面碰撞：相机/目标点不得沉到地面以下（真实感）
+    minHeightAboveGround: { min: 0.05, max: 3, default: 0.35 },
+    minTargetHeight: { min: 0, max: 2, default: 0.15 },
+    // 轨道俯仰软上限（度）：90=地平线，>90 允许轻微仰视
+    maxPolarAngleDeg: { min: 60, max: 120, default: 97 },
   },
   lightIntensity: { min: 0, max: 40 },
   ambientIntensity: { min: 0, max: 2 },
@@ -84,6 +89,36 @@ export function clampCameraConfig(camera = {}) {
     fov,
     near,
     far,
+  };
+}
+
+/**
+ * 解析相机地面碰撞约束（场景 controls 可覆盖默认值）。
+ * groundClamp=false 可整体关闭（如需要穿地的调试场景）。
+ */
+export function resolveCameraConstraints(controls = {}) {
+  const maxPolarAngleDeg = clampNumber(
+    controls.maxPolarAngleDeg,
+    VISUAL_LIMITS.camera.maxPolarAngleDeg.min,
+    VISUAL_LIMITS.camera.maxPolarAngleDeg.max,
+    VISUAL_LIMITS.camera.maxPolarAngleDeg.default
+  );
+  return {
+    groundClamp: controls.groundClamp !== false,
+    minCameraHeight: clampNumber(
+      controls.minCameraHeight,
+      VISUAL_LIMITS.camera.minHeightAboveGround.min,
+      VISUAL_LIMITS.camera.minHeightAboveGround.max,
+      VISUAL_LIMITS.camera.minHeightAboveGround.default
+    ),
+    minTargetHeight: clampNumber(
+      controls.minTargetHeight,
+      VISUAL_LIMITS.camera.minTargetHeight.min,
+      VISUAL_LIMITS.camera.minTargetHeight.max,
+      VISUAL_LIMITS.camera.minTargetHeight.default
+    ),
+    maxPolarAngle: (maxPolarAngleDeg * Math.PI) / 180,
+    maxPolarAngleDeg,
   };
 }
 
