@@ -5,17 +5,20 @@ export {
   HARVESTER_PARTS,
   HARVESTER_PARTS_BASE,
   HARVESTER_PARTS_WEB_BASE,
+  HARVESTER_PARTS_WEB_L2_BASE,
   HARVESTER_ASSEMBLY_GROUND_OFFSET,
   HARVESTER_ASSEMBLY_MODES,
   createHarvesterScene,
   createHarvesterThemeScene,
   createHarvesterAssemblyScene,
   encodeHarvesterPartUrl,
+  hasHarvesterPartL2,
   listHarvesterParts,
   offsetHarvesterAssemblyPoint,
   summarizeHarvesterParts,
   probeHarvesterPartsAvailable,
   probeHarvesterPartsWebAvailable,
+  probeHarvesterPartsWebL2Available,
 } from "./harvester-preset.js";
 
 export {

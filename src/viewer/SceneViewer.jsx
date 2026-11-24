@@ -46,7 +46,7 @@ import { buildNodeHierarchy, mergeById, inspectModel, PREFIX } from "./conventio
 import { normalizeScene } from "../core/scene/scene-normalize.js";
 import PageThemeControl from "../features/page-theme/PageThemeControl.jsx";
 import { inspectWebGLContext } from "./webgl-info.js";
-import { applyQualityTier, nextQualityTier, QUALITY_TIER_LABELS } from "./adaptive-quality.js";
+import { applyQualityTier, nextQualityTier, resolveModelLodUrl, QUALITY_TIER_LABELS } from "./adaptive-quality.js";
 import { createSceneRuntime, useSceneRuntime } from "../core/scene/scene-runtime.js";
 import {
   SceneEffectExtensions,
@@ -1326,11 +1326,37 @@ export default function SceneViewer({
   const [constrainedRenderer, setConstrainedRenderer] = useState(false);
 
   const models = useMemo(() => normalizedScene.models.map((model) => {
+    // LOD：自适应性能档切 L2 低模（从 normalizedScene 重算，升档自动回到 L1）
+    const lodUrl = resolveModelLodUrl(model, { tier: qualityTier, adaptive: adaptiveQuality });
+    const withLod = lodUrl !== model.url ? { ...model, url: lodUrl } : model;
     const override = nodeVisibility[model.id];
     return override
-      ? { ...model, nodeVisibility: { ...model.nodeVisibility, ...override } }
-      : model;
-  }), [nodeVisibility, normalizedScene.models]);
+      ? { ...withLod, nodeVisibility: { ...withLod.nodeVisibility, ...override } }
+      : withLod;
+  }), [nodeVisibility, normalizedScene.models, qualityTier, adaptiveQuality]);
+
+  // 空闲预载 L2 低模：性能档首次降档时无需等待网络（useGLTF 缓存后切换即时）
+  useEffect(() => {
+    if (!adaptiveQuality) return undefined;
+    const l2Urls = normalizedScene.models.map((m) => m?.lodL2Url).filter(Boolean);
+    if (l2Urls.length === 0) return undefined;
+    let cancelled = false;
+    const preloadAll = () => {
+      if (cancelled) return;
+      l2Urls.forEach((url) => useGLTF.preload(url, normalizedScene.dracoDecoderPath || "/draco/"));
+    };
+    const idleId = typeof window !== "undefined" && window.requestIdleCallback
+      ? window.requestIdleCallback(preloadAll, { timeout: 12000 })
+      : setTimeout(preloadAll, 10000);
+    return () => {
+      cancelled = true;
+      if (typeof window !== "undefined" && window.requestIdleCallback && window.cancelIdleCallback) {
+        window.cancelIdleCallback(idleId);
+      } else {
+        clearTimeout(idleId);
+      }
+    };
+  }, [normalizedScene.models, normalizedScene.dracoDecoderPath, adaptiveQuality]);
 
   useEffect(() => {
     setNodeVisibility({});

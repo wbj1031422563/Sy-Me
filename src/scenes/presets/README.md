@@ -20,17 +20,22 @@
 原始分件总计约 1.3GB，直接加载吃力。优化管线：
 
 ```bash
-npm run optimize:harvester          # 全量（../glb → ../glb-web）
+npm run optimize:harvester          # 全量 L1（../glb → ../glb-web）
+npm run optimize:harvester:l2       # 大件 L2 低模（≥15MB 的 11 件 → ../glb-web-l2）
 npm run optimize:harvester -- --only guwugetai   # 只处理割台
 npm run optimize:harvester -- --force --ratio 0.3 # 覆盖重写 + 自定义减面比例
 ```
 
 管线做 dedup → weld → simplify(meshopt，按体量 0.85/0.65/0.45 三档) →
 reorder → quantize → webp 纹理 → EXT_meshopt_compression，
-**保留节点树与命名**（动作绑定依赖）。当前一轮结果：1.34GB → 267MB（20%）。
+**保留节点树与命名**（动作绑定依赖）。当前一轮结果：L1 1.34GB → 267MB（20%）；
+L2（ratio 0.2 / error 0.005）大件合计 1.24GB → 149MB（12%）。
 
-产物经 `public/model/harvester-web` junction 暴露（不入库，可随时重跑生成）。
-页面启动时探测该目录，可用则优先加载优化版，否则回退原始分件；
+产物经 `public/model/harvester-web`（L1）与 `public/model/harvester-web-l2`（L2）
+junction 暴露（均不入库，可随时重跑生成）。
+页面启动时探测这两个目录：L1 可用则优先加载优化版，否则回退原始分件；
+L2 可用时工厂为大件附加 `lodL2Url`，自适应画质降到「性能档」时
+`SceneViewer` 自动切 L2 低模（升档切回 L1），空闲时后台预载 L2 避免切换等待；
 `SceneViewer` 已全局配置 meshopt 解码器。
 
 ```js

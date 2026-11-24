@@ -19,6 +19,8 @@ dist-ssr
 /public/model/harvester-parts/
 # Optimized web GLBs (junction into ../glb-web — regenerate via npm run optimize:harvester)
 /public/model/harvester-web/
+# L2 low-poly LOD GLBs (junction into ../glb-web-l2 — regenerate via npm run optimize:harvester:l2)
+/public/model/harvester-web-l2/
 
 # Local screenshots captured while validating the asset workbench
 /asset-workbench-*.png

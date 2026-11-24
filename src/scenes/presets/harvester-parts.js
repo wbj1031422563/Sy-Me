@@ -24,6 +24,15 @@ export const HARVESTER_PARTS_BASE = "/model/harvester-parts";
 export const HARVESTER_PARTS_WEB_BASE = "/model/harvester-web";
 
 /**
+ * L2 低模目录（经 public/model/harvester-web-l2 → ../../glb-web-l2 junction）。
+ * 仅大件有 L2（见 HARVESTER_PARTS_L2_MIN_SIZE_MB）；性能档自动切换。
+ */
+export const HARVESTER_PARTS_WEB_L2_BASE = "/model/harvester-web-l2";
+
+/** 生成 L2 的原始体量门槛（MB）：与 optimize:harvester:l2 的 --min-size-mb 对齐 */
+export const HARVESTER_PARTS_L2_MIN_SIZE_MB = 15;
+
+/**
  * 整机落地偏移（米）。默认取自 VISUAL_LIMITS.assembly.groundLiftY。
  */
 export const HARVESTER_ASSEMBLY_GROUND_OFFSET = Object.freeze(
@@ -53,6 +62,14 @@ export const HARVESTER_PARTS_PROBE_FILE = "006text_model(tuolijiti).glb";
 
 /** 优化目录探测用：体量最小的件，文件名无全角括号 */
 export const HARVESTER_PARTS_WEB_PROBE_FILE = "011text_model(jinqixizongcheng).glb";
+
+/** L2 目录探测用：有 L2 的最小件（15.4MB 原始） */
+export const HARVESTER_PARTS_WEB_L2_PROBE_FILE = "016text_model(shangcheti).glb";
+
+/** 该分件是否有 L2 低模（按原始体量门槛） */
+export function hasHarvesterPartL2(part) {
+  return Boolean(part) && (part.sizeMB || 0) >= HARVESTER_PARTS_L2_MIN_SIZE_MB;
+}
 
 /**
  * @typedef {object} HarvesterPartDef
@@ -165,4 +182,12 @@ export async function probeHarvesterPartsAvailable(fetchImpl = fetch) {
  */
 export async function probeHarvesterPartsWebAvailable(fetchImpl = fetch) {
   return probePartsBaseAvailable(HARVESTER_PARTS_WEB_BASE, HARVESTER_PARTS_WEB_PROBE_FILE, fetchImpl);
+}
+
+/**
+ * 探测 L2 低模目录（harvester-web-l2）是否可用。
+ * @returns {Promise<boolean>}
+ */
+export async function probeHarvesterPartsWebL2Available(fetchImpl = fetch) {
+  return probePartsBaseAvailable(HARVESTER_PARTS_WEB_L2_BASE, HARVESTER_PARTS_WEB_L2_PROBE_FILE, fetchImpl);
 }

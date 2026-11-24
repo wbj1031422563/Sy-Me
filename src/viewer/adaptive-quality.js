@@ -36,6 +36,15 @@ export function nextQualityTier(currentTier, stats, counters = { down: 0, up: 0 
   return { tier: nextTier, counters: { down, up } };
 }
 
+/**
+ * 模型 LOD 决策：仅在「自适应开启 + 性能档」时切到 L2 低模地址。
+ * 非破坏式 —— 调用方每次从原始 scene 重算，升档后自动回到 L1。
+ */
+export function resolveModelLodUrl(model, { tier = "high", adaptive = true } = {}) {
+  if (adaptive && tier === "performance" && model?.lodL2Url) return model.lodL2Url;
+  return model?.url;
+}
+
 export function applyQualityTier(scene, tier) {
   if (!scene || tier === "high") return scene;
   const originalDpr = scene.renderer?.dpr || [1, 1.5];

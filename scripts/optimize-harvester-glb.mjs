@@ -10,8 +10,11 @@
  * 刻意不做 flatten/join/palette：工作台动作绑定按节点名寻址，节点树必须原样保留。
  *
  * 用法：
- *   node --max-old-space-size=8192 scripts/optimize-harvester-glb.mjs [--force] [--only <关键字>] [--ratio <0-1>]
+ *   node --max-old-space-size=8192 scripts/optimize-harvester-glb.mjs [--force] [--only <关键字>]
+ *     [--ratio <0-1>] [--error <小数>] [--min-size-mb <MB>] [--src <目录>] [--out <目录>]
  * 或： npm run optimize:harvester
+ *
+ * L2 低模（性能档自动切换）：npm run optimize:harvester:l2
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -44,15 +47,18 @@ const OUT_DIR = path.resolve(rootDir, argValue("--out") || "../glb-web");
 const FORCE = args.includes("--force");
 const ONLY = argValue("--only");
 const RATIO_OVERRIDE = argValue("--ratio") ? Number(argValue("--ratio")) : null;
+const ERROR_OVERRIDE = argValue("--error") ? Number(argValue("--error")) : null;
+const MIN_SIZE_MB = argValue("--min-size-mb") ? Number(argValue("--min-size-mb")) : 0;
 
 /** 按原始体量分档：越大的件减面越激进（误差上限保持一致，避免可见变形） */
 function simplifyPolicy(sizeMB) {
+  const error = ERROR_OVERRIDE != null && Number.isFinite(ERROR_OVERRIDE) ? ERROR_OVERRIDE : null;
   if (RATIO_OVERRIDE != null && Number.isFinite(RATIO_OVERRIDE)) {
-    return { ratio: Math.min(1, Math.max(0.05, RATIO_OVERRIDE)), error: [0.001] };
+    return { ratio: Math.min(1, Math.max(0.05, RATIO_OVERRIDE)), error: [error ?? 0.001] };
   }
-  if (sizeMB >= 100) return { ratio: 0.45, error: [0.001] };
-  if (sizeMB >= 20) return { ratio: 0.65, error: [0.0008] };
-  return { ratio: 0.85, error: [0.0006] };
+  if (sizeMB >= 100) return { ratio: 0.45, error: [error ?? 0.001] };
+  if (sizeMB >= 20) return { ratio: 0.65, error: [error ?? 0.0008] };
+  return { ratio: 0.85, error: [error ?? 0.0006] };
 }
 
 function formatMB(bytes) {
@@ -121,6 +127,7 @@ async function main() {
   const files = fs.readdirSync(SRC_DIR)
     .filter((name) => name.toLowerCase().endsWith(".glb"))
     .filter((name) => !ONLY || name.includes(ONLY))
+    .filter((name) => !MIN_SIZE_MB || fs.statSync(path.join(SRC_DIR, name)).size >= MIN_SIZE_MB * 1024 * 1024)
     .sort((a, b) => fs.statSync(path.join(SRC_DIR, a)).size - fs.statSync(path.join(SRC_DIR, b)).size);
 
   if (files.length === 0) {

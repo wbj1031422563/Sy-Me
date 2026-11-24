@@ -11,6 +11,7 @@
  */
 import {
   encodeHarvesterPartUrl,
+  hasHarvesterPartL2,
   listHarvesterParts,
   summarizeHarvesterParts,
   HARVESTER_ASSEMBLY_GROUND_OFFSET,
@@ -24,14 +25,17 @@ export {
   HARVESTER_PARTS,
   HARVESTER_PARTS_BASE,
   HARVESTER_PARTS_WEB_BASE,
+  HARVESTER_PARTS_WEB_L2_BASE,
   HARVESTER_ASSEMBLY_GROUND_OFFSET,
   offsetHarvesterAssemblyPoint,
   HARVESTER_ASSEMBLY_MODES,
   encodeHarvesterPartUrl,
+  hasHarvesterPartL2,
   listHarvesterParts,
   summarizeHarvesterParts,
   probeHarvesterPartsAvailable,
   probeHarvesterPartsWebAvailable,
+  probeHarvesterPartsWebL2Available,
 } from "./harvester-parts.js";
 
 /** 展厅默认视觉方案（电影向柔和档） */
@@ -524,6 +528,7 @@ export function createHarvesterAssemblyScene({
   title,
   showroomSkin = "amber-hall",
   partsBase,
+  partsL2Base,
 } = {}) {
   if (mode === "header") {
     return createHarvesterScene({
@@ -554,6 +559,10 @@ export function createHarvesterAssemblyScene({
     id: part.id,
     label: part.label,
     url: encodeHarvesterPartUrl(part.file, partsBase),
+    // 大件附 L2 低模地址：自适应性能档降档时由 SceneViewer 切换
+    ...(partsL2Base && hasHarvesterPartL2(part)
+      ? { lodL2Url: encodeHarvesterPartUrl(part.file, partsL2Base) }
+      : {}),
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: 1,

@@ -12,6 +12,7 @@
     "lint:studio": "eslint src/views/studio src/features/page-theme src/theme src/router/router.jsx src/views/home/home.jsx --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "test:scene": "node scripts/scene-schema-smoke.mjs && node scripts/scene-safety-smoke.mjs && node scripts/validate-scenes.mjs",
     "optimize:harvester": "node --max-old-space-size=8192 scripts/optimize-harvester-glb.mjs",
+    "optimize:harvester:l2": "node --max-old-space-size=8192 scripts/optimize-harvester-glb.mjs --out ../glb-web-l2 --ratio 0.2 --error 0.005 --min-size-mb 15",
     "preview": "vite preview",
     "validate:scenes": "node scripts/validate-scenes.mjs"
   },
